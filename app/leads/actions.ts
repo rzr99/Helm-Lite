@@ -67,6 +67,18 @@ export async function updateLead(leadId: string, formData: FormData) {
   revalidatePath("/");
 }
 
+export async function deleteLead(leadId: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("leads").delete().eq("id", leadId);
+
+  if (error) throw new Error("Could not delete the lead: " + error.message);
+
+  revalidatePath("/leads");
+  revalidatePath("/");
+  redirect("/leads");
+}
+
 export async function setStage(leadId: string, stage: string) {
   const supabase = await createClient();
 

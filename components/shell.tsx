@@ -57,7 +57,28 @@ function ActivityIcon() {
   );
 }
 
-const navLinks = [
+function PersonasIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <circle cx="9" cy="10" r="2.5" />
+      <path d="M5.5 17c.6-1.8 1.9-2.8 3.5-2.8s2.9 1 3.5 2.8" />
+      <path d="M15 9h4" />
+      <path d="M15 13h4" />
+    </svg>
+  );
+}
+
+type NavLink = {
+  key: string;
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  floorOnly?: boolean;
+  ownerOnly?: boolean;
+};
+
+const navLinks: NavLink[] = [
   { key: "dashboard", href: "/", label: "Dashboard", icon: <HomeIcon /> },
   { key: "leads", href: "/leads", label: "Leads", icon: <LeadsIcon /> },
   { key: "sales", href: "/sales", label: "Sales", icon: <SalesIcon /> },
@@ -68,10 +89,21 @@ const navLinks = [
     icon: <ActivityIcon />,
     floorOnly: true,
   },
+  {
+    key: "personas",
+    href: "/personas",
+    label: "Personas",
+    icon: <PersonasIcon />,
+    ownerOnly: true,
+  },
 ];
 
 function visibleLinks(role: string) {
-  return navLinks.filter((l) => !("floorOnly" in l && l.floorOnly) || role !== "agent");
+  return navLinks.filter((l) => {
+    if (l.ownerOnly && role !== "owner") return false;
+    if (l.floorOnly && role === "agent") return false;
+    return true;
+  });
 }
 
 function NavList({ active, role }: { active: string; role: string }) {

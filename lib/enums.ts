@@ -22,6 +22,27 @@ export function serviceLabel(value: string | null) {
   return SERVICES.find((s) => s.value === value)?.label ?? value;
 }
 
+export const ACCOUNT_STATUSES = [
+  { value: "active", label: "Active" },
+  { value: "warming", label: "Warming" },
+  { value: "recovery", label: "Recovery" },
+  { value: "banned", label: "Banned" },
+  { value: "reserve", label: "Reserve" },
+] as const;
+
+export const STATUS_BADGE: Record<string, string> = {
+  active:
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+  warming: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  recovery: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
+  banned: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
+  reserve: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+};
+
+export function statusLabel(value: string) {
+  return ACCOUNT_STATUSES.find((s) => s.value === value)?.label ?? value;
+}
+
 export function fmtMoney(value: number) {
   return (
     "$" +

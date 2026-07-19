@@ -16,6 +16,7 @@ import {
   addFollowUp,
   setFollowUpDone,
   setStage,
+  deleteLead,
 } from "@/app/leads/actions";
 import { todayStr } from "@/lib/dates";
 
@@ -380,6 +381,22 @@ export default async function LeadDetailPage({
           </form>
         )}
       </Card>
+
+      {canEdit && (
+        <Card
+          title="Danger zone"
+          description="Deleting removes this lead and its follow-ups. Any logged deals stay, but lose their link to it. There is no undo."
+        >
+          <form action={deleteLead.bind(null, lead.id)}>
+            <button
+              type="submit"
+              className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+            >
+              Delete this lead
+            </button>
+          </form>
+        </Card>
+      )}
 
       {floor && agentInfo && (
         <p className="flex items-center justify-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
