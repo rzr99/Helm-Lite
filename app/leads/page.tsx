@@ -1,14 +1,20 @@
 import Link from "next/link";
-import { Nav } from "@/components/nav";
+import { Shell } from "@/components/shell";
+import {
+  Card,
+  EmptyState,
+  Avatar,
+  btnPrimary,
+  btnSecondary,
+  inputClass,
+} from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel, serviceLabel, STAGE_BADGE } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
-const inputClass =
-  "rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
-const labelClass =
-  "mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400";
+const filterLabel =
+  "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
 type LeadRow = {
   id: string;
@@ -64,32 +70,36 @@ export default async function LeadsPage({
 
   const { data } = await query;
   const leads = (data ?? []) as unknown as LeadRow[];
-
   const hasFilters = Boolean(stage || agent || from || to);
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
-      <Nav profile={profile} />
-      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-            {floor ? "All leads" : "My leads"}
-          </h1>
-          <Link
-            href="/leads/new"
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
-          >
-            + Add lead
-          </Link>
-        </div>
-
+    <Shell
+      profile={profile}
+      active="leads"
+      title={floor ? "All leads" : "My leads"}
+      subtitle={
+        floor
+          ? "Every lead on the floor. Use the filters to slice by agent, stage, or date."
+          : "Every lead you're working. Use the filters to narrow things down."
+      }
+      action={
+        <Link href="/leads/new" className={btnPrimary}>
+          + Add lead
+        </Link>
+      }
+    >
+      <Card padded={false}>
         <form
           method="get"
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+          className="flex flex-wrap items-end gap-4 px-5 py-4"
         >
           <div>
-            <label className={labelClass}>Stage</label>
-            <select name="stage" defaultValue={stage ?? ""} className={inputClass}>
+            <label className={filterLabel}>Stage</label>
+            <select
+              name="stage"
+              defaultValue={stage ?? ""}
+              className={inputClass}
+            >
               <option value="">All stages</option>
               {STAGES.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -101,7 +111,7 @@ export default async function LeadsPage({
 
           {floor && (
             <div>
-              <label className={labelClass}>Agent</label>
+              <label className={filterLabel}>Agent</label>
               <select
                 name="agent"
                 defaultValue={agent ?? ""}
@@ -118,7 +128,7 @@ export default async function LeadsPage({
           )}
 
           <div>
-            <label className={labelClass}>Added from</label>
+            <label className={filterLabel}>Added from</label>
             <input
               type="date"
               name="from"
@@ -127,7 +137,7 @@ export default async function LeadsPage({
             />
           </div>
           <div>
-            <label className={labelClass}>Added to</label>
+            <label className={filterLabel}>Added to</label>
             <input
               type="date"
               name="to"
@@ -136,86 +146,96 @@ export default async function LeadsPage({
             />
           </div>
 
-          <button
-            type="submit"
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
-          >
-            Apply filters
-          </button>
-          {hasFilters && (
-            <Link
-              href="/leads"
-              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            >
-              Clear
-            </Link>
-          )}
+          <div className="flex gap-2">
+            <button type="submit" className={btnPrimary}>
+              Filter
+            </button>
+            {hasFilters && (
+              <Link href="/leads" className={btnSecondary}>
+                Clear
+              </Link>
+            )}
+          </div>
         </form>
+      </Card>
 
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          {leads.length} lead{leads.length === 1 ? "" : "s"}
-          {hasFilters ? (leads.length === 1 ? " matches" : " match") + " the filters" : ""}
-        </p>
-
+      <Card
+        title={`${leads.length} lead${leads.length === 1 ? "" : "s"}${hasFilters ? " found" : ""}`}
+        padded={false}
+      >
         {leads.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            {hasFilters
-              ? "Nothing matches these filters."
-              : "No leads here yet. Click “Add lead” to create the first one."}
-          </p>
+          <EmptyState
+            emoji={hasFilters ? "🔍" : "🌱"}
+            title={hasFilters ? "Nothing matches these filters" : "No leads yet"}
+            hint={
+              hasFilters
+                ? "Try widening the date range or clearing a filter."
+                : "Add your first lead and it will show up here."
+            }
+            actionHref={hasFilters ? undefined : "/leads/new"}
+            actionLabel={hasFilters ? undefined : "+ Add lead"}
+          />
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Handle</th>
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Service</th>
-                  <th className="px-4 py-3 font-medium">Source</th>
-                  <th className="px-4 py-3 font-medium">Stage</th>
-                  <th className="px-4 py-3 font-medium">Added</th>
-                  {floor && <th className="px-4 py-3 font-medium">Agent</th>}
+                  <th className="px-5 py-3 font-semibold">Lead</th>
+                  <th className="px-5 py-3 font-semibold">Service</th>
+                  <th className="px-5 py-3 font-semibold">Source</th>
+                  <th className="px-5 py-3 font-semibold">Stage</th>
+                  <th className="px-5 py-3 font-semibold">Added</th>
+                  {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {leads.map((lead) => (
                   <tr
                     key={lead.id}
-                    className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3.5">
                       <Link
                         href={`/leads/${lead.id}`}
-                        className="font-medium text-black hover:underline dark:text-zinc-50"
+                        className="font-semibold text-zinc-900 hover:underline dark:text-zinc-50"
                       >
                         {lead.handle}
                       </Link>
+                      {lead.name && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {lead.name}
+                        </p>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                      {lead.name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {serviceLabel(lead.service_interest)}
                     </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {lead.source ?? "—"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3.5">
                       <span
                         className={
-                          "rounded-full px-2.5 py-0.5 text-xs font-medium " +
+                          "rounded-full px-2.5 py-1 text-xs font-semibold " +
                           (STAGE_BADGE[lead.stage] ?? "")
                         }
                       >
                         {stageLabel(lead.stage)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {lead.date_added}
                     </td>
                     {floor && (
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                        {lead.agent?.full_name ?? "—"}
+                      <td className="px-5 py-3.5">
+                        {lead.agent ? (
+                          <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                            <Avatar name={lead.agent.full_name} size={7} />
+                            {lead.agent.full_name}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     )}
                   </tr>
@@ -224,7 +244,7 @@ export default async function LeadsPage({
             </table>
           </div>
         )}
-      </main>
-    </div>
+      </Card>
+    </Shell>
   );
 }

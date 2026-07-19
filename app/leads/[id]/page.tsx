@@ -1,13 +1,16 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Nav } from "@/components/nav";
-import { requireProfile, isFloorRole } from "@/lib/profile";
+import { Shell } from "@/components/shell";
 import {
-  STAGES,
-  SERVICES,
-  stageLabel,
-  serviceLabel,
-  STAGE_BADGE,
-} from "@/lib/enums";
+  Card,
+  Avatar,
+  btnPrimary,
+  btnGhost,
+  inputClass,
+  labelClass,
+} from "@/components/ui";
+import { requireProfile, isFloorRole } from "@/lib/profile";
+import { STAGES, SERVICES, serviceLabel } from "@/lib/enums";
 import {
   updateLead,
   addFollowUp,
@@ -16,11 +19,6 @@ import {
 } from "@/app/leads/actions";
 
 export const dynamic = "force-dynamic";
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
-const labelClass =
-  "mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300";
 
 type FollowUp = {
   id: string;
@@ -58,72 +56,90 @@ export default async function LeadDetailPage({
     .order("due_date");
 
   const followUps = (fuData ?? []) as FollowUp[];
+  const openFollowUps = followUps.filter((f) => !f.done);
+  const doneFollowUps = followUps.filter((f) => f.done);
   const today = new Date().toISOString().slice(0, 10);
 
   const saveLead = updateLead.bind(null, lead.id);
   const saveFollowUp = addFollowUp.bind(null, lead.id, lead.agent_id);
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
-      <Nav profile={profile} />
-      <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-            {lead.handle}
-          </h1>
-          <span
-            className={
-              "rounded-full px-3 py-1 text-sm font-medium " +
-              (STAGE_BADGE[lead.stage] ?? "")
-            }
-          >
-            {stageLabel(lead.stage)}
-          </span>
-        </div>
-
-        {floor && agentInfo && (
-          <p className="-mt-6 text-sm text-zinc-500 dark:text-zinc-400">
-            Agent: {agentInfo.full_name}
-            {!canEdit && " · read-only view"}
-          </p>
-        )}
-
-        {canEdit && (
-          <div className="-mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">
-              Move to:
-            </span>
-            {STAGES.map((s) => {
-              const isCurrent = s.value === lead.stage;
-              const move = setStage.bind(null, lead.id, s.value);
+    <Shell
+      profile={profile}
+      active="leads"
+      title={lead.handle}
+      subtitle={
+        (lead.name ? lead.name + " · " : "") +
+        (floor && agentInfo ? `Agent: ${agentInfo.full_name}` : `Added ${lead.date_added}`) +
+        (!canEdit ? " · read-only" : "")
+      }
+      action={
+        <Link
+          href="/leads"
+          className="text-sm font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
+        >
+          ← Back to leads
+        </Link>
+      }
+    >
+      <Card
+        title="Stage"
+        description={
+          canEdit
+            ? "Where this conversation stands. Click any stage to move it — it saves instantly."
+            : "Where this conversation stands."
+        }
+      >
+        <div className="flex flex-wrap gap-2">
+          {STAGES.map((s) => {
+            const isCurrent = s.value === lead.stage;
+            if (!canEdit) {
               return (
-                <form key={s.value} action={move}>
-                  <button
-                    type="submit"
-                    disabled={isCurrent}
-                    className={
-                      "rounded-full border px-3 py-1 text-sm font-medium transition-colors " +
-                      (isCurrent
-                        ? "border-black bg-black text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-black"
-                        : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900")
-                    }
-                  >
-                    {s.label}
-                  </button>
-                </form>
+                <span
+                  key={s.value}
+                  className={
+                    "rounded-full border px-4 py-2 text-sm font-semibold " +
+                    (isCurrent
+                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      : "border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500")
+                  }
+                >
+                  {s.label}
+                </span>
               );
-            })}
-          </div>
-        )}
+            }
+            const move = setStage.bind(null, lead.id, s.value);
+            return (
+              <form key={s.value} action={move}>
+                <button
+                  type="submit"
+                  disabled={isCurrent}
+                  className={
+                    "rounded-full border px-4 py-2 text-sm font-semibold transition-colors " +
+                    (isCurrent
+                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      : "border-zinc-300 bg-white text-zinc-600 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-600 dark:hover:text-emerald-400")
+                  }
+                >
+                  {s.label}
+                </button>
+              </form>
+            );
+          })}
+        </div>
+      </Card>
 
+      <Card
+        title="Details"
+        description={canEdit ? "Edit anything and hit Save." : undefined}
+      >
         {canEdit ? (
-          <form
-            action={saveLead}
-            className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950"
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <form action={saveLead} className="flex flex-col gap-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label className={labelClass}>Handle *</label>
+                <label className={labelClass}>
+                  Handle <span className="text-red-500">*</span>
+                </label>
                 <input
                   name="handle"
                   required
@@ -146,7 +162,7 @@ export default async function LeadDetailPage({
                   defaultValue={lead.service_interest ?? ""}
                   className={inputClass}
                 >
-                  <option value="">—</option>
+                  <option value="">Not sure yet</option>
                   {SERVICES.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
@@ -162,14 +178,6 @@ export default async function LeadDetailPage({
                   className={inputClass}
                 />
               </div>
-              <div>
-                <label className={labelClass}>Date added</label>
-                <input
-                  disabled
-                  value={lead.date_added}
-                  className={inputClass + " opacity-60"}
-                />
-              </div>
             </div>
 
             <div>
@@ -178,109 +186,149 @@ export default async function LeadDetailPage({
                 name="notes"
                 rows={6}
                 defaultValue={lead.notes}
+                placeholder="Keep the story of this lead here — every reply, every promise."
                 className={inputClass}
               />
             </div>
 
-            <button
-              type="submit"
-              className="self-start rounded-lg bg-black px-5 py-2 font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
-            >
+            <button type="submit" className={btnPrimary + " self-start"}>
               Save changes
             </button>
           </form>
         ) : (
-          <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-6 text-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <p>
-              <span className="text-zinc-500 dark:text-zinc-400">Name: </span>
-              <span className="text-black dark:text-zinc-50">
-                {lead.name ?? "—"}
-              </span>
-            </p>
-            <p>
-              <span className="text-zinc-500 dark:text-zinc-400">
-                Service:{" "}
-              </span>
-              <span className="text-black dark:text-zinc-50">
-                {serviceLabel(lead.service_interest)}
-              </span>
-            </p>
-            <p>
-              <span className="text-zinc-500 dark:text-zinc-400">Source: </span>
-              <span className="text-black dark:text-zinc-50">
-                {lead.source ?? "—"}
-              </span>
-            </p>
-            <p>
-              <span className="text-zinc-500 dark:text-zinc-400">Added: </span>
-              <span className="text-black dark:text-zinc-50">
-                {lead.date_added}
-              </span>
-            </p>
+          <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
             <div>
-              <p className="text-zinc-500 dark:text-zinc-400">Notes:</p>
-              <p className="whitespace-pre-wrap text-black dark:text-zinc-50">
-                {lead.notes || "—"}
-              </p>
+              <dt className="text-zinc-500 dark:text-zinc-400">Name</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-50">
+                {lead.name ?? "—"}
+              </dd>
             </div>
-          </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Service</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-50">
+                {serviceLabel(lead.service_interest)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Source</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-50">
+                {lead.source ?? "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Added</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-50">
+                {lead.date_added}
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-zinc-500 dark:text-zinc-400">Notes</dt>
+              <dd className="whitespace-pre-wrap font-medium text-zinc-900 dark:text-zinc-50">
+                {lead.notes || "—"}
+              </dd>
+            </div>
+          </dl>
+        )}
+      </Card>
+
+      <Card
+        title="Follow-ups"
+        description={
+          canEdit
+            ? "Never let a lead go cold — set a date and it shows on the dashboard."
+            : undefined
+        }
+        padded={false}
+      >
+        {openFollowUps.length === 0 && doneFollowUps.length === 0 && (
+          <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">
+            No follow-ups yet{canEdit ? " — add the first one below." : "."}
+          </p>
         )}
 
-        <section>
-          <h2 className="mb-3 text-lg font-medium text-black dark:text-zinc-50">
-            Follow-ups
-          </h2>
+        {openFollowUps.length > 0 && (
+          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {openFollowUps.map((f) => {
+              const overdue = f.due_date < today;
+              const toggle = setFollowUpDone.bind(
+                null,
+                f.id,
+                true,
+                `/leads/${lead.id}`
+              );
+              return (
+                <li
+                  key={f.id}
+                  className="flex items-center justify-between gap-3 px-5 py-3"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className={
+                        "h-2.5 w-2.5 shrink-0 rounded-full " +
+                        (overdue ? "bg-red-500" : "bg-amber-400")
+                      }
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-50">
+                        {f.due_date}
+                        {overdue && (
+                          <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
+                            overdue
+                          </span>
+                        )}
+                      </p>
+                      {f.note && (
+                        <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
+                          {f.note}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {canEdit && (
+                    <form action={toggle}>
+                      <button type="submit" className={btnGhost}>
+                        ✓ Done
+                      </button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
-          {followUps.length === 0 ? (
-            <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-              No follow-ups yet.
+        {doneFollowUps.length > 0 && (
+          <>
+            <p className="border-b border-t border-zinc-100 px-5 py-2 text-xs font-bold uppercase tracking-wide text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
+              Completed · {doneFollowUps.length}
             </p>
-          ) : (
-            <ul className="mb-4 flex flex-col gap-2">
-              {followUps.map((f) => {
-                const overdue = !f.done && f.due_date < today;
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {doneFollowUps.map((f) => {
                 const toggle = setFollowUpDone.bind(
                   null,
                   f.id,
-                  !f.done,
+                  false,
                   `/leads/${lead.id}`
                 );
                 return (
                   <li
                     key={f.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
+                    className="flex items-center justify-between gap-3 px-5 py-3"
                   >
                     <div className="min-w-0">
-                      <span
-                        className={
-                          "font-medium " +
-                          (f.done
-                            ? "text-zinc-400 line-through dark:text-zinc-600"
-                            : overdue
-                              ? "text-red-700 dark:text-red-400"
-                              : "text-black dark:text-zinc-50")
-                        }
-                      >
+                      <p className="font-medium text-zinc-400 line-through dark:text-zinc-500">
                         {f.due_date}
-                      </span>
-                      {overdue && (
-                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-900 dark:bg-red-900 dark:text-red-100">
-                          overdue
-                        </span>
-                      )}
+                      </p>
                       {f.note && (
-                        <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
+                        <p className="truncate text-sm text-zinc-400 line-through dark:text-zinc-500">
                           {f.note}
                         </p>
                       )}
                     </div>
                     {canEdit && (
                       <form action={toggle}>
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-                        >
-                          {f.done ? "Reopen" : "Done"}
+                        <button type="submit" className={btnGhost}>
+                          Reopen
                         </button>
                       </form>
                     )}
@@ -288,40 +336,47 @@ export default async function LeadDetailPage({
                 );
               })}
             </ul>
-          )}
+          </>
+        )}
 
-          {canEdit && (
-            <form
-              action={saveFollowUp}
-              className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <div>
-                <label className={labelClass}>Due date *</label>
-                <input
-                  type="date"
-                  name="due_date"
-                  required
-                  className={inputClass}
-                />
-              </div>
-              <div className="min-w-48 flex-1">
-                <label className={labelClass}>Note</label>
-                <input
-                  name="note"
-                  placeholder="What's the next step?"
-                  className={inputClass}
-                />
-              </div>
-              <button
-                type="submit"
-                className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
-              >
-                Add follow-up
-              </button>
-            </form>
-          )}
-        </section>
-      </main>
-    </div>
+        {canEdit && (
+          <form
+            action={saveFollowUp}
+            className="flex flex-wrap items-end gap-3 border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
+            <div>
+              <label className={labelClass}>
+                Due date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                name="due_date"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div className="min-w-52 flex-1">
+              <label className={labelClass}>Note</label>
+              <input
+                name="note"
+                placeholder="What's the next step?"
+                className={inputClass}
+              />
+            </div>
+            <button type="submit" className={btnPrimary}>
+              Add follow-up
+            </button>
+          </form>
+        )}
+      </Card>
+
+      {floor && agentInfo && (
+        <p className="flex items-center justify-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+          <Avatar name={agentInfo.full_name} size={7} />
+          This lead belongs to {agentInfo.full_name}
+          {!canEdit && " — you can look, not touch"}
+        </p>
+      )}
+    </Shell>
   );
 }
