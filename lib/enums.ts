@@ -22,6 +22,16 @@ export function serviceLabel(value: string | null) {
   return SERVICES.find((s) => s.value === value)?.label ?? value;
 }
 
+export function fmtMoney(value: number) {
+  return (
+    "$" +
+    value.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
+  );
+}
+
 export const STAGE_BADGE: Record<string, string> = {
   new: "bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100",
   in_conversation:

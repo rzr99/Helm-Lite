@@ -1,0 +1,312 @@
+import Link from "next/link";
+import { Shell } from "@/components/shell";
+import {
+  Card,
+  EmptyState,
+  Avatar,
+  btnPrimary,
+  btnSecondary,
+  inputClass,
+} from "@/components/ui";
+import { requireProfile, isFloorRole } from "@/lib/profile";
+import { SERVICES, serviceLabel, fmtMoney } from "@/lib/enums";
+
+export const dynamic = "force-dynamic";
+
+const filterLabel =
+  "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+
+type DealRow = {
+  id: string;
+  client_name: string;
+  service_type: string;
+  deal_size: number;
+  revenue_received: number;
+  date_closed: string;
+  agent: { full_name: string } | null;
+  lead: { id: string; handle: string } | null;
+};
+
+export default async function SalesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    service?: string;
+    agent?: string;
+    from?: string;
+    to?: string;
+  }>;
+}) {
+  const { supabase, profile } = await requireProfile();
+  const floor = isFloorRole(profile.role);
+  const { service, agent, from, to } = await searchParams;
+
+  let teammates: { id: string; full_name: string }[] = [];
+  if (floor) {
+    const { data } = await supabase
+      .from("users")
+      .select("id, full_name")
+      .eq("active", true)
+      .order("full_name");
+    teammates = data ?? [];
+  }
+
+  let query = supabase
+    .from("deals")
+    .select(
+      "id, client_name, service_type, deal_size, revenue_received, date_closed, agent:users(full_name), lead:leads(id, handle)"
+    )
+    .order("date_closed", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (service && SERVICES.some((s) => s.value === service)) {
+    query = query.eq("service_type", service);
+  }
+  if (floor && agent) query = query.eq("agent_id", agent);
+  if (from) query = query.gte("date_closed", from);
+  if (to) query = query.lte("date_closed", to);
+
+  const { data } = await query;
+  const deals = (data ?? []) as unknown as DealRow[];
+  const hasFilters = Boolean(service || agent || from || to);
+
+  const totalRevenue = deals.reduce((sum, d) => sum + Number(d.revenue_received), 0);
+  const totalDealSize = deals.reduce((sum, d) => sum + Number(d.deal_size), 0);
+  const avgDeal = deals.length > 0 ? totalDealSize / deals.length : 0;
+
+  const byService = SERVICES.map((s) => {
+    const theirs = deals.filter((d) => d.service_type === s.value);
+    return {
+      ...s,
+      revenue: theirs.reduce((sum, d) => sum + Number(d.revenue_received), 0),
+      count: theirs.length,
+    };
+  }).filter((s) => s.count > 0);
+  const maxServiceRevenue = Math.max(1, ...byService.map((s) => s.revenue));
+
+  return (
+    <Shell
+      profile={profile}
+      active="sales"
+      title="Sales"
+      subtitle={
+        floor
+          ? "Closed deals and revenue across the floor."
+          : "Your closed deals and revenue."
+      }
+      action={
+        <Link href="/sales/new" className={btnPrimary}>
+          + Log deal
+        </Link>
+      }
+    >
+      <Card padded={false}>
+        <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
+          <div>
+            <label className={filterLabel}>Service</label>
+            <select
+              name="service"
+              defaultValue={service ?? ""}
+              className={inputClass}
+            >
+              <option value="">All services</option>
+              {SERVICES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {floor && (
+            <div>
+              <label className={filterLabel}>Agent</label>
+              <select
+                name="agent"
+                defaultValue={agent ?? ""}
+                className={inputClass}
+              >
+                <option value="">All agents</option>
+                {teammates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className={filterLabel}>Closed from</label>
+            <input
+              type="date"
+              name="from"
+              defaultValue={from ?? ""}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={filterLabel}>Closed to</label>
+            <input
+              type="date"
+              name="to"
+              defaultValue={to ?? ""}
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button type="submit" className={btnPrimary}>
+              Filter
+            </button>
+            {hasFilters && (
+              <Link href="/sales" className={btnSecondary}>
+                Clear
+              </Link>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <Card padded>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Revenue received{hasFilters ? " (filtered)" : ""}
+          </p>
+          <p className="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+            {fmtMoney(totalRevenue)}
+          </p>
+        </Card>
+        <Card padded>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Deals closed{hasFilters ? " (filtered)" : ""}
+          </p>
+          <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+            {deals.length}
+          </p>
+        </Card>
+        <Card padded>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Average deal size
+          </p>
+          <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+            {fmtMoney(avgDeal)}
+          </p>
+        </Card>
+      </div>
+
+      {byService.length > 0 && (
+        <Card
+          title="Revenue by service"
+          description="Where the money is coming from."
+        >
+          <ul className="flex flex-col gap-4">
+            {byService.map((s) => (
+              <li key={s.value}>
+                <div className="mb-1 flex items-baseline justify-between text-sm">
+                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                    {s.label}
+                    <span className="ml-2 text-xs text-zinc-400">
+                      {s.count} deal{s.count === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+                    {fmtMoney(s.revenue)}
+                  </span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  <div
+                    className="h-full rounded-full bg-emerald-500"
+                    style={{
+                      width: `${Math.round((s.revenue / maxServiceRevenue) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Card
+        title={`${deals.length} deal${deals.length === 1 ? "" : "s"}${hasFilters ? " found" : ""}`}
+        padded={false}
+      >
+        {deals.length === 0 ? (
+          <EmptyState
+            emoji={hasFilters ? "🔍" : "💰"}
+            title={hasFilters ? "Nothing matches these filters" : "No deals yet"}
+            hint={
+              hasFilters
+                ? "Try widening the date range or clearing a filter."
+                : "When you close a lead, log the deal here and it counts toward revenue."
+            }
+            actionHref={hasFilters ? undefined : "/sales/new"}
+            actionLabel={hasFilters ? undefined : "+ Log deal"}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Client</th>
+                  <th className="px-5 py-3 font-semibold">Service</th>
+                  <th className="px-5 py-3 font-semibold">Deal size</th>
+                  <th className="px-5 py-3 font-semibold">Received</th>
+                  <th className="px-5 py-3 font-semibold">Closed</th>
+                  {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {deals.map((deal) => (
+                  <tr
+                    key={deal.id}
+                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  >
+                    <td className="px-5 py-3.5">
+                      <Link
+                        href={`/sales/${deal.id}`}
+                        className="font-semibold text-zinc-900 hover:underline dark:text-zinc-50"
+                      >
+                        {deal.client_name}
+                      </Link>
+                      {deal.lead && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          from {deal.lead.handle}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {serviceLabel(deal.service_type)}
+                    </td>
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {fmtMoney(Number(deal.deal_size))}
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                      {fmtMoney(Number(deal.revenue_received))}
+                    </td>
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {deal.date_closed}
+                    </td>
+                    {floor && (
+                      <td className="px-5 py-3.5">
+                        {deal.agent ? (
+                          <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                            <Avatar name={deal.agent.full_name} size={7} />
+                            {deal.agent.full_name}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </Shell>
+  );
+}

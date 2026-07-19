@@ -37,9 +37,22 @@ function LeadsIcon() {
   );
 }
 
+function SalesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21h18" />
+      <path d="M6 21V12" />
+      <path d="M11 21V7" />
+      <path d="M16 21v-6" />
+      <path d="M21 21V4" />
+    </svg>
+  );
+}
+
 const navLinks = [
   { key: "dashboard", href: "/", label: "Dashboard", icon: <HomeIcon /> },
   { key: "leads", href: "/leads", label: "Leads", icon: <LeadsIcon /> },
+  { key: "sales", href: "/sales", label: "Sales", icon: <SalesIcon /> },
 ];
 
 function NavList({ active }: { active: string }) {

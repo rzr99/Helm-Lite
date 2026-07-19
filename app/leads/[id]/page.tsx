@@ -90,6 +90,16 @@ export default async function LeadDetailPage({
             ? "Where this conversation stands. Click any stage to move it — it saves instantly."
             : "Where this conversation stands."
         }
+        action={
+          canEdit ? (
+            <Link
+              href={`/sales/new?lead=${lead.id}`}
+              className="rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900"
+            >
+              💰 Log a deal
+            </Link>
+          ) : undefined
+        }
       >
         <div className="flex flex-wrap gap-2">
           {STAGES.map((s) => {
