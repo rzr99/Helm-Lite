@@ -57,7 +57,7 @@ export default async function ExpenseDetailPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>Category</label>
+                <label className={labelClass}>Section</label>
                 <select
                   name="category"
                   defaultValue={expense.category}
@@ -73,9 +73,12 @@ export default async function ExpenseDetailPage({
             </div>
 
             <div>
-              <label className={labelClass}>Description</label>
+              <label className={labelClass}>
+                Item <span className="text-red-500">*</span>
+              </label>
               <input
                 name="description"
+                required
                 defaultValue={expense.description ?? ""}
                 className={inputClass}
               />
@@ -83,7 +86,7 @@ export default async function ExpenseDetailPage({
 
             <div>
               <label className={labelClass}>
-                Amount ($) <span className="text-red-500">*</span>
+                Amount (Rs) <span className="text-red-500">*</span>
               </label>
               <input
                 name="amount"

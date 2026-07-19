@@ -22,17 +22,28 @@ export function serviceLabel(value: string | null) {
   return SERVICES.find((s) => s.value === value)?.label ?? value;
 }
 
+// Sections mirror the owner's expense spreadsheet.
 export const EXPENSE_CATEGORIES = [
-  { value: "proxy", label: "Proxy" },
-  { value: "vcc", label: "VCC" },
-  { value: "premium", label: "Premium" },
-  { value: "account_purchase", label: "Account purchase" },
-  { value: "production_house", label: "Production house" },
-  { value: "other", label: "Other" },
+  { value: "subscription", label: "Subscription" },
+  { value: "others", label: "Others" },
+  { value: "utilities", label: "Utilities" },
+  { value: "production", label: "Production" },
+  { value: "salary", label: "Salary" },
+  { value: "extras", label: "Extras" },
 ] as const;
 
 export function expenseCategoryLabel(value: string) {
   return EXPENSE_CATEGORIES.find((c) => c.value === value)?.label ?? value;
+}
+
+export function fmtPKR(value: number) {
+  return (
+    "Rs " +
+    value.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
+  );
 }
 
 export const ACCOUNT_STATUSES = [

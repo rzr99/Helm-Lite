@@ -22,11 +22,13 @@ export async function createExpense(formData: FormData) {
   const supabase = await createClient();
 
   const values = {
-    category: text(formData, "category") || "other",
+    category: text(formData, "category") || "others",
     description: text(formData, "description"),
     amount: money(formData, "amount"),
     date: text(formData, "date") || todayStr(),
   };
+
+  if (!values.description) throw new Error("Give the item a name.");
 
   const { error } = await supabase.from("expenses").insert(values);
 
@@ -35,15 +37,31 @@ export async function createExpense(formData: FormData) {
   revalidatePath("/expenses");
 }
 
+export async function setMonthlyClosing(month: string, formData: FormData) {
+  const supabase = await createClient();
+
+  const closing = money(formData, "closing");
+
+  const { error } = await supabase
+    .from("monthly_finances")
+    .upsert({ month, closing });
+
+  if (error) throw new Error("Could not save the closing: " + error.message);
+
+  revalidatePath("/expenses");
+}
+
 export async function updateExpense(expenseId: string, formData: FormData) {
   const supabase = await createClient();
 
   const values = {
-    category: text(formData, "category") || "other",
+    category: text(formData, "category") || "others",
     description: text(formData, "description"),
     amount: money(formData, "amount"),
     date: text(formData, "date") || todayStr(),
   };
+
+  if (!values.description) throw new Error("Give the item a name.");
 
   const { error } = await supabase
     .from("expenses")
