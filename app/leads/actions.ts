@@ -48,7 +48,6 @@ export async function updateLead(leadId: string, formData: FormData) {
     name: text(formData, "name") || null,
     service_interest: text(formData, "service_interest") || null,
     source: text(formData, "source") || null,
-    stage: text(formData, "stage") || "new",
     notes: text(formData, "notes"),
   };
 
@@ -60,6 +59,21 @@ export async function updateLead(leadId: string, formData: FormData) {
     .eq("id", leadId);
 
   if (error) throw new Error("Could not update the lead: " + error.message);
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/");
+}
+
+export async function setStage(leadId: string, stage: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("leads")
+    .update({ stage })
+    .eq("id", leadId);
+
+  if (error) throw new Error("Could not move the lead: " + error.message);
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);

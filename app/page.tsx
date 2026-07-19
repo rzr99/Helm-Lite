@@ -29,7 +29,19 @@ export default async function Dashboard() {
     .lte("due_date", today)
     .order("due_date");
 
-  const { data: leadRows } = await supabase.from("leads").select("stage");
+  const { data: leadRows } = await supabase
+    .from("leads")
+    .select("stage, agent_id, date_added");
+
+  let teammates: { id: string; full_name: string }[] = [];
+  if (floor) {
+    const { data } = await supabase
+      .from("users")
+      .select("id, full_name")
+      .eq("active", true)
+      .order("full_name");
+    teammates = data ?? [];
+  }
 
   const rows = (followUps ?? []) as unknown as FollowUpRow[];
   const overdue = rows.filter((f) => f.due_date < today);
@@ -39,6 +51,16 @@ export default async function Dashboard() {
   for (const lead of leadRows ?? []) {
     counts[lead.stage] = (counts[lead.stage] ?? 0) + 1;
   }
+
+  const byAgent = teammates.map((t) => {
+    const theirs = (leadRows ?? []).filter((l) => l.agent_id === t.id);
+    return {
+      ...t,
+      total: theirs.length,
+      addedToday: theirs.filter((l) => l.date_added === today).length,
+      closed: theirs.filter((l) => l.stage === "closed").length,
+    };
+  });
 
   function FollowUpList({
     items,
@@ -122,6 +144,56 @@ export default async function Dashboard() {
             </Link>
           ))}
         </section>
+
+        {floor && byAgent.length > 0 && (
+          <section>
+            <h2 className="mb-3 text-lg font-medium text-black dark:text-zinc-50">
+              By agent
+            </h2>
+            <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Agent</th>
+                    <th className="px-4 py-3 font-medium">Total leads</th>
+                    <th className="px-4 py-3 font-medium">Added today</th>
+                    <th className="px-4 py-3 font-medium">Closed</th>
+                    <th className="px-4 py-3 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {byAgent.map((a) => (
+                    <tr
+                      key={a.id}
+                      className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                    >
+                      <td className="px-4 py-3 font-medium text-black dark:text-zinc-50">
+                        {a.full_name}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                        {a.total}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                        {a.addedToday}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                        {a.closed}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/leads?agent=${a.id}`}
+                          className="text-sm font-medium text-black hover:underline dark:text-zinc-50"
+                        >
+                          View leads →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         <section>
           <h2 className="mb-3 text-lg font-medium text-black dark:text-zinc-50">

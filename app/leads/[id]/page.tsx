@@ -8,7 +8,12 @@ import {
   serviceLabel,
   STAGE_BADGE,
 } from "@/lib/enums";
-import { updateLead, addFollowUp, setFollowUpDone } from "@/app/leads/actions";
+import {
+  updateLead,
+  addFollowUp,
+  setFollowUpDone,
+  setStage,
+} from "@/app/leads/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +88,34 @@ export default async function LeadDetailPage({
           </p>
         )}
 
+        {canEdit && (
+          <div className="-mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              Move to:
+            </span>
+            {STAGES.map((s) => {
+              const isCurrent = s.value === lead.stage;
+              const move = setStage.bind(null, lead.id, s.value);
+              return (
+                <form key={s.value} action={move}>
+                  <button
+                    type="submit"
+                    disabled={isCurrent}
+                    className={
+                      "rounded-full border px-3 py-1 text-sm font-medium transition-colors " +
+                      (isCurrent
+                        ? "border-black bg-black text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-black"
+                        : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900")
+                    }
+                  >
+                    {s.label}
+                  </button>
+                </form>
+              );
+            })}
+          </div>
+        )}
+
         {canEdit ? (
           <form
             action={saveLead}
@@ -128,20 +161,6 @@ export default async function LeadDetailPage({
                   defaultValue={lead.source ?? ""}
                   className={inputClass}
                 />
-              </div>
-              <div>
-                <label className={labelClass}>Stage</label>
-                <select
-                  name="stage"
-                  defaultValue={lead.stage}
-                  className={inputClass}
-                >
-                  {STAGES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className={labelClass}>Date added</label>
