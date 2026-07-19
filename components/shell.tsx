@@ -49,16 +49,35 @@ function SalesIcon() {
   );
 }
 
+function ActivityIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12h4l3-8 4 16 3-8h4" />
+    </svg>
+  );
+}
+
 const navLinks = [
   { key: "dashboard", href: "/", label: "Dashboard", icon: <HomeIcon /> },
   { key: "leads", href: "/leads", label: "Leads", icon: <LeadsIcon /> },
   { key: "sales", href: "/sales", label: "Sales", icon: <SalesIcon /> },
+  {
+    key: "activity",
+    href: "/activity",
+    label: "Activity",
+    icon: <ActivityIcon />,
+    floorOnly: true,
+  },
 ];
 
-function NavList({ active }: { active: string }) {
+function visibleLinks(role: string) {
+  return navLinks.filter((l) => !("floorOnly" in l && l.floorOnly) || role !== "agent");
+}
+
+function NavList({ active, role }: { active: string; role: string }) {
   return (
     <nav className="flex flex-col gap-1">
-      {navLinks.map((l) => {
+      {visibleLinks(role).map((l) => {
         const isActive = l.key === active;
         return (
           <Link
@@ -113,7 +132,7 @@ export function Shell({
       {/* Sidebar (desktop) */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-zinc-200 bg-white px-3 py-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex">
         <Brand />
-        <NavList active={active} />
+        <NavList active={active} role={profile.role} />
         <div className="mt-auto flex flex-col gap-3 border-t border-zinc-100 px-1 pt-4 dark:border-zinc-800">
           <div className="flex items-center gap-3 px-2">
             <Avatar name={profile.full_name} size={9} />
@@ -147,7 +166,7 @@ export function Shell({
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 lg:hidden">
           <Brand />
           <div className="flex items-center gap-2">
-            {navLinks.map((l) => (
+            {visibleLinks(profile.role).map((l) => (
               <Link
                 key={l.key}
                 href={l.href}

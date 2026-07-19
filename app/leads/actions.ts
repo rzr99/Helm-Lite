@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { todayStr } from "@/lib/dates";
 
 function text(formData: FormData, key: string) {
   return ((formData.get(key) as string) || "").trim();
@@ -23,6 +24,7 @@ export async function createLead(formData: FormData) {
     source: text(formData, "source") || null,
     stage: text(formData, "stage") || "new",
     notes: text(formData, "notes"),
+    date_added: todayStr(),
   };
 
   if (!values.handle) throw new Error("The lead needs a handle or name.");
