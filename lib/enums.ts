@@ -22,6 +22,19 @@ export function serviceLabel(value: string | null) {
   return SERVICES.find((s) => s.value === value)?.label ?? value;
 }
 
+export const EXPENSE_CATEGORIES = [
+  { value: "proxy", label: "Proxy" },
+  { value: "vcc", label: "VCC" },
+  { value: "premium", label: "Premium" },
+  { value: "account_purchase", label: "Account purchase" },
+  { value: "production_house", label: "Production house" },
+  { value: "other", label: "Other" },
+] as const;
+
+export function expenseCategoryLabel(value: string) {
+  return EXPENSE_CATEGORIES.find((c) => c.value === value)?.label ?? value;
+}
+
 export const ACCOUNT_STATUSES = [
   { value: "active", label: "Active" },
   { value: "warming", label: "Warming" },

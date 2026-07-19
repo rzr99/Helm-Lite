@@ -69,6 +69,16 @@ function PersonasIcon() {
   );
 }
 
+function ExpensesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="6" width="18" height="13" rx="3" />
+      <path d="M3 10h18" />
+      <path d="M7 15h4" />
+    </svg>
+  );
+}
+
 type NavLink = {
   key: string;
   href: string;
@@ -94,6 +104,13 @@ const navLinks: NavLink[] = [
     href: "/personas",
     label: "Personas",
     icon: <PersonasIcon />,
+    ownerOnly: true,
+  },
+  {
+    key: "expenses",
+    href: "/expenses",
+    label: "Expenses",
+    icon: <ExpensesIcon />,
     ownerOnly: true,
   },
 ];
