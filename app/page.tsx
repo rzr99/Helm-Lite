@@ -4,6 +4,7 @@ import { Card, EmptyState, Avatar, btnPrimary, btnGhost } from "@/components/ui"
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
 import { setFollowUpDone } from "@/app/leads/actions";
+import { todayStr } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +29,12 @@ export default async function Dashboard() {
   const floor = isFloorRole(profile.role);
   const firstName = profile.full_name.split(" ")[0] || profile.full_name;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
 
   const { data: followUps } = await supabase
     .from("follow_ups")
     .select("id, due_date, note, lead:leads(id, handle), agent:users(full_name)")
     .eq("done", false)
-    .lte("due_date", today)
     .order("due_date");
 
   const { data: leadRows } = await supabase
@@ -54,6 +54,7 @@ export default async function Dashboard() {
   const rows = (followUps ?? []) as unknown as FollowUpRow[];
   const overdue = rows.filter((f) => f.due_date < today);
   const dueToday = rows.filter((f) => f.due_date === today);
+  const upcoming = rows.filter((f) => f.due_date > today);
 
   const counts: Record<string, number> = {};
   for (const lead of leadRows ?? []) {
@@ -70,7 +71,13 @@ export default async function Dashboard() {
     };
   });
 
-  function FollowUpItem({ f, tone }: { f: FollowUpRow; tone: "red" | "amber" }) {
+  function FollowUpItem({
+    f,
+    tone,
+  }: {
+    f: FollowUpRow;
+    tone: "red" | "amber" | "zinc";
+  }) {
     const markDone = setFollowUpDone.bind(null, f.id, true, "/");
     return (
       <li className="flex items-center justify-between gap-3 px-5 py-3">
@@ -78,7 +85,11 @@ export default async function Dashboard() {
           <span
             className={
               "h-2.5 w-2.5 shrink-0 rounded-full " +
-              (tone === "red" ? "bg-red-500" : "bg-amber-400")
+              (tone === "red"
+                ? "bg-red-500"
+                : tone === "amber"
+                  ? "bg-amber-400"
+                  : "bg-zinc-300 dark:bg-zinc-600")
             }
           />
           <div className="min-w-0">
@@ -209,14 +220,14 @@ export default async function Dashboard() {
 
       <Card
         title="Follow-ups"
-        description="Everything that needs a touch today — overdue first."
+        description="Overdue first, then today, then what's coming."
         padded={false}
       >
-        {overdue.length === 0 && dueToday.length === 0 ? (
+        {overdue.length === 0 && dueToday.length === 0 && upcoming.length === 0 ? (
           <EmptyState
             emoji="🎉"
             title="All caught up"
-            hint="No follow-ups due or overdue. Add follow-up dates on your leads and they'll show up here."
+            hint="No open follow-ups anywhere. Add follow-up dates on your leads and they'll show up here."
           />
         ) : (
           <div>
@@ -240,6 +251,18 @@ export default async function Dashboard() {
                 <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {dueToday.map((f) => (
                     <FollowUpItem key={f.id} f={f} tone="amber" />
+                  ))}
+                </ul>
+              </>
+            )}
+            {upcoming.length > 0 && (
+              <>
+                <p className="border-b border-t border-zinc-100 bg-zinc-50 px-5 py-2 text-xs font-bold uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400">
+                  Upcoming · {upcoming.length}
+                </p>
+                <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {upcoming.map((f) => (
+                    <FollowUpItem key={f.id} f={f} tone="zinc" />
                   ))}
                 </ul>
               </>

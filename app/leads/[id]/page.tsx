@@ -17,6 +17,7 @@ import {
   setFollowUpDone,
   setStage,
 } from "@/app/leads/actions";
+import { todayStr } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function LeadDetailPage({
   const followUps = (fuData ?? []) as FollowUp[];
   const openFollowUps = followUps.filter((f) => !f.done);
   const doneFollowUps = followUps.filter((f) => f.done);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
 
   const saveLead = updateLead.bind(null, lead.id);
   const saveFollowUp = addFollowUp.bind(null, lead.id, lead.agent_id);
