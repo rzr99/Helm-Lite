@@ -104,6 +104,7 @@ export async function createAccount(personaId: string, formData: FormData) {
   if (error) throw new Error("Could not save the account: " + error.message);
 
   revalidatePath(`/personas/${personaId}`);
+  redirect(`/personas/${personaId}`);
 }
 
 export async function updateAccount(
