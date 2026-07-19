@@ -32,6 +32,34 @@ type ExpenseRow = {
   date: string;
 };
 
+// Each sheet section gets its own color band.
+const sectionStyle: Record<string, { band: string; text: string }> = {
+  subscription: {
+    band: "bg-indigo-50 border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900",
+    text: "text-indigo-700 dark:text-indigo-300",
+  },
+  others: {
+    band: "bg-zinc-100 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700",
+    text: "text-zinc-700 dark:text-zinc-300",
+  },
+  utilities: {
+    band: "bg-sky-50 border-sky-100 dark:bg-sky-950/40 dark:border-sky-900",
+    text: "text-sky-700 dark:text-sky-300",
+  },
+  production: {
+    band: "bg-violet-50 border-violet-100 dark:bg-violet-950/40 dark:border-violet-900",
+    text: "text-violet-700 dark:text-violet-300",
+  },
+  salary: {
+    band: "bg-amber-50 border-amber-100 dark:bg-amber-950/40 dark:border-amber-900",
+    text: "text-amber-700 dark:text-amber-300",
+  },
+  extras: {
+    band: "bg-pink-50 border-pink-100 dark:bg-pink-950/40 dark:border-pink-900",
+    text: "text-pink-700 dark:text-pink-300",
+  },
+};
+
 export default async function ExpensesPage({
   searchParams,
 }: {
@@ -197,11 +225,29 @@ export default async function ExpensesPage({
       <Card padded={false}>
         {sections.map((s) => (
           <div key={s.label}>
-            <div className="flex items-center justify-between border-b border-t border-zinc-200 bg-zinc-100 px-5 py-2 first:border-t-0 dark:border-zinc-700 dark:bg-zinc-800">
-              <p className="text-xs font-bold uppercase tracking-widest text-zinc-700 dark:text-zinc-200">
+            <div
+              className={
+                "flex items-center justify-between border-b border-t px-5 py-2.5 first:border-t-0 " +
+                (sectionStyle[s.value]?.band ??
+                  "bg-zinc-100 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700")
+              }
+            >
+              <p
+                className={
+                  "text-base font-extrabold uppercase tracking-widest " +
+                  (sectionStyle[s.value]?.text ??
+                    "text-zinc-700 dark:text-zinc-300")
+                }
+              >
                 {s.label}
               </p>
-              <p className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
+              <p
+                className={
+                  "text-base font-bold tabular-nums " +
+                  (sectionStyle[s.value]?.text ??
+                    "text-zinc-900 dark:text-zinc-50")
+                }
+              >
                 {s.total > 0 ? fmtPKR(s.total) : ""}
               </p>
             </div>
