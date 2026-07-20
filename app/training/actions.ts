@@ -54,6 +54,21 @@ export async function updateAsset(assetId: string, formData: FormData) {
   redirect(`/training/${assetId}`);
 }
 
+// Saves just the written content, from the editor on the material page.
+export async function updateContent(assetId: string, formData: FormData) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("training_assets")
+    .update({ content: text(formData, "content") || null })
+    .eq("id", assetId);
+
+  if (error) throw new Error("Could not save: " + error.message);
+
+  revalidatePath(`/training/${assetId}`);
+  revalidatePath("/training");
+}
+
 export async function deleteAsset(assetId: string) {
   const supabase = await createClient();
 
