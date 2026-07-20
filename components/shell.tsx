@@ -129,6 +129,13 @@ const navLinks: NavLink[] = [
     label: "Training",
     icon: <TrainingIcon />,
   },
+  {
+    key: "team",
+    href: "/team",
+    label: "Team",
+    icon: <LeadsIcon />,
+    ownerOnly: true,
+  },
 ];
 
 function visibleLinks(role: string) {
