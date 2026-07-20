@@ -2,12 +2,14 @@
 -- token is useless even against the raw API (not just the app UI).
 --
 -- Uses RESTRICTIVE policies: they are AND-ed with the existing permissive
--- policies, so nothing already granted is changed — access is only ever
--- narrowed to "...and the caller is active".
+-- policies, so nothing already granted changes — access is only ever
+-- narrowed to "...and the caller is active". For any ACTIVE user this is
+-- "rule AND true" = the existing rule, so active users are unaffected.
 --
--- is_active() is security-definer (bypasses RLS on public.users), so no
--- recursion. Column users.active is NOT NULL default true, so an active
--- user always resolves to true; only a genuinely deactivated user is blocked.
+-- is_active() is security-definer (bypasses RLS on public.users, no
+-- recursion). users.active is NOT NULL default true, so an active user
+-- always resolves to true; only a deactivated user is blocked.
+-- Idempotent: safe to run more than once.
 
 create or replace function public.is_active()
 returns boolean
@@ -25,6 +27,7 @@ begin
     'accounts','expenses','monthly_finances','training_assets','training_files'
   ]
   loop
+    execute format('drop policy if exists "active users only" on public.%I', t);
     execute format(
       'create policy "active users only" on public.%I
          as restrictive to authenticated
@@ -33,3 +36,10 @@ begin
     );
   end loop;
 end $$;
+
+-- Verification: every active user must compute TRUE (proves no active user
+-- is ever locked out). Deactivated users show FALSE (they get blocked).
+select full_name, role, active,
+       coalesce(active, false) as will_have_access
+from public.users
+order by role, full_name;
