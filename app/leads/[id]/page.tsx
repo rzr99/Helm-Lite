@@ -41,14 +41,17 @@ export default async function LeadDetailPage({
   const { data: lead } = await supabase
     .from("leads")
     .select(
-      "id, agent_id, handle, name, service_interest, source, stage, date_added, notes, agent:users(full_name)"
+      "id, agent_id, handle, name, service_interest, source, stage, date_added, notes, agent:users(full_name, avatar_url)"
     )
     .eq("id", id)
     .single();
 
   if (!lead) notFound();
 
-  const agentInfo = lead.agent as unknown as { full_name: string } | null;
+  const agentInfo = lead.agent as unknown as {
+    full_name: string;
+    avatar_url: string | null;
+  } | null;
   const canEdit = profile.role === "owner" || lead.agent_id === profile.id;
 
   const { data: fuData } = await supabase
@@ -400,7 +403,7 @@ export default async function LeadDetailPage({
 
       {floor && agentInfo && (
         <p className="flex items-center justify-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
-          <Avatar name={agentInfo.full_name} size={7} />
+          <Avatar name={agentInfo.full_name} src={agentInfo.avatar_url} size={7} />
           This lead belongs to {agentInfo.full_name}
           {!canEdit && " — you can look, not touch"}
         </p>

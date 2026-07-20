@@ -206,8 +206,12 @@ export function Shell({
         <Brand />
         <NavList active={active} role={profile.role} />
         <div className="mt-auto flex flex-col gap-3 border-t border-zinc-100 px-1 pt-4 dark:border-zinc-800">
-          <div className="flex items-center gap-3 px-2">
-            <Avatar name={profile.full_name} size={9} />
+          <Link
+            href="/profile"
+            className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            title="Your profile — name and picture"
+          >
+            <Avatar name={profile.full_name} src={profile.avatar_url} size={9} />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
                 {profile.full_name}
@@ -221,7 +225,7 @@ export function Shell({
                 {roleLabel[profile.role]}
               </span>
             </div>
-          </div>
+          </Link>
           <form action={signOut}>
             <button
               type="submit"
@@ -252,6 +256,9 @@ export function Shell({
                 {l.label}
               </Link>
             ))}
+            <Link href="/profile" className="flex items-center">
+              <Avatar name={profile.full_name} src={profile.avatar_url} size={7} />
+            </Link>
             <form action={signOut}>
               <button
                 type="submit"

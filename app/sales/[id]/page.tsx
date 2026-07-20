@@ -26,14 +26,17 @@ export default async function DealDetailPage({
   const { data: deal } = await supabase
     .from("deals")
     .select(
-      "id, agent_id, client_name, service_type, deal_size, revenue_received, date_closed, agent:users(full_name), lead:leads(id, handle)"
+      "id, agent_id, client_name, service_type, deal_size, revenue_received, date_closed, agent:users(full_name, avatar_url), lead:leads(id, handle)"
     )
     .eq("id", id)
     .single();
 
   if (!deal) notFound();
 
-  const agentInfo = deal.agent as unknown as { full_name: string } | null;
+  const agentInfo = deal.agent as unknown as {
+    full_name: string;
+    avatar_url: string | null;
+  } | null;
   const leadInfo = deal.lead as unknown as {
     id: string;
     handle: string;
@@ -191,7 +194,7 @@ export default async function DealDetailPage({
 
       {floor && agentInfo && (
         <p className="flex items-center justify-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
-          <Avatar name={agentInfo.full_name} size={7} />
+          <Avatar name={agentInfo.full_name} src={agentInfo.avatar_url} size={7} />
           This deal belongs to {agentInfo.full_name}
           {!canEdit && " — you can look, not touch"}
         </p>

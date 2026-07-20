@@ -41,11 +41,12 @@ export default async function Dashboard() {
     .from("leads")
     .select("stage, agent_id, date_added");
 
-  let teammates: { id: string; full_name: string }[] = [];
+  let teammates: { id: string; full_name: string; avatar_url: string | null }[] =
+    [];
   if (floor) {
     const { data } = await supabase
       .from("users")
-      .select("id, full_name")
+      .select("id, full_name, avatar_url")
       .eq("active", true)
       .order("full_name");
     teammates = data ?? [];
@@ -181,7 +182,7 @@ export default async function Dashboard() {
                 className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <Avatar name={a.full_name} />
+                  <Avatar name={a.full_name} src={a.avatar_url} />
                   <span className="font-medium text-zinc-900 dark:text-zinc-50">
                     {a.full_name}
                   </span>

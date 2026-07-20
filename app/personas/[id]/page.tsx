@@ -50,7 +50,7 @@ export default async function PersonaDetailPage({
       .single(),
     supabase
       .from("users")
-      .select("id, full_name")
+      .select("id, full_name, avatar_url")
       .eq("active", true)
       .order("full_name"),
   ]);
@@ -95,7 +95,7 @@ export default async function PersonaDetailPage({
             <span className="text-zinc-500 dark:text-zinc-400">Run by</span>
             {manager ? (
               <span className="flex items-center gap-2 font-medium text-zinc-900 dark:text-zinc-50">
-                <Avatar name={manager.full_name} size={7} />
+                <Avatar name={manager.full_name} src={manager.avatar_url} size={7} />
                 {manager.full_name}
               </span>
             ) : (

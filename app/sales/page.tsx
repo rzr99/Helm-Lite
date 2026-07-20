@@ -23,7 +23,7 @@ type DealRow = {
   deal_size: number;
   revenue_received: number;
   date_closed: string;
-  agent: { full_name: string } | null;
+  agent: { full_name: string; avatar_url: string | null } | null;
   lead: { id: string; handle: string } | null;
 };
 
@@ -54,7 +54,7 @@ export default async function SalesPage({
   let query = supabase
     .from("deals")
     .select(
-      "id, client_name, service_type, deal_size, revenue_received, date_closed, agent:users(full_name), lead:leads(id, handle)"
+      "id, client_name, service_type, deal_size, revenue_received, date_closed, agent:users(full_name, avatar_url), lead:leads(id, handle)"
     )
     .order("date_closed", { ascending: false })
     .order("created_at", { ascending: false });
@@ -292,7 +292,11 @@ export default async function SalesPage({
                       <td className="px-5 py-3.5">
                         {deal.agent ? (
                           <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-                            <Avatar name={deal.agent.full_name} size={7} />
+                            <Avatar
+                              name={deal.agent.full_name}
+                              src={deal.agent.avatar_url}
+                              size={7}
+                            />
                             {deal.agent.full_name}
                           </span>
                         ) : (

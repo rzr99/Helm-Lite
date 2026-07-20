@@ -18,7 +18,7 @@ type PersonaRow = {
   persona_name: string;
   contact_email: string | null;
   contact_phone: string | null;
-  manager: { full_name: string } | null;
+  manager: { full_name: string; avatar_url: string | null } | null;
   accounts: { count: number }[];
 };
 
@@ -30,7 +30,7 @@ export default async function PersonasPage() {
     supabase
       .from("personas")
       .select(
-        "id, persona_name, contact_email, contact_phone, manager:users(full_name), accounts(count)"
+        "id, persona_name, contact_email, contact_phone, manager:users(full_name, avatar_url), accounts(count)"
       )
       .order("persona_name"),
     supabase.from("platforms").select("name").order("name"),
@@ -91,7 +91,11 @@ export default async function PersonasPage() {
                     <td className="px-5 py-3.5">
                       {p.manager ? (
                         <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-                          <Avatar name={p.manager.full_name} size={7} />
+                          <Avatar
+                            name={p.manager.full_name}
+                            src={p.manager.avatar_url}
+                            size={7}
+                          />
                           {p.manager.full_name}
                         </span>
                       ) : (

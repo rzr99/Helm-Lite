@@ -92,7 +92,35 @@ const avatarColors = [
   "bg-teal-500",
 ];
 
-export function Avatar({ name, size = 8 }: { name: string; size?: 7 | 8 | 9 }) {
+export function Avatar({
+  name,
+  src,
+  size = 8,
+}: {
+  name: string;
+  src?: string | null;
+  size?: 7 | 8 | 9 | 16;
+}) {
+  const sizeClass =
+    size === 7
+      ? "h-7 w-7 text-[10px]"
+      : size === 9
+        ? "h-9 w-9 text-sm"
+        : size === 16
+          ? "h-16 w-16 text-xl"
+          : "h-8 w-8 text-xs";
+
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={name}
+        className={`inline-block ${sizeClass} shrink-0 rounded-full border border-zinc-200 object-cover dark:border-zinc-700`}
+      />
+    );
+  }
+
   const initials = name
     .split(/\s+/)
     .filter((w) => /[a-z0-9]/i.test(w[0] ?? ""))
@@ -101,8 +129,6 @@ export function Avatar({ name, size = 8 }: { name: string; size?: 7 | 8 | 9 }) {
     .join("");
   const hash = [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
   const color = avatarColors[hash % avatarColors.length];
-  const sizeClass =
-    size === 7 ? "h-7 w-7 text-[10px]" : size === 9 ? "h-9 w-9 text-sm" : "h-8 w-8 text-xs";
   return (
     <span
       className={`inline-flex ${sizeClass} shrink-0 items-center justify-center rounded-full ${color} font-semibold text-white`}

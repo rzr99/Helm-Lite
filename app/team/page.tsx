@@ -18,7 +18,7 @@ export default async function TeamPage() {
 
   const { data } = await supabase
     .from("users")
-    .select("id, full_name, role, active")
+    .select("id, full_name, role, active, avatar_url")
     .order("full_name");
 
   const users = data ?? [];
@@ -77,7 +77,7 @@ export default async function TeamPage() {
                   action={save}
                   className="flex flex-wrap items-center gap-3"
                 >
-                  <Avatar name={u.full_name || "?"} size={9} />
+                  <Avatar name={u.full_name || "?"} src={u.avatar_url} size={9} />
                   <input
                     name="full_name"
                     required

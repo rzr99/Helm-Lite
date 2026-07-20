@@ -8,6 +8,7 @@ export type Profile = {
   full_name: string;
   role: Role;
   active: boolean;
+  avatar_url: string | null;
 };
 
 // Loads the signed-in user's profile, or sends them to the login page.
@@ -21,7 +22,7 @@ export async function requireProfile() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, full_name, role, active")
+    .select("id, full_name, role, active, avatar_url")
     .eq("id", user.id)
     .single();
 
