@@ -79,6 +79,16 @@ function ExpensesIcon() {
   );
 }
 
+function TrainingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5V6a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2z" />
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M9 8h7" />
+    </svg>
+  );
+}
+
 type NavLink = {
   key: string;
   href: string;
@@ -112,6 +122,12 @@ const navLinks: NavLink[] = [
     label: "Expenses",
     icon: <ExpensesIcon />,
     ownerOnly: true,
+  },
+  {
+    key: "training",
+    href: "/training",
+    label: "Training",
+    icon: <TrainingIcon />,
   },
 ];
 
