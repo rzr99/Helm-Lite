@@ -26,7 +26,12 @@ export async function requireProfile() {
     .eq("id", user.id)
     .single();
 
-  if (!profile) redirect("/login");
+  // No profile, or a deactivated account, means no access to the app.
+  // (The owner can never be deactivated — the Team page blocks self-deactivation.)
+  if (!profile || !profile.active) {
+    await supabase.auth.signOut();
+    redirect("/login?deactivated=1");
+  }
 
   return { supabase, profile: profile as Profile };
 }

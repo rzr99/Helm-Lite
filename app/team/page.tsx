@@ -126,8 +126,9 @@ export default async function TeamPage() {
       </Card>
 
       <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
-        Deactivating someone removes them from dropdowns; to fully block their
-        login, also delete them on the Supabase users page.
+        Deactivating someone locks them out of the app and hides them from
+        dropdowns — reversible any time by ticking Active again. When a person
+        leaves for good, also delete their login on the Supabase users page.
       </p>
     </Shell>
   );
