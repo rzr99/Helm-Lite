@@ -57,6 +57,16 @@ export async function updateAsset(assetId: string, formData: FormData) {
 export async function deleteAsset(assetId: string) {
   const supabase = await createClient();
 
+  // Remove any attached files from storage first.
+  const { data: files } = await supabase
+    .from("training_files")
+    .select("path")
+    .eq("asset_id", assetId);
+
+  if (files && files.length > 0) {
+    await supabase.storage.from("training").remove(files.map((f) => f.path));
+  }
+
   const { error } = await supabase
     .from("training_assets")
     .delete()
@@ -66,4 +76,23 @@ export async function deleteAsset(assetId: string) {
 
   revalidatePath("/training");
   redirect("/training");
+}
+
+export async function deleteFile(
+  fileId: string,
+  path: string,
+  assetId: string
+) {
+  const supabase = await createClient();
+
+  await supabase.storage.from("training").remove([path]);
+
+  const { error } = await supabase
+    .from("training_files")
+    .delete()
+    .eq("id", fileId);
+
+  if (error) throw new Error("Could not delete the file: " + error.message);
+
+  revalidatePath(`/training/${assetId}`);
 }
