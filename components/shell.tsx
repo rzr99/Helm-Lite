@@ -227,7 +227,7 @@ export function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#0e0e0d] font-sans lg:flex">
+    <div className="min-h-screen font-sans lg:flex">
       {/* Sidebar (desktop) */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-white/[0.07] bg-[#100f0d] px-3 py-6 lg:flex">
         <Brand />

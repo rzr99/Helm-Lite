@@ -46,7 +46,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#08080b] p-6 font-sans">
+    <div className="flex min-h-screen items-center justify-center p-6 font-sans">
       <div className="w-full max-w-sm animate-fade-up">
         <div className="mb-8 flex flex-col items-center gap-3">
           <svg viewBox="0 0 400 400" className="h-14 w-14 rounded-xl border border-white/10" aria-hidden>

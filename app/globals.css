@@ -88,7 +88,14 @@ html {
 }
 
 body {
-  background: var(--ink);
+  background-color: var(--ink);
+  /* Ink-dither halftone — a fine off-white stipple over the canvas,
+     two offset grids so it reads as scatter, not a rigid dot matrix. */
+  background-image:
+    radial-gradient(rgba(248, 247, 244, 0.11) 0.7px, transparent 0.8px),
+    radial-gradient(rgba(248, 247, 244, 0.08) 0.7px, transparent 0.8px);
+  background-size: 3px 3px, 3px 3px;
+  background-position: 0 0, 1.5px 1.5px;
   color: var(--paper);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
