@@ -1,26 +1,86 @@
 @import "tailwindcss";
 
+/* Linear Solutions brand system — exactly three colours, no tints beyond
+   opacity. Ink canvas (content canvas / secondary), warm off-white type,
+   a single amber accent used sparingly. */
 :root {
-  --background: #08080b;
-  --foreground: #f4f4f5;
+  --ink: #0e0e0d;
+  --paper: #f8f7f4;
+  --amber: #e87000;
+  --background: var(--ink);
+  --foreground: var(--paper);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* Refined indigo-violet brand accent (remaps the violet scale app-wide). */
+/* Collapse the app's palette to the brand. The accent families all resolve
+   to Amber #E87000; the old "rainbow" families resolve to neutral warm-grey
+   so nothing competes with the single accent. Red is kept only for
+   destructive actions; zinc stays as the neutral ramp. */
 @theme {
-  --color-violet-200: #d2d0ff;
-  --color-violet-300: #b4b1ff;
-  --color-violet-400: #9591ff;
-  --color-violet-500: #7b74f0;
-  --color-violet-600: #635fe0;
-  --color-violet-700: #5350c9;
-  --color-violet-950: #17162e;
+  /* Amber accent ramp (positive / key / CTA) */
+  --color-amber-50: #fff5ec;
+  --color-amber-100: #ffe8d4;
+  --color-amber-200: #ffd0a8;
+  --color-amber-300: #ffb277;
+  --color-amber-400: #ff9440;
+  --color-amber-500: #f5811a;
+  --color-amber-600: #e87000;
+  --color-amber-700: #c25e00;
+  --color-amber-800: #8f4500;
+  --color-amber-900: #5c2c00;
+  --color-amber-950: #2a1400;
+
+  --color-violet-50: #fff5ec;
+  --color-violet-100: #ffe8d4;
+  --color-violet-200: #ffd0a8;
+  --color-violet-300: #ffb277;
+  --color-violet-400: #ff9440;
+  --color-violet-500: #f5811a;
+  --color-violet-600: #e87000;
+  --color-violet-700: #c25e00;
+  --color-violet-800: #8f4500;
+  --color-violet-900: #5c2c00;
+  --color-violet-950: #2a1400;
+
+  --color-green-100: #ffe8d4;
+  --color-green-200: #ffd0a8;
+  --color-green-300: #ffb277;
+  --color-green-400: #ff9440;
+  --color-green-500: #f5811a;
+  --color-green-600: #e87000;
+  --color-green-700: #c25e00;
+  --color-green-800: #8f4500;
+  --color-green-900: #5c2c00;
+  --color-green-950: #2a1400;
+
+  /* Neutralised families (warm grey → reads as muted off-white on ink) */
+  --color-sky-100: #e8e8e6;
+  --color-sky-200: #d6d6d2;
+  --color-sky-300: #b8b8b2;
+  --color-sky-400: #9a9a93;
+  --color-sky-500: #787871;
+  --color-sky-600: #565650;
+  --color-sky-900: #24241f;
+  --color-sky-950: #171714;
+  --color-blue-100: #e8e8e6;
+  --color-blue-900: #24241f;
+  --color-indigo-50: #1a1a17;
+  --color-indigo-100: #e8e8e6;
+  --color-indigo-800: #2a2a26;
+  --color-indigo-950: #171714;
+  --color-teal-300: #b8b8b2;
+  --color-teal-500: #787871;
+  --color-pink-100: #e8e8e6;
+  --color-pink-800: #2a2a26;
+  --color-pink-950: #171714;
+  --color-fuchsia-500: #787871;
+  --color-rose-500: #787871;
 }
 
 html {
@@ -28,57 +88,47 @@ html {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Ambient aura — a violet glow up top and a soft one at the right,
-     so the canvas reads as lit depth rather than flat black. */
-  background-image:
-    radial-gradient(
-      72rem 44rem at 50% -14%,
-      rgba(99, 95, 224, 0.18),
-      transparent 66%
-    ),
-    radial-gradient(
-      44rem 32rem at 108% 0%,
-      rgba(99, 95, 224, 0.08),
-      transparent 60%
-    );
-  background-attachment: fixed;
+  letter-spacing: -0.011em;
 }
 
 ::selection {
-  background: rgba(99, 95, 224, 0.35);
-  color: #fff;
+  background: var(--amber);
+  color: var(--ink);
 }
 
-/* Thin, dark scrollbars. */
+/* Thin brand scrollbars. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #26262f transparent;
+  scrollbar-color: #33332e transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #24242d;
+  background: #2b2b26;
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: #33333f;
+  background: #3a3a33;
 }
 
-h1,
+/* Display / hero type per brand: tight tracking, sentence case. */
+h1 {
+  letter-spacing: -0.03em;
+  line-height: 1.03;
+}
 h2 {
   letter-spacing: -0.02em;
 }
 
-/* Entrance + micro-motion. */
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -89,24 +139,12 @@ h2 {
     transform: none;
   }
 }
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 .animate-fade-up {
-  animation: fadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.animate-fade-in {
-  animation: fadeIn 0.5s ease both;
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-up,
-  .animate-fade-in {
+  .animate-fade-up {
     animation: none;
   }
   html {

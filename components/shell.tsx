@@ -147,7 +147,7 @@ function visibleLinks(role: string) {
 
 function NavList({ active, role }: { active: string; role: string }) {
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-0.5">
       {visibleLinks(role).map((l) => {
         const isActive = l.key === active;
         return (
@@ -155,13 +155,20 @@ function NavList({ active, role }: { active: string; role: string }) {
             key={l.key}
             href={l.href}
             className={
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors " +
+              "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors " +
               (isActive
-                ? "bg-violet-500/[0.14] text-white shadow-[inset_2px_0_0_#635fe0]"
-                : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100")
+                ? "bg-white/[0.05] font-medium text-[#f8f7f4]"
+                : "text-[#f8f7f4]/50 hover:bg-white/[0.03] hover:text-[#f8f7f4]")
             }
           >
-            {l.icon}
+            <span
+              className={
+                "h-2 w-2 rotate-45 transition-colors " +
+                (isActive
+                  ? "bg-amber-600"
+                  : "border border-[#f8f7f4]/30 group-hover:border-[#f8f7f4]/60")
+              }
+            />
             {l.label}
           </Link>
         );
@@ -170,13 +177,34 @@ function NavList({ active, role }: { active: string; role: string }) {
   );
 }
 
+function BrandMark({ className = "h-9 w-9" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 400 400"
+      className={className + " rounded-lg border border-white/10"}
+      aria-hidden
+    >
+      <rect width="400" height="400" fill="#0E0E0D" />
+      <g fill="#F8F7F4">
+        <rect x="96" y="96" width="62" height="13" />
+        <rect x="96" y="96" width="13" height="62" />
+        <rect x="242" y="96" width="62" height="13" />
+        <rect x="291" y="96" width="13" height="62" />
+        <rect x="96" y="291" width="62" height="13" />
+        <rect x="96" y="242" width="13" height="62" />
+        <rect x="242" y="291" width="62" height="13" />
+        <rect x="291" y="242" width="13" height="62" />
+      </g>
+      <polygon points="200,146 254,200 200,254 146,200" fill="#E87000" />
+    </svg>
+  );
+}
+
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-lg font-bold text-white shadow-[0_1px_3px_rgba(124,58,237,0.5)]">
-        H
-      </span>
-      <span className="text-lg font-bold tracking-tight text-zinc-50">
+      <BrandMark />
+      <span className="text-[15px] font-semibold tracking-tight text-[#f8f7f4]">
         Helm Lite
       </span>
     </Link>
@@ -199,9 +227,9 @@ export function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#08080b] font-sans lg:flex">
+    <div className="min-h-screen bg-[#0e0e0d] font-sans lg:flex">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-white/[0.06] bg-[#0a0a0e] px-3 py-6 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-white/[0.07] bg-[#100f0d] px-3 py-6 lg:flex">
         <Brand />
         <NavList active={active} role={profile.role} />
         <div className="mt-auto flex flex-col gap-3 border-t border-white/[0.06] px-1 pt-4">
@@ -238,7 +266,7 @@ export function Shell({
 
       {/* Mobile header */}
       <div className="flex-1">
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#1b1b24] bg-[#0c0c12] px-4 py-3 lg:hidden">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/[0.07] bg-[#100f0d] px-4 py-3 lg:hidden">
           <Brand />
           <MobileNav
             items={visibleLinks(profile.role)}

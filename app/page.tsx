@@ -17,19 +17,19 @@ type FollowUpRow = {
 };
 
 const stageAccent: Record<string, string> = {
-  new: "text-sky-600 dark:text-sky-400",
-  in_conversation: "text-amber-600 dark:text-amber-400",
-  qualified: "text-violet-600 dark:text-violet-400",
-  closed: "text-green-500 dark:text-green-400",
-  lost: "text-zinc-400 dark:text-zinc-500",
+  new: "text-[#f8f7f4]",
+  in_conversation: "text-[#f8f7f4]",
+  qualified: "text-[#f8f7f4]",
+  closed: "text-amber-600",
+  lost: "text-[#f8f7f4]/40",
 };
 
 const stageBar: Record<string, string> = {
-  new: "bg-sky-500",
-  in_conversation: "bg-amber-500",
-  qualified: "bg-violet-500",
-  closed: "bg-green-500",
-  lost: "bg-zinc-600",
+  new: "bg-[#f8f7f4]/20",
+  in_conversation: "bg-[#f8f7f4]/20",
+  qualified: "bg-[#f8f7f4]/20",
+  closed: "bg-amber-600",
+  lost: "bg-[#f8f7f4]/10",
 };
 
 export default async function Dashboard() {

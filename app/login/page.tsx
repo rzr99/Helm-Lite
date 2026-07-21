@@ -49,9 +49,20 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#08080b] p-6 font-sans">
       <div className="w-full max-w-sm animate-fade-up">
         <div className="mb-8 flex flex-col items-center gap-3">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600 text-2xl font-bold text-white shadow-lg shadow-violet-600/30">
-            H
-          </span>
+          <svg viewBox="0 0 400 400" className="h-14 w-14 rounded-xl border border-white/10" aria-hidden>
+            <rect width="400" height="400" fill="#0E0E0D" />
+            <g fill="#F8F7F4">
+              <rect x="96" y="96" width="62" height="13" />
+              <rect x="96" y="96" width="13" height="62" />
+              <rect x="242" y="96" width="62" height="13" />
+              <rect x="291" y="96" width="13" height="62" />
+              <rect x="96" y="291" width="62" height="13" />
+              <rect x="96" y="242" width="13" height="62" />
+              <rect x="242" y="291" width="62" height="13" />
+              <rect x="291" y="242" width="13" height="62" />
+            </g>
+            <polygon points="200,146 254,200 200,254 146,200" fill="#E87000" />
+          </svg>
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
               Helm Lite
