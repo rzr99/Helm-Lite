@@ -199,12 +199,12 @@ export function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#09090e] font-sans lg:flex">
+    <div className="min-h-screen bg-[#08080b] font-sans lg:flex">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-[#1b1b24] bg-[#0c0c12] px-3 py-6 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-white/[0.06] bg-[#0a0a0e] px-3 py-6 lg:flex">
         <Brand />
         <NavList active={active} role={profile.role} />
-        <div className="mt-auto flex flex-col gap-3 border-t border-[#1b1b24] px-1 pt-4">
+        <div className="mt-auto flex flex-col gap-3 border-t border-white/[0.06] px-1 pt-4">
           <Link
             href="/profile"
             className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-[#16161e]"
@@ -261,7 +261,7 @@ export function Shell({
             </div>
             {action}
           </header>
-          <div className="flex flex-col gap-6">{children}</div>
+          <div className="flex flex-col gap-6 animate-fade-up">{children}</div>
         </main>
       </div>
     </div>

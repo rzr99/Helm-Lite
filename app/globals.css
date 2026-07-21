@@ -1,28 +1,108 @@
 @import "tailwindcss";
 
-/* Dark-first premium theme. Deep near-black canvas, violet brand accent. */
 :root {
-  --background: #09090e;
+  --background: #08080b;
   --foreground: #f4f4f5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-jakarta);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Refined indigo-violet brand accent (remaps the violet scale app-wide). */
+@theme {
+  --color-violet-200: #d2d0ff;
+  --color-violet-300: #b4b1ff;
+  --color-violet-400: #9591ff;
+  --color-violet-500: #7b74f0;
+  --color-violet-600: #635fe0;
+  --color-violet-700: #5350c9;
+  --color-violet-950: #17162e;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Subtle ambient glow from the top, the way Linear lights its canvas. */
+  background-image: radial-gradient(
+    58rem 38rem at 50% -8%,
+    rgba(99, 95, 224, 0.1),
+    transparent 70%
+  );
+  background-attachment: fixed;
 }
 
-/* Tighter, more confident headings. */
+::selection {
+  background: rgba(99, 95, 224, 0.35);
+  color: #fff;
+}
+
+/* Thin, dark scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #26262f transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #24242d;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #33333f;
+}
+
 h1,
 h2 {
   letter-spacing: -0.02em;
+}
+
+/* Entrance + micro-motion. */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-up {
+  animation: fadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }

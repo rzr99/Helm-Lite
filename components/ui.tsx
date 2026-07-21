@@ -1,16 +1,16 @@
 import Link from "next/link";
 
 export const btnPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(124,58,237,0.45)] transition-colors hover:bg-violet-500 disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_2px_8px_rgba(99,95,224,0.35)] transition-all duration-150 hover:bg-violet-500 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_4px_14px_rgba(99,95,224,0.45)] active:translate-y-px disabled:opacity-50";
 
 export const btnSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a2a37] bg-[#16161e] px-4 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:bg-[#1e1e28] hover:text-white";
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-zinc-200 transition-all duration-150 hover:bg-white/[0.07] hover:text-white active:translate-y-px";
 
 export const btnGhost =
-  "inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-zinc-400 transition-colors hover:bg-[#1e1e28] hover:text-zinc-100";
+  "inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-zinc-100";
 
 export const inputClass =
-  "w-full rounded-xl border border-[#2a2a37] bg-[#101017] px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/25";
+  "w-full rounded-xl border border-white/[0.09] bg-[#0d0d12] px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition-all duration-150 placeholder:text-zinc-500 focus:border-violet-500/70 focus:ring-4 focus:ring-violet-500/15";
 
 export const labelClass = "mb-1.5 block text-sm font-medium text-zinc-300";
 
@@ -28,9 +28,9 @@ export function Card({
   padded?: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#232331] bg-[#131319] shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111116] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_1px_3px_rgba(0,0,0,0.4)]">
       {(title || action) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1f1f29] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-5 py-4">
           <div>
             {title && (
               <h2 className="text-[15px] font-semibold tracking-tight text-zinc-50">
