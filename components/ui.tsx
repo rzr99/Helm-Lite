@@ -28,7 +28,7 @@ export function Card({
   padded?: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111116] shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_1px_3px_rgba(0,0,0,0.4)]">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.09] bg-[#15151d] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_4px_16px_rgba(0,0,0,0.35)]">
       {(title || action) && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-5 py-4">
           <div>

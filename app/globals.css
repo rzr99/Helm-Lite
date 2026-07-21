@@ -33,12 +33,19 @@ body {
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Subtle ambient glow from the top, the way Linear lights its canvas. */
-  background-image: radial-gradient(
-    58rem 38rem at 50% -8%,
-    rgba(99, 95, 224, 0.1),
-    transparent 70%
-  );
+  /* Ambient aura — a violet glow up top and a soft one at the right,
+     so the canvas reads as lit depth rather than flat black. */
+  background-image:
+    radial-gradient(
+      72rem 44rem at 50% -14%,
+      rgba(99, 95, 224, 0.18),
+      transparent 66%
+    ),
+    radial-gradient(
+      44rem 32rem at 108% 0%,
+      rgba(99, 95, 224, 0.08),
+      transparent 60%
+    );
   background-attachment: fixed;
 }
 

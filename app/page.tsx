@@ -24,6 +24,14 @@ const stageAccent: Record<string, string> = {
   lost: "text-zinc-400 dark:text-zinc-500",
 };
 
+const stageBar: Record<string, string> = {
+  new: "bg-sky-500",
+  in_conversation: "bg-amber-500",
+  qualified: "bg-violet-500",
+  closed: "bg-green-500",
+  lost: "bg-zinc-600",
+};
+
 export default async function Dashboard() {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
@@ -143,25 +151,32 @@ export default async function Dashboard() {
       <Card
         title="Pipeline"
         description={
-          floor ? "All leads by stage — click a stage to open it." : "Your leads by stage — click a stage to open it."
+          floor
+            ? "All leads by stage — click a stage to open it."
+            : "Your leads by stage — click a stage to open it."
         }
-        padded={false}
       >
-        <div className="grid grid-cols-2 divide-zinc-100 dark:divide-zinc-800 sm:grid-cols-5 sm:divide-x">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {STAGES.map((s) => (
             <Link
               key={s.value}
               href={`/leads?stage=${s.value}`}
-              className="px-5 py-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.05]"
             >
+              <span
+                className={
+                  "absolute inset-x-0 top-0 h-0.5 opacity-70 " +
+                  (stageBar[s.value] ?? "bg-zinc-600")
+                }
+              />
               <p
                 className={
-                  "text-2xl font-bold " + (stageAccent[s.value] ?? "")
+                  "text-3xl font-bold tabular-nums " + (stageAccent[s.value] ?? "")
                 }
               >
                 {counts[s.value] ?? 0}
               </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 {stageLabel(s.value)}
               </p>
             </Link>

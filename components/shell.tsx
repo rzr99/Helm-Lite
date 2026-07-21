@@ -157,8 +157,8 @@ function NavList({ active, role }: { active: string; role: string }) {
             className={
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors " +
               (isActive
-                ? "bg-[#1b1626] text-violet-200 ring-1 ring-inset ring-violet-500/25"
-                : "text-zinc-400 hover:bg-[#16161e] hover:text-zinc-100")
+                ? "bg-violet-500/[0.14] text-white shadow-[inset_2px_0_0_#635fe0]"
+                : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100")
             }
           >
             {l.icon}
