@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 const inputClass =
-  "w-full rounded-xl border border-[#2a2a37] bg-[#101017] px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/25";
+  "w-full rounded-lg border border-white/15 bg-[#141412] px-3.5 py-2.5 text-sm text-[#f8f7f4] outline-none transition-colors placeholder:text-[#f8f7f4]/35 focus:border-amber-600/70 focus:ring-2 focus:ring-amber-600/20";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,37 +46,61 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-sm animate-fade-up">
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <svg viewBox="0 0 400 400" className="h-14 w-14 rounded-xl border border-white/10" aria-hidden>
-            <rect width="400" height="400" fill="#0E0E0D" />
-            <g fill="#F8F7F4">
-              <rect x="96" y="96" width="62" height="13" />
-              <rect x="96" y="96" width="13" height="62" />
-              <rect x="242" y="96" width="62" height="13" />
-              <rect x="291" y="96" width="13" height="62" />
-              <rect x="96" y="291" width="62" height="13" />
-              <rect x="96" y="242" width="13" height="62" />
-              <rect x="242" y="291" width="62" height="13" />
-              <rect x="291" y="242" width="13" height="62" />
-            </g>
-            <polygon points="200,146 254,200 200,254 146,200" fill="#E87000" />
-          </svg>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-6 font-sans sm:justify-start sm:px-[8vw]">
+      {/* Corner-bracket frame (structural element E1) */}
+      <span className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l border-t border-[#f8f7f4]/25" />
+      <span className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r border-t border-[#f8f7f4]/25" />
+      <span className="pointer-events-none absolute bottom-5 left-5 h-4 w-4 border-b border-l border-[#f8f7f4]/25" />
+      <span className="pointer-events-none absolute bottom-5 right-5 h-4 w-4 border-b border-r border-[#f8f7f4]/25" />
+
+      {/* Saturn V — line skeleton + ink-dither, dissolving into the canvas */}
+      <img
+        src="/saturn-v.png"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 right-[5vw] hidden h-[74vh] max-h-[560px] w-auto max-w-none opacity-90 lg:block"
+      />
+      {/* Amber keyframe marker at the rocket's nose */}
+      <span className="pointer-events-none absolute right-[calc(5vw+3.5rem)] top-[16vh] hidden h-2.5 w-2.5 rotate-45 bg-amber-600 lg:block" />
+
+      <div className="relative z-10 w-full max-w-sm animate-fade-up">
+        <div className="mb-7">
+          <div className="mb-5 flex items-center gap-2.5">
+            <svg viewBox="0 0 400 400" className="h-9 w-9 rounded-lg border border-white/10" aria-hidden>
+              <rect width="400" height="400" fill="#0E0E0D" />
+              <g fill="#F8F7F4">
+                <rect x="96" y="96" width="62" height="13" />
+                <rect x="96" y="96" width="13" height="62" />
+                <rect x="242" y="96" width="62" height="13" />
+                <rect x="291" y="96" width="13" height="62" />
+                <rect x="96" y="291" width="62" height="13" />
+                <rect x="96" y="242" width="13" height="62" />
+                <rect x="242" y="291" width="62" height="13" />
+                <rect x="291" y="242" width="13" height="62" />
+              </g>
+              <polygon points="200,146 254,200 200,254 146,200" fill="#E87000" />
+            </svg>
+            <span className="text-[15px] font-semibold tracking-tight text-[#f8f7f4]">
               Helm Lite
-            </h1>
-            <p className="text-sm text-zinc-400">Sign in to your workspace</p>
+            </span>
           </div>
+
+          <p className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[#f8f7f4]/40">
+            <span className="h-1.5 w-1.5 rotate-45 border border-[#f8f7f4]/40" />
+            00 — Linear.Solutions
+          </p>
+
+          <h1 className="mt-3 text-[28px] font-semibold leading-tight tracking-tight text-[#f8f7f4]">
+            Sign in to the <span className="text-amber-600">floor</span>.
+          </h1>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-2xl border border-[#232331] bg-[#131319] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
+          className="flex flex-col gap-4 rounded-lg border border-white/10 bg-[#141412]/80 p-6 backdrop-blur-sm"
         >
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-[#f8f7f4]/70">
               Email
             </label>
             <input
@@ -91,7 +115,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-[#f8f7f4]/70">
               Password
             </label>
             <input
@@ -106,7 +130,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="rounded-xl border border-red-900 bg-red-950/60 px-3 py-2 text-sm text-red-300">
+            <p className="rounded-lg border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-300">
               {error}
             </p>
           )}
@@ -114,7 +138,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 w-full rounded-xl bg-violet-600 py-2.5 font-semibold text-white shadow-[0_1px_3px_rgba(124,58,237,0.45)] transition-colors hover:bg-violet-500 disabled:opacity-50"
+            className="mt-1 w-full rounded-lg bg-amber-600 py-2.5 font-medium text-[#0e0e0d] transition-colors hover:bg-amber-500 disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
