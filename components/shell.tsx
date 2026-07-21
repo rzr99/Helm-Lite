@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/app/actions";
 import type { Profile } from "@/lib/profile";
 import { Avatar } from "@/components/ui";
+import { MobileNav } from "@/components/mobile-nav";
 
 const roleLabel: Record<string, string> = {
   owner: "Owner",
@@ -10,11 +11,9 @@ const roleLabel: Record<string, string> = {
 };
 
 const roleBadge: Record<string, string> = {
-  owner:
-    "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
-  team_lead: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
-  agent:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+  owner: "bg-violet-500/15 text-violet-300",
+  team_lead: "bg-sky-500/15 text-sky-300",
+  agent: "bg-teal-500/15 text-teal-300",
 };
 
 function HomeIcon() {
@@ -158,8 +157,8 @@ function NavList({ active, role }: { active: string; role: string }) {
             className={
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors " +
               (isActive
-                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100")
+                ? "bg-[#1b1626] text-violet-200 ring-1 ring-inset ring-violet-500/25"
+                : "text-zinc-400 hover:bg-[#16161e] hover:text-zinc-100")
             }
           >
             {l.icon}
@@ -174,10 +173,10 @@ function NavList({ active, role }: { active: string; role: string }) {
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-lg font-bold text-white">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-lg font-bold text-white shadow-[0_1px_3px_rgba(124,58,237,0.5)]">
         H
       </span>
-      <span className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <span className="text-lg font-bold tracking-tight text-zinc-50">
         Helm Lite
       </span>
     </Link>
@@ -200,20 +199,20 @@ export function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950 lg:flex">
+    <div className="min-h-screen bg-[#09090e] font-sans lg:flex">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-zinc-200 bg-white px-3 py-6 dark:border-zinc-800 dark:bg-zinc-900 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-[#1b1b24] bg-[#0c0c12] px-3 py-6 lg:flex">
         <Brand />
         <NavList active={active} role={profile.role} />
-        <div className="mt-auto flex flex-col gap-3 border-t border-zinc-100 px-1 pt-4 dark:border-zinc-800">
+        <div className="mt-auto flex flex-col gap-3 border-t border-[#1b1b24] px-1 pt-4">
           <Link
             href="/profile"
-            className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-[#16161e]"
             title="Your profile — name and picture"
           >
             <Avatar name={profile.full_name} src={profile.avatar_url} size={9} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+              <p className="truncate text-sm font-medium text-zinc-50">
                 {profile.full_name}
               </p>
               <span
@@ -229,7 +228,7 @@ export function Shell({
           <form action={signOut}>
             <button
               type="submit"
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="w-full rounded-xl border border-[#2a2a37] px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-[#1e1e28] hover:text-white"
             >
               Sign out
             </button>
@@ -239,47 +238,25 @@ export function Shell({
 
       {/* Mobile header */}
       <div className="flex-1">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 lg:hidden">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#1b1b24] bg-[#0c0c12] px-4 py-3 lg:hidden">
           <Brand />
-          <div className="flex items-center gap-2">
-            {visibleLinks(profile.role).map((l) => (
-              <Link
-                key={l.key}
-                href={l.href}
-                className={
-                  "rounded-lg px-3 py-1.5 text-sm font-medium " +
-                  (l.key === active
-                    ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                    : "text-zinc-600 dark:text-zinc-400")
-                }
-              >
-                {l.label}
-              </Link>
-            ))}
-            <Link href="/profile" className="flex items-center">
-              <Avatar name={profile.full_name} src={profile.avatar_url} size={7} />
-            </Link>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-lg px-2 py-1.5 text-sm text-zinc-500 dark:text-zinc-400"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
+          <MobileNav
+            items={visibleLinks(profile.role)}
+            active={active}
+            fullName={profile.full_name}
+            avatarUrl={profile.avatar_url}
+            role={profile.role}
+          />
         </div>
 
         <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-8">
           <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              <h1 className="text-[26px] font-bold tracking-tight text-zinc-50">
                 {title}
               </h1>
               {subtitle && (
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  {subtitle}
-                </p>
+                <p className="mt-1.5 text-sm text-zinc-400">{subtitle}</p>
               )}
             </div>
             {action}

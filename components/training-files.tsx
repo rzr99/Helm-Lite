@@ -81,7 +81,7 @@ export function FileUploader({ assetId }: { assetId: string }) {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50"
+          className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-700 disabled:opacity-50"
         >
           {busy ? "Uploading…" : "Upload"}
         </button>
@@ -95,7 +95,7 @@ export function FileUploader({ assetId }: { assetId: string }) {
             "text-sm font-medium " +
             (isError
               ? "text-red-600 dark:text-red-400"
-              : "text-emerald-700 dark:text-emerald-400")
+              : "text-violet-700 dark:text-violet-400")
           }
         >
           {message}

@@ -41,7 +41,7 @@ export default async function TeamPage() {
               href="https://supabase.com/dashboard/project/msjtebtppwnyzokdwhdb/auth/users"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-emerald-700 underline dark:text-emerald-400"
+              className="font-semibold text-violet-700 underline dark:text-violet-400"
             >
               your Supabase users page
             </a>{" "}
@@ -103,12 +103,12 @@ export default async function TeamPage() {
                       name="active"
                       defaultChecked={u.active}
                       disabled={isSelf}
-                      className="h-4 w-4 accent-emerald-600"
+                      className="h-4 w-4 accent-violet-600"
                     />
                     Active
                   </label>
                   {isSelf && (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                    <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
                       you
                     </span>
                   )}

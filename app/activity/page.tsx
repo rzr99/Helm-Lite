@@ -190,7 +190,7 @@ export default async function ActivityPage({
         </Card>
         <Card padded>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Deals closed</p>
-          <p className="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+          <p className="mt-1 text-3xl font-bold text-green-500 dark:text-green-400">
             {totals.closes}
           </p>
         </Card>
@@ -240,7 +240,7 @@ export default async function ActivityPage({
                     <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {r.followUps}
                     </td>
-                    <td className="px-5 py-3.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                    <td className="px-5 py-3.5 font-semibold text-green-500 dark:text-green-400">
                       {r.closes}
                     </td>
                   </tr>
@@ -288,7 +288,7 @@ export default async function ActivityPage({
                     <li key={e.id}>
                       <Link
                         href={`/leads/${e.id}`}
-                        className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                        className="font-medium text-violet-400 hover:underline"
                       >
                         view lead
                       </Link>{" "}

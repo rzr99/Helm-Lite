@@ -173,7 +173,7 @@ export default async function SalesPage({
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Revenue received{hasFilters ? " (filtered)" : ""}
           </p>
-          <p className="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+          <p className="mt-1 text-3xl font-bold text-green-600 dark:text-green-400">
             {fmtMoney(totalRevenue)}
           </p>
         </Card>
@@ -216,7 +216,7 @@ export default async function SalesPage({
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                   <div
-                    className="h-full rounded-full bg-emerald-500"
+                    className="h-full rounded-full bg-green-500"
                     style={{
                       width: `${Math.round((s.revenue / maxServiceRevenue) * 100)}%`,
                     }}
@@ -282,7 +282,7 @@ export default async function SalesPage({
                     <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {fmtMoney(Number(deal.deal_size))}
                     </td>
-                    <td className="px-5 py-3.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                    <td className="px-5 py-3.5 font-semibold text-green-700 dark:text-green-400">
                       {fmtMoney(Number(deal.revenue_received))}
                     </td>
                     <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">

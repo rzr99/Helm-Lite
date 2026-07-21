@@ -98,7 +98,7 @@ export default async function LeadDetailPage({
           canEdit ? (
             <Link
               href={`/sales/new?lead=${lead.id}`}
-              className="rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900"
+              className="rounded-xl border border-violet-300 bg-violet-50 px-3.5 py-2 text-sm font-semibold text-violet-800 transition-colors hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-200 dark:hover:bg-violet-900"
             >
               💰 Log a deal
             </Link>
@@ -115,7 +115,7 @@ export default async function LeadDetailPage({
                   className={
                     "rounded-full border px-4 py-2 text-sm font-semibold " +
                     (isCurrent
-                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      ? "border-violet-600 bg-violet-600 text-white"
                       : "border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500")
                   }
                 >
@@ -132,8 +132,8 @@ export default async function LeadDetailPage({
                   className={
                     "rounded-full border px-4 py-2 text-sm font-semibold transition-colors " +
                     (isCurrent
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : "border-zinc-300 bg-white text-zinc-600 hover:border-emerald-400 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-600 dark:hover:text-emerald-400")
+                      ? "border-violet-600 bg-violet-600 text-white"
+                      : "border-zinc-300 bg-white text-zinc-600 hover:border-violet-400 hover:text-violet-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-violet-600 dark:hover:text-violet-400")
                   }
                 >
                   {s.label}

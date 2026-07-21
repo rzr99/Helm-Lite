@@ -70,7 +70,7 @@ export default async function DealDetailPage({
           This deal came from lead{" "}
           <Link
             href={`/leads/${leadInfo.id}`}
-            className="font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+            className="font-semibold text-violet-400 hover:underline"
           >
             {leadInfo.handle}
           </Link>
@@ -168,7 +168,7 @@ export default async function DealDetailPage({
               <dt className="text-zinc-500 dark:text-zinc-400">
                 Revenue received
               </dt>
-              <dd className="font-medium text-emerald-700 dark:text-emerald-400">
+              <dd className="font-medium text-green-500 dark:text-green-400">
                 {fmtMoney(Number(deal.revenue_received))}
               </dd>
             </div>

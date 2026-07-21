@@ -55,8 +55,7 @@ export const ACCOUNT_STATUSES = [
 ] as const;
 
 export const STATUS_BADGE: Record<string, string> = {
-  active:
-    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+  active: "bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200",
   warming: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
   recovery: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
   banned: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",

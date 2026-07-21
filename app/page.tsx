@@ -20,7 +20,7 @@ const stageAccent: Record<string, string> = {
   new: "text-sky-600 dark:text-sky-400",
   in_conversation: "text-amber-600 dark:text-amber-400",
   qualified: "text-violet-600 dark:text-violet-400",
-  closed: "text-emerald-600 dark:text-emerald-400",
+  closed: "text-green-500 dark:text-green-400",
   lost: "text-zinc-400 dark:text-zinc-500",
 };
 
@@ -201,14 +201,14 @@ export default async function Dashboard() {
                     today
                   </span>
                   <span className="text-zinc-500 dark:text-zinc-400">
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span className="font-semibold text-green-500 dark:text-green-400">
                       {a.closed}
                     </span>{" "}
                     closed
                   </span>
                   <Link
                     href={`/leads?agent=${a.id}`}
-                    className="font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+                    className="font-semibold text-violet-400 hover:underline"
                   >
                     View →
                   </Link>

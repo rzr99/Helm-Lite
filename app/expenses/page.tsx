@@ -170,7 +170,7 @@ export default async function ExpensesPage({
               name="closing"
               inputMode="numeric"
               placeholder="update…"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-sm tabular-nums outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+              className="w-full rounded-lg border border-[#2a2a37] bg-[#101017] px-2.5 py-1.5 text-sm tabular-nums text-zinc-100 outline-none focus:border-violet-500"
             />
             <button
               type="submit"
@@ -185,7 +185,7 @@ export default async function ExpensesPage({
           className={
             "rounded-2xl border p-5 " +
             (balance >= 0
-              ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-950 dark:bg-emerald-950/30"
+              ? "border-green-900 bg-green-950/30"
               : "border-red-200 bg-red-50/70 dark:border-red-950 dark:bg-red-950/30")
           }
         >
@@ -193,7 +193,7 @@ export default async function ExpensesPage({
             className={
               "text-xs font-bold uppercase tracking-wide " +
               (balance >= 0
-                ? "text-emerald-700 dark:text-emerald-300"
+                ? "text-green-400"
                 : "text-red-700 dark:text-red-300")
             }
           >
@@ -203,7 +203,7 @@ export default async function ExpensesPage({
             className={
               "mt-1 text-3xl font-bold tabular-nums " +
               (balance >= 0
-                ? "text-emerald-700 dark:text-emerald-300"
+                ? "text-green-400"
                 : "text-red-700 dark:text-red-300")
             }
           >
@@ -213,7 +213,7 @@ export default async function ExpensesPage({
             className={
               "mt-1 text-xs " +
               (balance >= 0
-                ? "text-emerald-600/70 dark:text-emerald-300/70"
+                ? "text-green-500/70"
                 : "text-red-600/70 dark:text-red-300/70")
             }
           >
@@ -266,7 +266,7 @@ export default async function ExpensesPage({
                 <p className="flex shrink-0 items-center gap-3">
                   <Link
                     href={`/expenses/${e.id}`}
-                    className="text-xs font-semibold text-emerald-700 opacity-0 transition-opacity hover:underline group-hover:opacity-100 dark:text-emerald-400"
+                    className="text-xs font-semibold text-violet-400 opacity-0 transition-opacity hover:underline group-hover:opacity-100"
                   >
                     edit
                   </Link>
@@ -299,7 +299,7 @@ export default async function ExpensesPage({
                 />
                 <button
                   type="submit"
-                  className="rounded-md px-2 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                  className="rounded-md px-2 py-1 text-xs font-bold text-violet-400 hover:bg-violet-950/40"
                 >
                   Add
                 </button>

@@ -43,7 +43,7 @@ function RenderedContent({ text }: { text: string }) {
                 href={part}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all font-medium text-emerald-700 underline dark:text-emerald-400"
+                className="break-all font-medium text-violet-700 underline dark:text-violet-400"
               >
                 {part}
               </a>
@@ -257,7 +257,7 @@ export default async function TrainingAssetPage({
                   href={links.get(f.id) ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex min-w-0 items-center gap-3 font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+                  className="flex min-w-0 items-center gap-3 font-semibold text-violet-700 hover:underline dark:text-violet-400"
                 >
                   <span aria-hidden>📄</span>
                   <span className="truncate">{f.name}</span>
