@@ -12,7 +12,7 @@ type FollowUpRow = {
   id: string;
   due_date: string;
   note: string;
-  lead: { id: string; handle: string } | null;
+  lead: { id: string; handle: string; persona: string | null } | null;
   agent: { full_name: string } | null;
 };
 
@@ -41,7 +41,9 @@ export default async function Dashboard() {
 
   const { data: followUps } = await supabase
     .from("follow_ups")
-    .select("id, due_date, note, lead:leads(id, handle), agent:users(full_name)")
+    .select(
+      "id, due_date, note, lead:leads(id, handle, persona), agent:users(full_name)"
+    )
     .eq("done", false)
     .order("due_date");
 
@@ -113,6 +115,11 @@ export default async function Dashboard() {
               {floor && f.agent && (
                 <span className="ml-2 text-sm text-zinc-400">
                   · {f.agent.full_name}
+                </span>
+              )}
+              {f.lead?.persona && (
+                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  via {f.lead.persona}
                 </span>
               )}
             </p>

@@ -96,6 +96,9 @@ export default async function ActivityPage({
   );
 
   // ---- Duplicate checks (across ALL leads, ignoring filters) ----
+  // We ONLY flag when the SAME client handle is worked by TWO DIFFERENT agents.
+  // One agent reaching the same client from several personas is normal outreach,
+  // never a duplicate — so those are deliberately left out.
   const byHandle = new Map<string, LeadRow[]>();
   for (const l of (leads ?? []) as LeadRow[]) {
     const key = l.handle.trim().toLowerCase();
@@ -105,20 +108,20 @@ export default async function ActivityPage({
     byHandle.set(key, list);
   }
   const duplicates = [...byHandle.entries()]
-    .filter(([, list]) => list.length > 1)
-    .map(([handle, list]) => {
-      const agents = [...new Set(list.map((l) => l.agent_id))];
-      return {
-        handle,
-        crossAgent: agents.length > 1,
-        entries: list.map((l) => ({
-          agent: nameOf.get(l.agent_id) ?? "Unknown",
-          date: l.date_added,
-          id: l.id,
-        })),
-      };
-    })
-    .sort((a, b) => Number(b.crossAgent) - Number(a.crossAgent));
+    .filter(([, list]) => new Set(list.map((l) => l.agent_id)).size > 1)
+    .map(([handle, list]) => ({
+      handle,
+      // Collapse to one row per agent — the point is "two agents on one client",
+      // not how many times each logged them.
+      entries: [...new Set(list.map((l) => l.agent_id))].map((agentId) => {
+        const first = list.find((l) => l.agent_id === agentId)!;
+        return {
+          agent: nameOf.get(agentId) ?? "Unknown",
+          date: first.date_added,
+          id: first.id,
+        };
+      }),
+    }));
 
   const hasFilters = Boolean(agent || from || to);
 
@@ -253,14 +256,14 @@ export default async function ActivityPage({
 
       <Card
         title="Duplicate warnings"
-        description="Same lead handle appearing more than once — across agents is serious, within one agent is usually a slip."
+        description="The same client handle being worked by two different agents. One agent using several personas on a client is normal — that never shows here."
         padded={false}
       >
         {duplicates.length === 0 ? (
           <EmptyState
             emoji="✅"
-            title="No duplicates found"
-            hint="Every lead handle is unique right now."
+            title="No clashes found"
+            hint="No client is being worked by two different agents right now."
           />
         ) : (
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -270,17 +273,8 @@ export default async function ActivityPage({
                   <span className="font-semibold text-zinc-900 dark:text-zinc-50">
                     {d.handle}
                   </span>
-                  <span
-                    className={
-                      "rounded-full px-2.5 py-0.5 text-xs font-semibold " +
-                      (d.crossAgent
-                        ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-                        : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300")
-                    }
-                  >
-                    {d.crossAgent
-                      ? "same handle under multiple agents"
-                      : "entered more than once by the same agent"}
+                  <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-950 dark:text-red-300">
+                    worked by {d.entries.length} agents
                   </span>
                 </p>
                 <ul className="mt-2 flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">

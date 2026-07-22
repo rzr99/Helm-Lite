@@ -23,6 +23,7 @@ export async function createLead(formData: FormData) {
     service_interest: text(formData, "service_interest") || null,
     source: text(formData, "source") || null,
     stage: text(formData, "stage") || "new",
+    persona: text(formData, "persona") || null,
     notes: text(formData, "notes"),
     date_added: todayStr(),
   };
@@ -50,6 +51,7 @@ export async function updateLead(leadId: string, formData: FormData) {
     name: text(formData, "name") || null,
     service_interest: text(formData, "service_interest") || null,
     source: text(formData, "source") || null,
+    persona: text(formData, "persona") || null,
     notes: text(formData, "notes"),
   };
 

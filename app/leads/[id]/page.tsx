@@ -41,12 +41,21 @@ export default async function LeadDetailPage({
   const { data: lead } = await supabase
     .from("leads")
     .select(
-      "id, agent_id, handle, name, service_interest, source, stage, date_added, notes, agent:users(full_name, avatar_url)"
+      "id, agent_id, handle, name, service_interest, source, stage, date_added, persona, notes, agent:users(full_name, avatar_url)"
     )
     .eq("id", id)
     .single();
 
   if (!lead) notFound();
+
+  // Personas this user can reach out from (RLS: their own, or all for owner).
+  const { data: personaData } = await supabase
+    .from("personas")
+    .select("persona_name")
+    .order("persona_name");
+  const personas = [
+    ...new Set((personaData ?? []).map((p) => p.persona_name).filter(Boolean)),
+  ];
 
   const agentInfo = lead.agent as unknown as {
     full_name: string;
@@ -193,6 +202,24 @@ export default async function LeadDetailPage({
                   className={inputClass}
                 />
               </div>
+              <div>
+                <label className={labelClass}>Reached out from</label>
+                <input
+                  name="persona"
+                  list="persona-options"
+                  defaultValue={lead.persona ?? ""}
+                  placeholder="Which account did you message from?"
+                  className={inputClass}
+                />
+                <datalist id="persona-options">
+                  {personas.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                </datalist>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                  The persona / X account you used for this lead.
+                </p>
+              </div>
             </div>
 
             <div>
@@ -231,6 +258,12 @@ export default async function LeadDetailPage({
               </dd>
             </div>
             <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Reached out from</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-50">
+                {lead.persona ?? "—"}
+              </dd>
+            </div>
+            <div>
               <dt className="text-zinc-500 dark:text-zinc-400">Added</dt>
               <dd className="font-medium text-zinc-900 dark:text-zinc-50">
                 {lead.date_added}
@@ -249,7 +282,9 @@ export default async function LeadDetailPage({
       <Card
         title="Follow-ups"
         description={
-          canEdit
+          lead.persona
+            ? `Reach out from ${lead.persona}. Set a date and it shows on the dashboard.`
+            : canEdit
             ? "Never let a lead go cold — set a date and it shows on the dashboard."
             : undefined
         }

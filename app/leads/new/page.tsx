@@ -20,6 +20,15 @@ export default async function NewLeadPage() {
     teammates = data ?? [];
   }
 
+  // Personas this user can reach out from (RLS: their own, or all for owner).
+  const { data: personaData } = await supabase
+    .from("personas")
+    .select("persona_name")
+    .order("persona_name");
+  const personas = [
+    ...new Set((personaData ?? []).map((p) => p.persona_name).filter(Boolean)),
+  ];
+
   return (
     <Shell
       profile={profile}
@@ -78,6 +87,24 @@ export default async function NewLeadPage() {
                   className={inputClass}
                 />
               </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Reached out from</label>
+              <input
+                name="persona"
+                list="persona-options"
+                placeholder="Which account did you message from?"
+                className={inputClass}
+              />
+              <datalist id="persona-options">
+                {personas.map((p) => (
+                  <option key={p} value={p} />
+                ))}
+              </datalist>
+              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                The persona / X account you used — so you know where to follow up from.
+              </p>
             </div>
 
             <div>
