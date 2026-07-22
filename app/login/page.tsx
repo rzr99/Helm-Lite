@@ -46,22 +46,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-6 font-sans sm:justify-start sm:px-[8vw]">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-6 font-sans">
       {/* Corner-bracket frame (structural element E1) */}
       <span className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l border-t border-[#f8f7f4]/25" />
       <span className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r border-t border-[#f8f7f4]/25" />
       <span className="pointer-events-none absolute bottom-5 left-5 h-4 w-4 border-b border-l border-[#f8f7f4]/25" />
       <span className="pointer-events-none absolute bottom-5 right-5 h-4 w-4 border-b border-r border-[#f8f7f4]/25" />
-
-      {/* Saturn V — line skeleton + ink-dither, dissolving into the canvas */}
-      <img
-        src="/saturn-v.png"
-        alt=""
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-[5vw] hidden h-[74vh] max-h-[560px] w-auto max-w-none opacity-90 lg:block"
-      />
-      {/* Amber keyframe marker at the rocket's nose */}
-      <span className="pointer-events-none absolute right-[calc(5vw+3.5rem)] top-[16vh] hidden h-2.5 w-2.5 rotate-45 bg-amber-600 lg:block" />
 
       <div className="relative z-10 w-full max-w-sm animate-fade-up">
         <div className="mb-7">
