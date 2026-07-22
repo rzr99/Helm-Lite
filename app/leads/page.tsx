@@ -1,37 +1,19 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
-import {
-  Card,
-  EmptyState,
-  Avatar,
-  btnPrimary,
-  btnSecondary,
-  inputClass,
-} from "@/components/ui";
+import { Card, btnPrimary, btnSecondary, inputClass } from "@/components/ui";
+import { LeadsLive, type LeadRow } from "@/components/leads-live";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { STAGES, stageLabel, serviceLabel, STAGE_BADGE } from "@/lib/enums";
+import { STAGES } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
 const filterLabel =
   "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
-type LeadRow = {
-  id: string;
-  handle: string;
-  name: string | null;
-  service_interest: string | null;
-  source: string | null;
-  stage: string;
-  date_added: string;
-  agent: { full_name: string; avatar_url: string | null } | null;
-};
-
 export default async function LeadsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    q?: string;
     stage?: string;
     agent?: string;
     from?: string;
@@ -40,8 +22,7 @@ export default async function LeadsPage({
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { q, stage, agent, from, to } = await searchParams;
-  const search = (q ?? "").trim();
+  const { stage, agent, from, to } = await searchParams;
 
   let teammates: { id: string; full_name: string }[] = [];
   if (floor) {
@@ -61,15 +42,6 @@ export default async function LeadsPage({
     .order("date_added", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (search) {
-    // Match on client name OR handle, partial and case-insensitive, so any
-    // variation of the name surfaces. Strip characters that would break the
-    // Postgres .or() filter syntax.
-    const safe = search.replace(/[,()%*]/g, " ").trim();
-    if (safe) {
-      query = query.or(`name.ilike.%${safe}%,handle.ilike.%${safe}%`);
-    }
-  }
   if (stage && STAGES.some((s) => s.value === stage)) {
     query = query.eq("stage", stage);
   }
@@ -81,7 +53,7 @@ export default async function LeadsPage({
 
   const { data } = await query;
   const leads = (data ?? []) as unknown as LeadRow[];
-  const hasFilters = Boolean(search || stage || agent || from || to);
+  const hasFilters = Boolean(stage || agent || from || to);
 
   return (
     <Shell
@@ -104,17 +76,6 @@ export default async function LeadsPage({
           method="get"
           className="flex flex-wrap items-end gap-4 px-5 py-4"
         >
-          <div className="min-w-56 flex-1">
-            <label className={filterLabel}>Search name or handle</label>
-            <input
-              type="search"
-              name="q"
-              defaultValue={search}
-              placeholder="Type a client's name…"
-              className={inputClass}
-            />
-          </div>
-
           <div>
             <label className={filterLabel}>Stage</label>
             <select
@@ -181,96 +142,7 @@ export default async function LeadsPage({
         </form>
       </Card>
 
-      <Card
-        title={`${leads.length} lead${leads.length === 1 ? "" : "s"}${hasFilters ? " found" : ""}`}
-        padded={false}
-      >
-        {leads.length === 0 ? (
-          <EmptyState
-            emoji={hasFilters ? "🔍" : "🌱"}
-            title={hasFilters ? "Nothing matches these filters" : "No leads yet"}
-            hint={
-              hasFilters
-                ? "Try widening the date range or clearing a filter."
-                : "Add your first lead and it will show up here."
-            }
-            actionHref={hasFilters ? undefined : "/leads/new"}
-            actionLabel={hasFilters ? undefined : "+ Add lead"}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Lead</th>
-                  <th className="px-5 py-3 font-semibold">Service</th>
-                  <th className="px-5 py-3 font-semibold">Source</th>
-                  <th className="px-5 py-3 font-semibold">Stage</th>
-                  <th className="px-5 py-3 font-semibold">Added</th>
-                  {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {leads.map((lead) => (
-                  <tr
-                    key={lead.id}
-                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                  >
-                    <td className="px-5 py-3.5">
-                      <Link
-                        href={`/leads/${lead.id}`}
-                        className="font-semibold text-zinc-900 hover:underline dark:text-zinc-50"
-                      >
-                        {lead.handle}
-                      </Link>
-                      {lead.name && (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {lead.name}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {serviceLabel(lead.service_interest)}
-                    </td>
-                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {lead.source ?? "—"}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={
-                          "rounded-full px-2.5 py-1 text-xs font-semibold " +
-                          (STAGE_BADGE[lead.stage] ?? "")
-                        }
-                      >
-                        {stageLabel(lead.stage)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {lead.date_added}
-                    </td>
-                    {floor && (
-                      <td className="px-5 py-3.5">
-                        {lead.agent ? (
-                          <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-                            <Avatar
-                              name={lead.agent.full_name}
-                              src={lead.agent.avatar_url}
-                              size={7}
-                            />
-                            {lead.agent.full_name}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      <LeadsLive leads={leads} floor={floor} hasServerFilters={hasFilters} />
     </Shell>
   );
 }
