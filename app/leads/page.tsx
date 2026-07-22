@@ -31,6 +31,7 @@ export default async function LeadsPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    q?: string;
     stage?: string;
     agent?: string;
     from?: string;
@@ -39,7 +40,8 @@ export default async function LeadsPage({
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { stage, agent, from, to } = await searchParams;
+  const { q, stage, agent, from, to } = await searchParams;
+  const search = (q ?? "").trim();
 
   let teammates: { id: string; full_name: string }[] = [];
   if (floor) {
@@ -59,6 +61,15 @@ export default async function LeadsPage({
     .order("date_added", { ascending: false })
     .order("created_at", { ascending: false });
 
+  if (search) {
+    // Match on client name OR handle, partial and case-insensitive, so any
+    // variation of the name surfaces. Strip characters that would break the
+    // Postgres .or() filter syntax.
+    const safe = search.replace(/[,()%*]/g, " ").trim();
+    if (safe) {
+      query = query.or(`name.ilike.%${safe}%,handle.ilike.%${safe}%`);
+    }
+  }
   if (stage && STAGES.some((s) => s.value === stage)) {
     query = query.eq("stage", stage);
   }
@@ -70,7 +81,7 @@ export default async function LeadsPage({
 
   const { data } = await query;
   const leads = (data ?? []) as unknown as LeadRow[];
-  const hasFilters = Boolean(stage || agent || from || to);
+  const hasFilters = Boolean(search || stage || agent || from || to);
 
   return (
     <Shell
@@ -93,6 +104,17 @@ export default async function LeadsPage({
           method="get"
           className="flex flex-wrap items-end gap-4 px-5 py-4"
         >
+          <div className="min-w-56 flex-1">
+            <label className={filterLabel}>Search name or handle</label>
+            <input
+              type="search"
+              name="q"
+              defaultValue={search}
+              placeholder="Type a client's name…"
+              className={inputClass}
+            />
+          </div>
+
           <div>
             <label className={filterLabel}>Stage</label>
             <select
