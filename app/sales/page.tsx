@@ -9,7 +9,7 @@ import {
   inputClass,
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { SERVICES, serviceLabel, fmtMoney } from "@/lib/enums";
+import { SERVICE_CATEGORIES, SERVICE_SUGGESTIONS, fmtMoney } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +19,15 @@ const filterLabel =
 type DealRow = {
   id: string;
   client_name: string;
-  service_type: string;
+  service: string | null;
+  service_category: string | null;
   deal_size: number;
   revenue_received: number;
   date_closed: string;
+  payment_method: string | null;
+  merchant_name: string | null;
+  social_platform: string | null;
+  designer: string | null;
   agent: { full_name: string; avatar_url: string | null } | null;
   lead: { id: string; handle: string } | null;
 };
@@ -32,6 +37,7 @@ export default async function SalesPage({
 }: {
   searchParams: Promise<{
     service?: string;
+    category?: string;
     agent?: string;
     from?: string;
     to?: string;
@@ -39,7 +45,7 @@ export default async function SalesPage({
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { service, agent, from, to } = await searchParams;
+  const { service, category, agent, from, to } = await searchParams;
 
   let teammates: { id: string; full_name: string }[] = [];
   if (floor) {
@@ -54,35 +60,41 @@ export default async function SalesPage({
   let query = supabase
     .from("deals")
     .select(
-      "id, client_name, service_type, deal_size, revenue_received, date_closed, agent:users(full_name, avatar_url), lead:leads(id, handle)"
+      "id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)"
     )
     .order("date_closed", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (service && SERVICES.some((s) => s.value === service)) {
-    query = query.eq("service_type", service);
-  }
+  if (service) query = query.eq("service", service);
+  if (category) query = query.eq("service_category", category);
   if (floor && agent) query = query.eq("agent_id", agent);
   if (from) query = query.gte("date_closed", from);
   if (to) query = query.lte("date_closed", to);
 
   const { data } = await query;
   const deals = (data ?? []) as unknown as DealRow[];
-  const hasFilters = Boolean(service || agent || from || to);
+  const hasFilters = Boolean(service || category || agent || from || to);
 
   const totalRevenue = deals.reduce((sum, d) => sum + Number(d.revenue_received), 0);
   const totalDealSize = deals.reduce((sum, d) => sum + Number(d.deal_size), 0);
   const avgDeal = deals.length > 0 ? totalDealSize / deals.length : 0;
 
-  const byService = SERVICES.map((s) => {
-    const theirs = deals.filter((d) => d.service_type === s.value);
-    return {
-      ...s,
-      revenue: theirs.reduce((sum, d) => sum + Number(d.revenue_received), 0),
-      count: theirs.length,
-    };
-  }).filter((s) => s.count > 0);
-  const maxServiceRevenue = Math.max(1, ...byService.map((s) => s.revenue));
+  const categoryNames = [
+    ...new Set(deals.map((d) => d.service_category || "Uncategorized")),
+  ];
+  const byCategory = categoryNames
+    .map((name) => {
+      const theirs = deals.filter(
+        (d) => (d.service_category || "Uncategorized") === name
+      );
+      return {
+        name,
+        revenue: theirs.reduce((sum, d) => sum + Number(d.revenue_received), 0),
+        count: theirs.length,
+      };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
+  const maxCategoryRevenue = Math.max(1, ...byCategory.map((c) => c.revenue));
 
   return (
     <Shell
@@ -103,19 +115,35 @@ export default async function SalesPage({
       <Card padded={false}>
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
           <div>
-            <label className={filterLabel}>Service</label>
+            <label className={filterLabel}>Category</label>
             <select
-              name="service"
-              defaultValue={service ?? ""}
+              name="category"
+              defaultValue={category ?? ""}
               className={inputClass}
             >
-              <option value="">All services</option>
-              {SERVICES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
+              <option value="">All categories</option>
+              {SERVICE_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className={filterLabel}>Service</label>
+            <input
+              name="service"
+              list="service-filter-list"
+              defaultValue={service ?? ""}
+              placeholder="All services"
+              className={inputClass}
+            />
+            <datalist id="service-filter-list">
+              {SERVICE_SUGGESTIONS.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
           </div>
 
           {floor && (
@@ -195,17 +223,17 @@ export default async function SalesPage({
         </Card>
       </div>
 
-      {byService.length > 0 && (
+      {byCategory.length > 0 && (
         <Card
-          title="Revenue by service"
-          description="Where the money is coming from."
+          title="Revenue by category"
+          description="Which kind of work brings the most sales."
         >
           <ul className="flex flex-col gap-4">
-            {byService.map((s) => (
-              <li key={s.value}>
+            {byCategory.map((s) => (
+              <li key={s.name}>
                 <div className="mb-1 flex items-baseline justify-between text-sm">
                   <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                    {s.label}
+                    {s.name}
                     <span className="ml-2 text-xs text-zinc-400">
                       {s.count} deal{s.count === 1 ? "" : "s"}
                     </span>
@@ -218,7 +246,7 @@ export default async function SalesPage({
                   <div
                     className="h-full rounded-full bg-green-500"
                     style={{
-                      width: `${Math.round((s.revenue / maxServiceRevenue) * 100)}%`,
+                      width: `${Math.round((s.revenue / maxCategoryRevenue) * 100)}%`,
                     }}
                   />
                 </div>
@@ -250,20 +278,28 @@ export default async function SalesPage({
               <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Client</th>
+                  <th className="px-5 py-3 font-semibold">Category</th>
                   <th className="px-5 py-3 font-semibold">Service</th>
-                  <th className="px-5 py-3 font-semibold">Deal size</th>
+                  <th className="px-5 py-3 font-semibold">Sale</th>
                   <th className="px-5 py-3 font-semibold">Received</th>
-                  <th className="px-5 py-3 font-semibold">Closed</th>
+                  <th className="px-5 py-3 font-semibold">Remaining</th>
+                  <th className="px-5 py-3 font-semibold">Payment</th>
+                  <th className="px-5 py-3 font-semibold">Merchant</th>
+                  <th className="px-5 py-3 font-semibold">Platform</th>
+                  <th className="px-5 py-3 font-semibold">Date</th>
                   {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {deals.map((deal) => (
+                {deals.map((deal) => {
+                  const remaining =
+                    Number(deal.deal_size) - Number(deal.revenue_received);
+                  return (
                   <tr
                     key={deal.id}
                     className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="whitespace-nowrap px-5 py-3.5">
                       <Link
                         href={`/sales/${deal.id}`}
                         className="font-semibold text-zinc-900 hover:underline dark:text-zinc-50"
@@ -276,16 +312,37 @@ export default async function SalesPage({
                         </p>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {serviceLabel(deal.service_type)}
+                    <td className="whitespace-nowrap px-5 py-3.5">
+                      {deal.service_category ? (
+                        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-[#f8f7f4]/80">
+                          {deal.service_category}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-600 dark:text-zinc-400">—</span>
+                      )}
                     </td>
-                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {deal.service ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {fmtMoney(Number(deal.deal_size))}
                     </td>
-                    <td className="px-5 py-3.5 font-semibold text-green-700 dark:text-green-400">
+                    <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-green-700 dark:text-green-400">
                       {fmtMoney(Number(deal.revenue_received))}
                     </td>
-                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {remaining > 0 ? fmtMoney(remaining) : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {deal.payment_method ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {deal.merchant_name ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {deal.social_platform ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {deal.date_closed}
                     </td>
                     {floor && (
@@ -305,7 +362,8 @@ export default async function SalesPage({
                       </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

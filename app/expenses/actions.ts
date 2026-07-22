@@ -35,6 +35,12 @@ export async function createExpense(formData: FormData) {
   if (error) throw new Error("Could not save the expense: " + error.message);
 
   revalidatePath("/expenses");
+  // Reopen the section (and stay on the right month) after adding.
+  redirect(
+    `/expenses?month=${values.date.slice(0, 7)}&open=${encodeURIComponent(
+      values.category
+    )}`
+  );
 }
 
 export async function setMonthlyClosing(month: string, formData: FormData) {

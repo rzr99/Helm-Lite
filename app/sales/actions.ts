@@ -30,10 +30,15 @@ export async function createDeal(formData: FormData) {
     agent_id: text(formData, "agent_id") || user.id,
     lead_id: text(formData, "lead_id") || null,
     client_name: text(formData, "client_name"),
-    service_type: text(formData, "service_type") || "other",
+    service: text(formData, "service") || null,
+    service_category: text(formData, "service_category") || null,
     deal_size: money(formData, "deal_size"),
     revenue_received: money(formData, "revenue_received"),
     date_closed: text(formData, "date_closed") || todayStr(),
+    payment_method: text(formData, "payment_method") || null,
+    merchant_name: text(formData, "merchant_name") || null,
+    social_platform: text(formData, "social_platform") || null,
+    designer: text(formData, "designer") || null,
   };
 
   if (!values.client_name) throw new Error("The deal needs a client name.");
@@ -55,10 +60,15 @@ export async function updateDeal(dealId: string, formData: FormData) {
 
   const values = {
     client_name: text(formData, "client_name"),
-    service_type: text(formData, "service_type") || "other",
+    service: text(formData, "service") || null,
+    service_category: text(formData, "service_category") || null,
     deal_size: money(formData, "deal_size"),
     revenue_received: money(formData, "revenue_received"),
     date_closed: text(formData, "date_closed") || todayStr(),
+    payment_method: text(formData, "payment_method") || null,
+    merchant_name: text(formData, "merchant_name") || null,
+    social_platform: text(formData, "social_platform") || null,
+    designer: text(formData, "designer") || null,
   };
 
   if (!values.client_name) throw new Error("The deal needs a client name.");

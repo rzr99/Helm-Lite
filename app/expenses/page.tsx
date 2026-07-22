@@ -63,18 +63,22 @@ const sectionStyle: Record<string, { band: string; text: string }> = {
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; open?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/");
 
-  const { month: rawMonth } = await searchParams;
+  const { month: rawMonth, open: openSection } = await searchParams;
   const month =
     rawMonth && /^\d{4}-\d{2}$/.test(rawMonth)
       ? rawMonth
       : todayStr().slice(0, 7);
   const start = `${month}-01`;
   const end = `${shiftMonth(month, 1)}-01`;
+  // New items land in the month you're viewing (today if it's the current
+  // month, otherwise the 1st of that month) — so you can log past months.
+  const addDate =
+    month === todayStr().slice(0, 7) ? todayStr() : `${month}-01`;
 
   const [{ data }, { data: finance }] = await Promise.all([
     supabase
@@ -224,24 +228,44 @@ export default async function ExpensesPage({
 
       <Card padded={false}>
         {sections.map((s) => (
-          <div key={s.label}>
-            <div
+          <details key={s.label} className="group" open={s.value === openSection}>
+            <summary
               className={
-                "flex items-center justify-between border-b border-t px-5 py-2.5 first:border-t-0 " +
+                "flex cursor-pointer list-none select-none items-center justify-between border-b border-t px-5 py-2.5 first:border-t-0 [&::-webkit-details-marker]:hidden " +
                 (sectionStyle[s.value]?.band ??
                   "bg-zinc-100 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700")
               }
             >
-              <p
-                className={
-                  "text-base font-extrabold uppercase tracking-widest " +
-                  (sectionStyle[s.value]?.text ??
-                    "text-zinc-700 dark:text-zinc-300")
-                }
-              >
-                {s.label}
-              </p>
-              <p
+              <span className="flex items-center gap-2.5">
+                <svg
+                  viewBox="0 0 24 24"
+                  className={
+                    "h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90 " +
+                    (sectionStyle[s.value]?.text ?? "text-zinc-500")
+                  }
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+                <span
+                  className={
+                    "text-base font-extrabold uppercase tracking-widest " +
+                    (sectionStyle[s.value]?.text ??
+                      "text-zinc-700 dark:text-zinc-300")
+                  }
+                >
+                  {s.label}
+                </span>
+                <span className="text-xs font-medium tabular-nums text-zinc-400">
+                  {s.items.length}
+                </span>
+              </span>
+              <span
                 className={
                   "text-base font-bold tabular-nums " +
                   (sectionStyle[s.value]?.text ??
@@ -249,8 +273,8 @@ export default async function ExpensesPage({
                 }
               >
                 {s.total > 0 ? fmtPKR(s.total) : ""}
-              </p>
-            </div>
+              </span>
+            </summary>
 
             {s.items.map((e) => (
               <div
@@ -283,6 +307,7 @@ export default async function ExpensesPage({
                 className="flex items-center gap-2 border-b border-zinc-100 px-5 py-1.5 dark:border-zinc-800/60"
               >
                 <input type="hidden" name="category" value={s.value} />
+                <input type="hidden" name="date" value={addDate} />
                 <span className="text-zinc-300 dark:text-zinc-600">+</span>
                 <input
                   name="description"
@@ -305,7 +330,7 @@ export default async function ExpensesPage({
                 </button>
               </form>
             )}
-          </div>
+          </details>
         ))}
 
         <div className="flex items-center justify-between bg-zinc-900 px-5 py-3 dark:bg-zinc-100">
@@ -319,8 +344,9 @@ export default async function ExpensesPage({
       </Card>
 
       <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
-        Type into any section and hit Add — the date is set to today
-        automatically (change it later via edit).
+        Click a section to expand it, then type an item and hit Add. New items
+        are dated to the month you're viewing ({monthTitle(month)}) — flip
+        months with ‹ › to log a past one. Change the day later via edit.
       </p>
     </Shell>
   );

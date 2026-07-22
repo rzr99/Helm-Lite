@@ -22,6 +22,41 @@ export function serviceLabel(value: string | null) {
   return SERVICES.find((s) => s.value === value)?.label ?? value;
 }
 
+// Higher-level buckets so you can see which KIND of work drives revenue.
+export const SERVICE_CATEGORIES = [
+  "Video Editing",
+  "Motion Design",
+  "Animation",
+  "Branding",
+  "Web",
+  "Other",
+];
+
+// Free-text suggestions for the sales log (agents can type anything).
+export const SERVICE_SUGGESTIONS = [
+  "Podcast video editing",
+  "Video editing",
+  "Motion designing",
+  "Short logo animation",
+  "Website designing",
+  "Reels / shorts editing",
+  "Long-form editing",
+  "Branding",
+  "Other",
+];
+
+export const PAYMENT_METHODS = [
+  "Bank transfer",
+  "Stripe",
+  "PayPal",
+  "Wise",
+  "Crypto",
+  "Cash",
+  "Other",
+];
+
+export const MERCHANTS = ["Linear Solutions", "H.Q Embroidery"];
+
 // Sections mirror the owner's expense spreadsheet.
 export const EXPENSE_CATEGORIES = [
   { value: "subscription", label: "Subscription" },

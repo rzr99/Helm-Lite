@@ -8,7 +8,13 @@ import {
   labelClass,
 } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
-import { SERVICES } from "@/lib/enums";
+import {
+  SERVICE_CATEGORIES,
+  SERVICE_SUGGESTIONS,
+  PAYMENT_METHODS,
+  MERCHANTS,
+  serviceLabel,
+} from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
 import { createDeal } from "@/app/sales/actions";
 
@@ -79,23 +85,57 @@ export default async function NewDealPage({
               />
             </div>
 
+            <datalist id="service-list">
+              {SERVICE_SUGGESTIONS.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            <datalist id="payment-list">
+              {PAYMENT_METHODS.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            <datalist id="merchant-list">
+              {MERCHANTS.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label className={labelClass}>Service sold</label>
+                <label className={labelClass}>Service category</label>
                 <select
-                  name="service_type"
-                  defaultValue={lead?.service_interest ?? "other"}
+                  name="service_category"
+                  defaultValue=""
                   className={inputClass}
                 >
-                  {SERVICES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
+                  <option value="">— choose —</option>
+                  {SERVICE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
                     </option>
                   ))}
                 </select>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                  The kind of work — powers the revenue breakdown.
+                </p>
               </div>
               <div>
-                <label className={labelClass}>Date closed</label>
+                <label className={labelClass}>Product / Service</label>
+                <input
+                  name="service"
+                  list="service-list"
+                  defaultValue={
+                    lead?.service_interest
+                      ? serviceLabel(lead.service_interest)
+                      : ""
+                  }
+                  placeholder="e.g. Podcast video editing"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Date</label>
                 <input
                   type="date"
                   name="date_closed"
@@ -108,7 +148,7 @@ export default async function NewDealPage({
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>
-                  Deal size ($) <span className="text-red-500">*</span>
+                  Sale amount ($) <span className="text-red-500">*</span>
                 </label>
                 <input
                   name="deal_size"
@@ -122,7 +162,7 @@ export default async function NewDealPage({
                 </p>
               </div>
               <div>
-                <label className={labelClass}>Revenue received ($)</label>
+                <label className={labelClass}>Received amount ($)</label>
                 <input
                   name="revenue_received"
                   inputMode="decimal"
@@ -130,8 +170,45 @@ export default async function NewDealPage({
                   className={inputClass}
                 />
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  What's actually been paid so far.
+                  Paid so far. Remaining is worked out for you.
                 </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Payment method</label>
+                <input
+                  name="payment_method"
+                  list="payment-list"
+                  placeholder="Bank transfer, Stripe…"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Merchant name</label>
+                <input
+                  name="merchant_name"
+                  list="merchant-list"
+                  placeholder="Who received the payment"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Social media platform</label>
+                <input
+                  name="social_platform"
+                  placeholder="X, Instagram, WhatsApp…"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Designer / Editor</label>
+                <input
+                  name="designer"
+                  placeholder="Who did the work (optional)"
+                  className={inputClass}
+                />
               </div>
             </div>
 
