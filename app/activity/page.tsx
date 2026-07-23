@@ -67,9 +67,22 @@ export default async function ActivityPage({
     return b;
   }
 
+  // Collapse to unique clients per agent (same rule as the Leads list): one
+  // client reached from several personas counts as a single "lead added", on
+  // the earliest date it was worked.
+  const firstAddByClient = new Map<
+    string,
+    { date: string; agentId: string }
+  >();
   for (const l of (leads ?? []) as LeadRow[]) {
-    if (inRange(l.date_added) && agentOk(l.agent_id))
-      bucket(l.date_added, l.agent_id).added++;
+    const key = `${l.agent_id}|${l.handle.trim().toLowerCase()}`;
+    const prev = firstAddByClient.get(key);
+    if (!prev || l.date_added < prev.date) {
+      firstAddByClient.set(key, { date: l.date_added, agentId: l.agent_id });
+    }
+  }
+  for (const c of firstAddByClient.values()) {
+    if (inRange(c.date) && agentOk(c.agentId)) bucket(c.date, c.agentId).added++;
   }
   for (const f of followUps ?? []) {
     const d = toKarachiDate(f.created_at);

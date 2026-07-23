@@ -49,7 +49,7 @@ export default async function Dashboard() {
 
   const { data: leadRows } = await supabase
     .from("leads")
-    .select("stage, agent_id, date_added");
+    .select("stage, agent_id, date_added, handle, created_at");
 
   let teammates: { id: string; full_name: string; avatar_url: string | null }[] =
     [];
@@ -67,18 +67,48 @@ export default async function Dashboard() {
   const dueToday = rows.filter((f) => f.due_date === today);
   const upcoming = rows.filter((f) => f.due_date > today);
 
+  // Collapse to unique clients per agent (same rule as the Leads list): the
+  // same client reached from several personas is ONE client, not several.
+  type RawLead = {
+    stage: string;
+    agent_id: string;
+    date_added: string;
+    handle: string;
+    created_at: string;
+  };
+  const clientMap = new Map<string, RawLead[]>();
+  for (const l of (leadRows ?? []) as RawLead[]) {
+    const key = `${l.agent_id}|${l.handle.trim().toLowerCase()}`;
+    const arr = clientMap.get(key) ?? [];
+    arr.push(l);
+    clientMap.set(key, arr);
+  }
+  const clients = [...clientMap.values()].map((entries) => {
+    // Stage/agent follow the most-recent outreach; "added" is the first one.
+    const rep = [...entries].sort(
+      (a, b) =>
+        b.date_added.localeCompare(a.date_added) ||
+        (b.created_at ?? "").localeCompare(a.created_at ?? "")
+    )[0];
+    const firstAdded = entries.reduce(
+      (min, e) => (e.date_added < min ? e.date_added : min),
+      entries[0].date_added
+    );
+    return { agent_id: rep.agent_id, stage: rep.stage, firstAdded };
+  });
+
   const counts: Record<string, number> = {};
-  for (const lead of leadRows ?? []) {
-    counts[lead.stage] = (counts[lead.stage] ?? 0) + 1;
+  for (const c of clients) {
+    counts[c.stage] = (counts[c.stage] ?? 0) + 1;
   }
 
   const byAgent = teammates.map((t) => {
-    const theirs = (leadRows ?? []).filter((l) => l.agent_id === t.id);
+    const theirs = clients.filter((c) => c.agent_id === t.id);
     return {
       ...t,
       total: theirs.length,
-      addedToday: theirs.filter((l) => l.date_added === today).length,
-      closed: theirs.filter((l) => l.stage === "closed").length,
+      addedToday: theirs.filter((c) => c.firstAdded === today).length,
+      closed: theirs.filter((c) => c.stage === "closed").length,
     };
   });
 
