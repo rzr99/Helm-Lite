@@ -96,9 +96,25 @@ export default async function LeadsPage({
   }
   query = query.range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE - 1);
 
-  const { data, count } = await query;
+  // Distinct-client count for the SAME filters (the floor can have the same
+  // client under two agents; an agent's unique always equals their total).
+  const uniquePromise = floor
+    ? supabase.rpc("lead_unique_count", {
+        p_stage: stage && STAGES.some((s) => s.value === stage) ? stage : null,
+        p_agent: agent || null,
+        p_from: from || null,
+        p_to: to || null,
+        p_search: search || null,
+      })
+    : null;
+
+  const [{ data, count }, uniqueRes] = await Promise.all([
+    query,
+    uniquePromise,
+  ]);
   const clients = (data ?? []) as unknown as ClientRow[];
   const total = count ?? 0;
+  const uniqueClients = (uniqueRes?.data as number | null) ?? total;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = Boolean(search || stage || agent || from || to);
 
@@ -196,6 +212,11 @@ export default async function LeadsPage({
         title={`${total} client${total === 1 ? "" : "s"}${
           hasFilters ? " found" : ""
         }`}
+        description={
+          floor
+            ? `${uniqueClients} unique — the same client worked by two agents counts once here`
+            : undefined
+        }
         padded={false}
       >
         <LeadsSearch initial={search} />

@@ -47,6 +47,7 @@ export default async function ActivityPage({
     { data: followUpDays },
     { data: dealDays },
     { data: dupRows },
+    { data: uniqueAdded },
   ] = await Promise.all([
     supabase.from("users").select("id, full_name").eq("active", true).order("full_name"),
     dayQuery("activity_leads_added"),
@@ -55,6 +56,11 @@ export default async function ActivityPage({
     supabase
       .from("lead_duplicate_entries")
       .select("handle_key, agent_id, lead_id, handle, date_added"),
+    supabase.rpc("activity_unique_added", {
+      p_from: fromDate,
+      p_to: toDate,
+      p_agent: agent || null,
+    }),
   ]);
 
   const nameOf = new Map((users ?? []).map((u) => [u.id, u.full_name]));
@@ -91,6 +97,7 @@ export default async function ActivityPage({
     }),
     { added: 0, followUps: 0, closes: 0 }
   );
+  const uniqueAddedCount = (uniqueAdded as number | null) ?? 0;
 
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
@@ -174,6 +181,12 @@ export default async function ActivityPage({
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Leads added</p>
           <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
             {totals.added}
+          </p>
+          <p
+            className="mt-1 text-xs text-amber-600 dark:text-amber-500"
+            title="Distinct clients — the same client added by two agents counts once."
+          >
+            {uniqueAddedCount} unique client{uniqueAddedCount === 1 ? "" : "s"}
           </p>
         </Card>
         <Card padded>

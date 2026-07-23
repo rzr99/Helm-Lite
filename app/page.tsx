@@ -45,6 +45,7 @@ export default async function Dashboard() {
     { data: followUps },
     { data: stageCounts },
     { data: agentStats },
+    { data: clientTotals },
   ] = await Promise.all([
     supabase
       .from("follow_ups")
@@ -56,7 +57,13 @@ export default async function Dashboard() {
       .limit(200),
     supabase.from("pipeline_counts").select("stage, n"),
     supabase.from("agent_lead_stats").select("agent_id, total_clients, added_today, closed"),
+    supabase.from("client_totals").select("total_clients, unique_clients").single(),
   ]);
+
+  const totals = (clientTotals ?? { total_clients: 0, unique_clients: 0 }) as {
+    total_clients: number;
+    unique_clients: number;
+  };
 
   let teammates: { id: string; full_name: string; avatar_url: string | null }[] =
     [];
@@ -178,6 +185,26 @@ export default async function Dashboard() {
             : "Your leads by stage — click a stage to open it."
         }
       >
+        <div className="mb-4 flex flex-wrap items-center gap-x-8 gap-y-1 border-b border-white/[0.06] pb-4">
+          <div>
+            <span className="text-2xl font-bold tabular-nums text-[#f8f7f4]">
+              {totals.total_clients}
+            </span>
+            <span className="ml-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+              leads logged
+            </span>
+          </div>
+          {floor && (
+            <div title="Distinct clients — the same client worked by two agents counts once here.">
+              <span className="text-2xl font-bold tabular-nums text-amber-500">
+                {totals.unique_clients}
+              </span>
+              <span className="ml-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                unique clients
+              </span>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {STAGES.map((s) => (
             <Link
