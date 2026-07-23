@@ -37,7 +37,7 @@ export default async function LeadsPage({
   let query = supabase
     .from("leads")
     .select(
-      "id, handle, name, service_interest, source, stage, date_added, agent:users(full_name, avatar_url)"
+      "id, agent_id, handle, name, service_interest, source, stage, date_added, persona, agent:users(full_name, avatar_url)"
     )
     .order("date_added", { ascending: false })
     .order("created_at", { ascending: false });
