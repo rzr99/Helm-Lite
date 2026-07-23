@@ -1,59 +1,118 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
-import { Card, btnPrimary, btnSecondary, inputClass } from "@/components/ui";
-import { LeadsLive, type LeadRow } from "@/components/leads-live";
+import {
+  Card,
+  EmptyState,
+  Avatar,
+  btnPrimary,
+  btnSecondary,
+  inputClass,
+} from "@/components/ui";
+import { LeadsSearch } from "@/components/leads-search";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { STAGES } from "@/lib/enums";
+import { STAGES, stageLabel, serviceLabel, STAGE_BADGE } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 50;
+
 const filterLabel =
   "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+
+type Entry = {
+  id: string;
+  persona: string | null;
+  name: string | null;
+  date_added: string;
+};
+
+type ClientRow = {
+  agent_id: string;
+  outreach_count: number;
+  rep_id: string;
+  rep_handle: string;
+  rep_name: string | null;
+  rep_service: string | null;
+  rep_source: string | null;
+  rep_stage: string;
+  rep_persona: string | null;
+  rep_date_added: string;
+  entries: Entry[];
+};
 
 export default async function LeadsPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    q?: string;
     stage?: string;
     agent?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { stage, agent, from, to } = await searchParams;
+  const { q, stage, agent, from, to, page } = await searchParams;
+  const search = (q ?? "").trim();
+  const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
-  let teammates: { id: string; full_name: string }[] = [];
+  let teammates: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  }[] = [];
   if (floor) {
     const { data } = await supabase
       .from("users")
-      .select("id, full_name")
+      .select("id, full_name, avatar_url")
       .eq("active", true)
       .order("full_name");
     teammates = data ?? [];
   }
+  const userById = new Map(teammates.map((t) => [t.id, t]));
 
+  // One row per client, pre-grouped and counted in Postgres. Filters, search,
+  // and paging all run in the database — the app only ever holds one page.
   let query = supabase
-    .from("leads")
+    .from("lead_clients")
     .select(
-      "id, agent_id, handle, name, service_interest, source, stage, date_added, persona, agent:users(full_name, avatar_url)"
+      "agent_id, outreach_count, rep_id, rep_handle, rep_name, rep_service, rep_source, rep_stage, rep_persona, rep_date_added, entries",
+      { count: "exact" }
     )
-    .order("date_added", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("rep_date_added", { ascending: false });
 
   if (stage && STAGES.some((s) => s.value === stage)) {
-    query = query.eq("stage", stage);
+    query = query.eq("rep_stage", stage);
   }
   if (floor && agent) {
     query = query.eq("agent_id", agent);
   }
-  if (from) query = query.gte("date_added", from);
-  if (to) query = query.lte("date_added", to);
+  if (from) query = query.gte("rep_date_added", from);
+  if (to) query = query.lte("rep_date_added", to);
+  for (const token of search.toLowerCase().split(/\s+/).filter(Boolean)) {
+    query = query.ilike("search_text", `%${token}%`);
+  }
+  query = query.range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE - 1);
 
-  const { data } = await query;
-  const leads = (data ?? []) as unknown as LeadRow[];
-  const hasFilters = Boolean(stage || agent || from || to);
+  const { data, count } = await query;
+  const clients = (data ?? []) as unknown as ClientRow[];
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasFilters = Boolean(search || stage || agent || from || to);
+
+  const pageHref = (p: number) => {
+    const sp = new URLSearchParams();
+    if (search) sp.set("q", search);
+    if (stage) sp.set("stage", stage);
+    if (agent) sp.set("agent", agent);
+    if (from) sp.set("from", from);
+    if (to) sp.set("to", to);
+    if (p > 1) sp.set("page", String(p));
+    const s = sp.toString();
+    return s ? `/leads?${s}` : "/leads";
+  };
 
   return (
     <Shell
@@ -72,17 +131,12 @@ export default async function LeadsPage({
       }
     >
       <Card padded={false}>
-        <form
-          method="get"
-          className="flex flex-wrap items-end gap-4 px-5 py-4"
-        >
+        <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
+          {/* Keep any active search when the other filters are submitted. */}
+          {search && <input type="hidden" name="q" value={search} />}
           <div>
             <label className={filterLabel}>Stage</label>
-            <select
-              name="stage"
-              defaultValue={stage ?? ""}
-              className={inputClass}
-            >
+            <select name="stage" defaultValue={stage ?? ""} className={inputClass}>
               <option value="">All stages</option>
               {STAGES.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -95,11 +149,7 @@ export default async function LeadsPage({
           {floor && (
             <div>
               <label className={filterLabel}>Agent</label>
-              <select
-                name="agent"
-                defaultValue={agent ?? ""}
-                className={inputClass}
-              >
+              <select name="agent" defaultValue={agent ?? ""} className={inputClass}>
                 <option value="">All agents</option>
                 {teammates.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -142,7 +192,150 @@ export default async function LeadsPage({
         </form>
       </Card>
 
-      <LeadsLive leads={leads} floor={floor} hasServerFilters={hasFilters} />
+      <Card
+        title={`${total} client${total === 1 ? "" : "s"}${
+          hasFilters ? " found" : ""
+        }`}
+        padded={false}
+      >
+        <LeadsSearch initial={search} />
+
+        {clients.length === 0 ? (
+          hasFilters ? (
+            <EmptyState
+              emoji="🔍"
+              title="Nothing matches these filters"
+              hint="Try a different name, widen the date range, or clear a filter."
+            />
+          ) : (
+            <EmptyState
+              emoji="🌱"
+              title="No leads yet"
+              hint="Add your first lead and it will show up here."
+              actionHref="/leads/new"
+              actionLabel="+ Add lead"
+            />
+          )
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Client</th>
+                  <th className="px-5 py-3 font-semibold">Service</th>
+                  <th className="px-5 py-3 font-semibold">Source</th>
+                  <th className="px-5 py-3 font-semibold">Stage</th>
+                  <th className="px-5 py-3 font-semibold">Added</th>
+                  {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {clients.map((c) => {
+                  const entries = c.entries ?? [];
+                  const multi = entries.length > 1;
+                  const ag = userById.get(c.agent_id);
+                  return (
+                    <tr
+                      key={c.rep_id}
+                      className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    >
+                      <td className="px-5 py-3.5 align-top">
+                        <Link
+                          href={`/leads/${c.rep_id}`}
+                          className="font-semibold text-zinc-900 hover:underline dark:text-zinc-50"
+                        >
+                          {c.rep_handle}
+                        </Link>
+                        {!multi && c.rep_name && (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {c.rep_name}
+                          </p>
+                        )}
+                        {multi && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                              Reached from:
+                            </span>
+                            {entries.map((e) => (
+                              <Link
+                                key={e.id}
+                                href={`/leads/${e.id}`}
+                                title={`Added ${e.date_added}`}
+                                className="rounded-full border border-zinc-300 px-2 py-0.5 text-xs font-medium text-zinc-600 transition-colors hover:border-amber-500 hover:text-amber-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-amber-500 dark:hover:text-amber-400"
+                              >
+                                {e.persona || e.name || e.date_added}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 align-top text-zinc-600 dark:text-zinc-400">
+                        {serviceLabel(c.rep_service)}
+                      </td>
+                      <td className="px-5 py-3.5 align-top text-zinc-600 dark:text-zinc-400">
+                        {c.rep_source ?? "—"}
+                      </td>
+                      <td className="px-5 py-3.5 align-top">
+                        <span
+                          className={
+                            "rounded-full px-2.5 py-1 text-xs font-semibold " +
+                            (STAGE_BADGE[c.rep_stage] ?? "")
+                          }
+                        >
+                          {stageLabel(c.rep_stage)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 align-top text-zinc-600 dark:text-zinc-400">
+                        {c.rep_date_added}
+                      </td>
+                      {floor && (
+                        <td className="px-5 py-3.5 align-top">
+                          {ag ? (
+                            <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                              <Avatar
+                                name={ag.full_name}
+                                src={ag.avatar_url}
+                                size={7}
+                              />
+                              {ag.full_name}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 border-t border-zinc-100 px-5 py-3 text-sm dark:border-zinc-800">
+            <span className="text-zinc-500 dark:text-zinc-400">
+              Page {pageNum} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              {pageNum > 1 ? (
+                <Link href={pageHref(pageNum - 1)} className={btnSecondary}>
+                  ← Prev
+                </Link>
+              ) : (
+                <span className={btnSecondary + " opacity-40"}>← Prev</span>
+              )}
+              {pageNum < totalPages ? (
+                <Link href={pageHref(pageNum + 1)} className={btnSecondary}>
+                  Next →
+                </Link>
+              ) : (
+                <span className={btnSecondary + " opacity-40"}>Next →</span>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
     </Shell>
   );
 }

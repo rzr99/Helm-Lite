@@ -39,17 +39,24 @@ export default async function Dashboard() {
 
   const today = todayStr();
 
-  const { data: followUps } = await supabase
-    .from("follow_ups")
-    .select(
-      "id, due_date, note, lead:leads(id, handle, persona), agent:users(full_name)"
-    )
-    .eq("done", false)
-    .order("due_date");
-
-  const { data: leadRows } = await supabase
-    .from("leads")
-    .select("stage, agent_id, date_added, handle, created_at");
+  // Counts come pre-aggregated from Postgres (views group by unique client),
+  // so the dashboard never loads the whole leads table to add it up.
+  const [
+    { data: followUps },
+    { data: stageCounts },
+    { data: agentStats },
+  ] = await Promise.all([
+    supabase
+      .from("follow_ups")
+      .select(
+        "id, due_date, note, lead:leads(id, handle, persona), agent:users(full_name)"
+      )
+      .eq("done", false)
+      .order("due_date")
+      .limit(200),
+    supabase.from("pipeline_counts").select("stage, n"),
+    supabase.from("agent_lead_stats").select("agent_id, total_clients, added_today, closed"),
+  ]);
 
   let teammates: { id: string; full_name: string; avatar_url: string | null }[] =
     [];
@@ -67,48 +74,26 @@ export default async function Dashboard() {
   const dueToday = rows.filter((f) => f.due_date === today);
   const upcoming = rows.filter((f) => f.due_date > today);
 
-  // Collapse to unique clients per agent (same rule as the Leads list): the
-  // same client reached from several personas is ONE client, not several.
-  type RawLead = {
-    stage: string;
-    agent_id: string;
-    date_added: string;
-    handle: string;
-    created_at: string;
-  };
-  const clientMap = new Map<string, RawLead[]>();
-  for (const l of (leadRows ?? []) as RawLead[]) {
-    const key = `${l.agent_id}|${l.handle.trim().toLowerCase()}`;
-    const arr = clientMap.get(key) ?? [];
-    arr.push(l);
-    clientMap.set(key, arr);
-  }
-  const clients = [...clientMap.values()].map((entries) => {
-    // Stage/agent follow the most-recent outreach; "added" is the first one.
-    const rep = [...entries].sort(
-      (a, b) =>
-        b.date_added.localeCompare(a.date_added) ||
-        (b.created_at ?? "").localeCompare(a.created_at ?? "")
-    )[0];
-    const firstAdded = entries.reduce(
-      (min, e) => (e.date_added < min ? e.date_added : min),
-      entries[0].date_added
-    );
-    return { agent_id: rep.agent_id, stage: rep.stage, firstAdded };
-  });
-
   const counts: Record<string, number> = {};
-  for (const c of clients) {
-    counts[c.stage] = (counts[c.stage] ?? 0) + 1;
+  for (const c of (stageCounts ?? []) as { stage: string; n: number }[]) {
+    counts[c.stage] = c.n;
   }
 
+  const statsByAgent = new Map(
+    ((agentStats ?? []) as {
+      agent_id: string;
+      total_clients: number;
+      added_today: number;
+      closed: number;
+    }[]).map((s) => [s.agent_id, s])
+  );
   const byAgent = teammates.map((t) => {
-    const theirs = clients.filter((c) => c.agent_id === t.id);
+    const s = statsByAgent.get(t.id);
     return {
       ...t,
-      total: theirs.length,
-      addedToday: theirs.filter((c) => c.firstAdded === today).length,
-      closed: theirs.filter((c) => c.stage === "closed").length,
+      total: s?.total_clients ?? 0,
+      addedToday: s?.added_today ?? 0,
+      closed: s?.closed ?? 0,
     };
   });
 

@@ -10,19 +10,12 @@ import {
   inputClass,
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { todayStr, toKarachiDate, daysAgoStr } from "@/lib/dates";
+import { todayStr, daysAgoStr } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
 const filterLabel =
   "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
-
-type LeadRow = {
-  id: string;
-  handle: string;
-  agent_id: string;
-  date_added: string;
-};
 
 export default async function ActivityPage({
   searchParams,
@@ -36,23 +29,37 @@ export default async function ActivityPage({
   const fromDate = from || daysAgoStr(6);
   const toDate = to || todayStr();
 
-  const [{ data: users }, { data: leads }, { data: followUps }, { data: deals }] =
-    await Promise.all([
-      supabase
-        .from("users")
-        .select("id, full_name")
-        .eq("active", true)
-        .order("full_name"),
-      supabase.from("leads").select("id, handle, agent_id, date_added"),
-      supabase.from("follow_ups").select("agent_id, created_at"),
-      supabase.from("deals").select("agent_id, date_closed"),
-    ]);
+  // Per-day/per-agent counts come pre-aggregated from Postgres, filtered to the
+  // date range (and agent) server-side — no full-table scan into the app.
+  const dayQuery = (table: string) => {
+    let q = supabase
+      .from(table)
+      .select("agent_id, day, n")
+      .gte("day", fromDate)
+      .lte("day", toDate);
+    if (agent) q = q.eq("agent_id", agent);
+    return q;
+  };
+
+  const [
+    { data: users },
+    { data: leadsAdded },
+    { data: followUpDays },
+    { data: dealDays },
+    { data: dupRows },
+  ] = await Promise.all([
+    supabase.from("users").select("id, full_name").eq("active", true).order("full_name"),
+    dayQuery("activity_leads_added"),
+    dayQuery("activity_followups"),
+    dayQuery("activity_deals"),
+    supabase
+      .from("lead_duplicate_entries")
+      .select("handle_key, agent_id, lead_id, handle, date_added"),
+  ]);
 
   const nameOf = new Map((users ?? []).map((u) => [u.id, u.full_name]));
-  const inRange = (d: string) => d >= fromDate && d <= toDate;
-  const agentOk = (id: string) => !agent || id === agent;
 
-  // date|agent -> { added, followUps, closes }
+  type DayRow = { agent_id: string; day: string; n: number };
   const buckets = new Map<
     string,
     { date: string; agentId: string; added: number; followUps: number; closes: number }
@@ -66,32 +73,9 @@ export default async function ActivityPage({
     }
     return b;
   }
-
-  // Collapse to unique clients per agent (same rule as the Leads list): one
-  // client reached from several personas counts as a single "lead added", on
-  // the earliest date it was worked.
-  const firstAddByClient = new Map<
-    string,
-    { date: string; agentId: string }
-  >();
-  for (const l of (leads ?? []) as LeadRow[]) {
-    const key = `${l.agent_id}|${l.handle.trim().toLowerCase()}`;
-    const prev = firstAddByClient.get(key);
-    if (!prev || l.date_added < prev.date) {
-      firstAddByClient.set(key, { date: l.date_added, agentId: l.agent_id });
-    }
-  }
-  for (const c of firstAddByClient.values()) {
-    if (inRange(c.date) && agentOk(c.agentId)) bucket(c.date, c.agentId).added++;
-  }
-  for (const f of followUps ?? []) {
-    const d = toKarachiDate(f.created_at);
-    if (inRange(d) && agentOk(f.agent_id)) bucket(d, f.agent_id).followUps++;
-  }
-  for (const d of deals ?? []) {
-    if (inRange(d.date_closed) && agentOk(d.agent_id))
-      bucket(d.date_closed, d.agent_id).closes++;
-  }
+  for (const r of (leadsAdded ?? []) as DayRow[]) bucket(r.day, r.agent_id).added += r.n;
+  for (const r of (followUpDays ?? []) as DayRow[]) bucket(r.day, r.agent_id).followUps += r.n;
+  for (const r of (dealDays ?? []) as DayRow[]) bucket(r.day, r.agent_id).closes += r.n;
 
   const rows = [...buckets.values()].sort(
     (a, b) =>
@@ -108,33 +92,29 @@ export default async function ActivityPage({
     { added: 0, followUps: 0, closes: 0 }
   );
 
-  // ---- Duplicate checks (across ALL leads, ignoring filters) ----
-  // We ONLY flag when the SAME client handle is worked by TWO DIFFERENT agents.
-  // One agent reaching the same client from several personas is normal outreach,
-  // never a duplicate — so those are deliberately left out.
-  const byHandle = new Map<string, LeadRow[]>();
-  for (const l of (leads ?? []) as LeadRow[]) {
-    const key = l.handle.trim().toLowerCase();
-    if (!key) continue;
-    const list = byHandle.get(key) ?? [];
-    list.push(l);
-    byHandle.set(key, list);
+  // Cross-agent duplicates come straight from the view: it returns one row per
+  // (client, agent) only for handles two or more DIFFERENT agents have worked.
+  type DupRow = {
+    handle_key: string;
+    agent_id: string;
+    lead_id: string;
+    handle: string;
+    date_added: string;
+  };
+  const dupMap = new Map<
+    string,
+    { handle: string; entries: { agent: string; date: string; id: string }[] }
+  >();
+  for (const r of (dupRows ?? []) as DupRow[]) {
+    const g = dupMap.get(r.handle_key) ?? { handle: r.handle, entries: [] };
+    g.entries.push({
+      agent: nameOf.get(r.agent_id) ?? "Unknown",
+      date: r.date_added,
+      id: r.lead_id,
+    });
+    dupMap.set(r.handle_key, g);
   }
-  const duplicates = [...byHandle.entries()]
-    .filter(([, list]) => new Set(list.map((l) => l.agent_id)).size > 1)
-    .map(([handle, list]) => ({
-      handle,
-      // Collapse to one row per agent — the point is "two agents on one client",
-      // not how many times each logged them.
-      entries: [...new Set(list.map((l) => l.agent_id))].map((agentId) => {
-        const first = list.find((l) => l.agent_id === agentId)!;
-        return {
-          agent: nameOf.get(agentId) ?? "Unknown",
-          date: first.date_added,
-          id: first.id,
-        };
-      }),
-    }));
+  const duplicates = [...dupMap.values()];
 
   const hasFilters = Boolean(agent || from || to);
 

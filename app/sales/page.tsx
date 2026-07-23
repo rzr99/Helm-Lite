@@ -13,6 +13,8 @@ import { SERVICE_CATEGORIES, SERVICE_SUGGESTIONS, fmtMoney } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 50;
+
 const filterLabel =
   "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
@@ -41,11 +43,13 @@ export default async function SalesPage({
     agent?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { service, category, agent, from, to } = await searchParams;
+  const { service, category, agent, from, to, page } = await searchParams;
+  const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
   let teammates: { id: string; full_name: string }[] = [];
   if (floor) {
@@ -60,7 +64,8 @@ export default async function SalesPage({
   let query = supabase
     .from("deals")
     .select(
-      "id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)"
+      "id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)",
+      { count: "exact" }
     )
     .order("date_closed", { ascending: false })
     .order("created_at", { ascending: false });
@@ -70,31 +75,53 @@ export default async function SalesPage({
   if (floor && agent) query = query.eq("agent_id", agent);
   if (from) query = query.gte("date_closed", from);
   if (to) query = query.lte("date_closed", to);
+  query = query.range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE - 1);
 
-  const { data } = await query;
+  // Totals + category breakdown for the WHOLE filtered set come from the DB,
+  // so they stay correct no matter which page of the list is shown.
+  const [{ data, count }, { data: summaryData }] = await Promise.all([
+    query,
+    supabase.rpc("deal_summary", {
+      p_service: service || null,
+      p_category: category || null,
+      p_agent: floor && agent ? agent : null,
+      p_from: from || null,
+      p_to: to || null,
+    }),
+  ]);
+
   const deals = (data ?? []) as unknown as DealRow[];
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = Boolean(service || category || agent || from || to);
 
-  const totalRevenue = deals.reduce((sum, d) => sum + Number(d.revenue_received), 0);
-  const totalDealSize = deals.reduce((sum, d) => sum + Number(d.deal_size), 0);
-  const avgDeal = deals.length > 0 ? totalDealSize / deals.length : 0;
-
-  const categoryNames = [
-    ...new Set(deals.map((d) => d.service_category || "Uncategorized")),
-  ];
-  const byCategory = categoryNames
-    .map((name) => {
-      const theirs = deals.filter(
-        (d) => (d.service_category || "Uncategorized") === name
-      );
-      return {
-        name,
-        revenue: theirs.reduce((sum, d) => sum + Number(d.revenue_received), 0),
-        count: theirs.length,
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue);
+  const summary = (summaryData ?? {}) as {
+    total_received?: number;
+    total_size?: number;
+    deal_count?: number;
+    by_category?: { name: string; revenue: number; count: number }[];
+  };
+  const totalRevenue = Number(summary.total_received ?? 0);
+  const dealCount = Number(summary.deal_count ?? 0);
+  const avgDeal = dealCount > 0 ? Number(summary.total_size ?? 0) / dealCount : 0;
+  const byCategory = (summary.by_category ?? []).map((c) => ({
+    name: c.name,
+    revenue: Number(c.revenue),
+    count: Number(c.count),
+  }));
   const maxCategoryRevenue = Math.max(1, ...byCategory.map((c) => c.revenue));
+
+  const pageHref = (p: number) => {
+    const sp = new URLSearchParams();
+    if (service) sp.set("service", service);
+    if (category) sp.set("category", category);
+    if (agent) sp.set("agent", agent);
+    if (from) sp.set("from", from);
+    if (to) sp.set("to", to);
+    if (p > 1) sp.set("page", String(p));
+    const s = sp.toString();
+    return s ? `/sales?${s}` : "/sales";
+  };
 
   return (
     <Shell
@@ -210,7 +237,7 @@ export default async function SalesPage({
             Deals closed{hasFilters ? " (filtered)" : ""}
           </p>
           <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            {deals.length}
+            {dealCount}
           </p>
         </Card>
         <Card padded>
@@ -257,7 +284,7 @@ export default async function SalesPage({
       )}
 
       <Card
-        title={`${deals.length} deal${deals.length === 1 ? "" : "s"}${hasFilters ? " found" : ""}`}
+        title={`${total} deal${total === 1 ? "" : "s"}${hasFilters ? " found" : ""}`}
         padded={false}
       >
         {deals.length === 0 ? (
@@ -366,6 +393,30 @@ export default async function SalesPage({
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 border-t border-zinc-100 px-5 py-3 text-sm dark:border-zinc-800">
+            <span className="text-zinc-500 dark:text-zinc-400">
+              Page {pageNum} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              {pageNum > 1 ? (
+                <Link href={pageHref(pageNum - 1)} className={btnSecondary}>
+                  ← Prev
+                </Link>
+              ) : (
+                <span className={btnSecondary + " opacity-40"}>← Prev</span>
+              )}
+              {pageNum < totalPages ? (
+                <Link href={pageHref(pageNum + 1)} className={btnSecondary}>
+                  Next →
+                </Link>
+              ) : (
+                <span className={btnSecondary + " opacity-40"}>Next →</span>
+              )}
+            </div>
           </div>
         )}
       </Card>
