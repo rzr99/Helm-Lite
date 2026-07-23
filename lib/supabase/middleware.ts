@@ -28,7 +28,33 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Touching getUser() refreshes the token cookie when it's close to expiry.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Daily fresh login: everyone must sign in again once their session marker
+  // is more than 24h old. The marker (helm_login_at) is stamped at login;
+  // when it's missing or stale we clear the session and bounce to /login.
+  const path = request.nextUrl.pathname;
+  if (user && path !== "/login") {
+    const loginAt = Number(request.cookies.get("helm_login_at")?.value);
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    const stale =
+      !loginAt || Number.isNaN(loginAt) || Date.now() - loginAt > ONE_DAY_MS;
+    if (stale) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = "expired=1";
+      const redirect = NextResponse.redirect(url);
+      // Clear the Supabase auth cookies (sb-*) and our marker → fully signed out.
+      for (const c of request.cookies.getAll()) {
+        if (c.name.startsWith("sb-") || c.name === "helm_login_at") {
+          redirect.cookies.set(c.name, "", { maxAge: 0, path: "/" });
+        }
+      }
+      return redirect;
+    }
+  }
 
   return response;
 }

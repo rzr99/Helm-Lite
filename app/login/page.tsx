@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { startSession } from "@/app/actions";
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-[#141412] px-3.5 py-2.5 text-sm text-[#f8f7f4] outline-none transition-colors placeholder:text-[#f8f7f4]/35 focus:border-amber-600/70 focus:ring-2 focus:ring-amber-600/20";
@@ -15,8 +16,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("deactivated")) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("deactivated")) {
       setError("Your account is inactive. Ask the owner to reactivate it.");
+    } else if (params.has("expired")) {
+      setError("Your session ended for the day — please sign in again.");
     }
   }, []);
 
@@ -40,6 +44,9 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+
+    // Stamp the login time so the daily-expiry check in the proxy has a start.
+    await startSession();
 
     router.push("/");
     router.refresh();
