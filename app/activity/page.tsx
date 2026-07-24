@@ -10,7 +10,7 @@ import {
   inputClass,
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { todayStr, daysAgoStr } from "@/lib/dates";
+import { todayStr, weekRange, monthRange } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +26,27 @@ export default async function ActivityPage({
   if (!isFloorRole(profile.role)) redirect("/");
 
   const { agent, from, to } = await searchParams;
-  const fromDate = from || daysAgoStr(6);
+  // Default view is Today; the Daily/Weekly/Monthly buttons set exact ranges.
+  const fromDate = from || todayStr();
   const toDate = to || todayStr();
+
+  const week = weekRange();
+  const month = monthRange();
+  const presets = [
+    { key: "daily", label: "Daily", from: todayStr(), to: todayStr() },
+    { key: "weekly", label: "Weekly", from: week.from, to: week.to },
+    { key: "monthly", label: "Monthly", from: month.from, to: month.to },
+  ];
+  const activePreset = presets.find(
+    (p) => p.from === fromDate && p.to === toDate
+  )?.key;
+  const presetHref = (p: { from: string; to: string }) => {
+    const sp = new URLSearchParams();
+    if (agent) sp.set("agent", agent);
+    sp.set("from", p.from);
+    sp.set("to", p.to);
+    return `/activity?${sp.toString()}`;
+  };
 
   // Per-day/per-agent counts come pre-aggregated from Postgres, filtered to the
   // date range (and agent) server-side — no full-table scan into the app.
@@ -133,6 +152,25 @@ export default async function ActivityPage({
       subtitle="Derived automatically from leads, follow-ups, and deals — nothing here is typed in by hand."
     >
       <Card padded={false}>
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
+          {presets.map((p) => (
+            <Link
+              key={p.key}
+              href={presetHref(p)}
+              className={
+                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
+                (activePreset === p.key
+                  ? "bg-amber-600 text-[#0e0e0d]"
+                  : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 hover:text-amber-600 dark:border-white/15 dark:text-zinc-300 dark:hover:border-amber-500/70 dark:hover:text-amber-400")
+              }
+            >
+              {p.label}
+            </Link>
+          ))}
+          <span className="ml-1 text-xs text-zinc-400 dark:text-zinc-500">
+            or pick a custom range below
+          </span>
+        </div>
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
           <div>
             <label className={filterLabel}>Agent</label>
