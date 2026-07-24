@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -14,7 +14,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Helm Lite",
-  description: "Internal operations app",
+  description: "Linear Solutions internal operations",
+  applicationName: "Helm Lite",
+  appleWebApp: {
+    capable: true,
+    title: "Helm Lite",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0e0e0d",
 };
 
 export default function RootLayout({
