@@ -11,6 +11,7 @@ import {
 import { LeadsSearch } from "@/components/leads-search";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, SERVICES, stageLabel, serviceLabel, STAGE_BADGE } from "@/lib/enums";
+import { todayStr, weekRange, monthRange } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -137,6 +138,28 @@ export default async function LeadsPage({
     return s ? `/leads?${s}` : "/leads";
   };
 
+  // Quick date ranges (work for agents too — they filter their own leads).
+  const week = weekRange();
+  const month = monthRange();
+  const datePresets = [
+    { key: "daily", label: "Today", from: todayStr(), to: todayStr() },
+    { key: "weekly", label: "This week", from: week.from, to: week.to },
+    { key: "monthly", label: "This month", from: month.from, to: month.to },
+  ];
+  const activePreset = datePresets.find(
+    (r) => r.from === from && r.to === to
+  )?.key;
+  const presetHref = (r: { from: string; to: string }) => {
+    const sp = new URLSearchParams();
+    if (search) sp.set("q", search);
+    if (stage) sp.set("stage", stage);
+    if (serviceOk) sp.set("service", service!);
+    if (agent) sp.set("agent", agent);
+    sp.set("from", r.from);
+    sp.set("to", r.to);
+    return `/leads?${sp.toString()}`;
+  };
+
   return (
     <Shell
       profile={profile}
@@ -154,6 +177,25 @@ export default async function LeadsPage({
       }
     >
       <Card padded={false}>
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
+          {datePresets.map((r) => (
+            <Link
+              key={r.key}
+              href={presetHref(r)}
+              className={
+                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
+                (activePreset === r.key
+                  ? "bg-amber-600 text-[#0e0e0d]"
+                  : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 hover:text-amber-600 dark:border-white/15 dark:text-zinc-300 dark:hover:border-amber-500/70 dark:hover:text-amber-400")
+              }
+            >
+              {r.label}
+            </Link>
+          ))}
+          <span className="ml-1 text-xs text-zinc-400 dark:text-zinc-500">
+            quick date filters — or set a custom range below
+          </span>
+        </div>
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
           {/* Keep any active search when the other filters are submitted. */}
           {search && <input type="hidden" name="q" value={search} />}
