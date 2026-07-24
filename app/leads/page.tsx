@@ -10,7 +10,7 @@ import {
 } from "@/components/ui";
 import { LeadsSearch } from "@/components/leads-search";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { STAGES, stageLabel, serviceLabel, STAGE_BADGE } from "@/lib/enums";
+import { STAGES, SERVICES, stageLabel, serviceLabel, STAGE_BADGE } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +46,7 @@ export default async function LeadsPage({
   searchParams: Promise<{
     q?: string;
     stage?: string;
+    service?: string;
     agent?: string;
     from?: string;
     to?: string;
@@ -54,8 +55,9 @@ export default async function LeadsPage({
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { q, stage, agent, from, to, page } = await searchParams;
+  const { q, stage, service, agent, from, to, page } = await searchParams;
   const search = (q ?? "").trim();
+  const serviceOk = service && SERVICES.some((s) => s.value === service);
   const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
   let teammates: {
@@ -86,6 +88,9 @@ export default async function LeadsPage({
   if (stage && STAGES.some((s) => s.value === stage)) {
     query = query.eq("rep_stage", stage);
   }
+  if (serviceOk) {
+    query = query.eq("rep_service", service);
+  }
   if (floor && agent) {
     query = query.eq("agent_id", agent);
   }
@@ -101,6 +106,7 @@ export default async function LeadsPage({
   const uniquePromise = floor
     ? supabase.rpc("lead_unique_count", {
         p_stage: stage && STAGES.some((s) => s.value === stage) ? stage : null,
+        p_service: serviceOk ? service : null,
         p_agent: agent || null,
         p_from: from || null,
         p_to: to || null,
@@ -116,12 +122,13 @@ export default async function LeadsPage({
   const total = count ?? 0;
   const uniqueClients = (uniqueRes?.data as number | null) ?? total;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const hasFilters = Boolean(search || stage || agent || from || to);
+  const hasFilters = Boolean(search || stage || serviceOk || agent || from || to);
 
   const pageHref = (p: number) => {
     const sp = new URLSearchParams();
     if (search) sp.set("q", search);
     if (stage) sp.set("stage", stage);
+    if (serviceOk) sp.set("service", service!);
     if (agent) sp.set("agent", agent);
     if (from) sp.set("from", from);
     if (to) sp.set("to", to);
@@ -155,6 +162,22 @@ export default async function LeadsPage({
             <select name="stage" defaultValue={stage ?? ""} className={inputClass}>
               <option value="">All stages</option>
               {STAGES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={filterLabel}>Service</label>
+            <select
+              name="service"
+              defaultValue={serviceOk ? service : ""}
+              className={inputClass}
+            >
+              <option value="">All services</option>
+              {SERVICES.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
