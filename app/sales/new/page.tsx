@@ -195,10 +195,18 @@ export default async function NewDealPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>Social media platform</label>
+                <label className={labelClass}>Lead source</label>
                 <input
                   name="social_platform"
-                  placeholder="X, Instagram, WhatsApp…"
+                  placeholder="X, Instagram, referral…"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Conversation</label>
+                <input
+                  name="conversation"
+                  placeholder="WhatsApp, Slack, X…"
                   className={inputClass}
                 />
               </div>

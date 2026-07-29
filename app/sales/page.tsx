@@ -29,6 +29,7 @@ type DealRow = {
   payment_method: string | null;
   merchant_name: string | null;
   social_platform: string | null;
+  conversation: string | null;
   designer: string | null;
   agent: { full_name: string; avatar_url: string | null } | null;
   lead: { id: string; handle: string } | null;
@@ -64,7 +65,7 @@ export default async function SalesPage({
   let query = supabase
     .from("deals")
     .select(
-      "id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)",
+      "id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, conversation, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)",
       { count: "exact" }
     )
     .order("date_closed", { ascending: false })
@@ -312,7 +313,8 @@ export default async function SalesPage({
                   <th className="px-5 py-3 font-semibold">Remaining</th>
                   <th className="px-5 py-3 font-semibold">Payment</th>
                   <th className="px-5 py-3 font-semibold">Merchant</th>
-                  <th className="px-5 py-3 font-semibold">Platform</th>
+                  <th className="px-5 py-3 font-semibold">Lead source</th>
+                  <th className="px-5 py-3 font-semibold">Conversation</th>
                   <th className="px-5 py-3 font-semibold">Date</th>
                   {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
                 </tr>
@@ -368,6 +370,9 @@ export default async function SalesPage({
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {deal.social_platform ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {deal.conversation ?? "—"}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {deal.date_closed}

@@ -32,7 +32,7 @@ export default async function DealDetailPage({
   const { data: deal } = await supabase
     .from("deals")
     .select(
-      "id, agent_id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)"
+      "id, agent_id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, conversation, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)"
     )
     .eq("id", id)
     .single();
@@ -191,10 +191,19 @@ export default async function DealDetailPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>Social media platform</label>
+                <label className={labelClass}>Lead source</label>
                 <input
                   name="social_platform"
                   defaultValue={deal.social_platform ?? ""}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Conversation</label>
+                <input
+                  name="conversation"
+                  defaultValue={deal.conversation ?? ""}
+                  placeholder="WhatsApp, Slack, X…"
                   className={inputClass}
                 />
               </div>
@@ -270,9 +279,15 @@ export default async function DealDetailPage({
               </dd>
             </div>
             <div>
-              <dt className="text-zinc-500 dark:text-zinc-400">Platform</dt>
+              <dt className="text-zinc-500 dark:text-zinc-400">Lead source</dt>
               <dd className="font-medium text-zinc-900 dark:text-zinc-50">
                 {deal.social_platform ?? "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Conversation</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-50">
+                {deal.conversation ?? "—"}
               </dd>
             </div>
             <div>

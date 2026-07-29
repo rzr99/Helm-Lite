@@ -38,6 +38,7 @@ export async function createDeal(formData: FormData) {
     payment_method: text(formData, "payment_method") || null,
     merchant_name: text(formData, "merchant_name") || null,
     social_platform: text(formData, "social_platform") || null,
+    conversation: text(formData, "conversation") || null,
     designer: text(formData, "designer") || null,
   };
 
@@ -68,6 +69,7 @@ export async function updateDeal(dealId: string, formData: FormData) {
     payment_method: text(formData, "payment_method") || null,
     merchant_name: text(formData, "merchant_name") || null,
     social_platform: text(formData, "social_platform") || null,
+    conversation: text(formData, "conversation") || null,
     designer: text(formData, "designer") || null,
   };
 
