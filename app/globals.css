@@ -150,19 +150,6 @@ h2 {
   animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Loading screen holds off ~250ms, so fast page swaps never flash it. */
-@keyframes loaderReveal {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-.animate-loader-reveal {
-  animation: loaderReveal 0.2s ease-out 0.25s both;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up {
     animation: none;
