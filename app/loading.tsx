@@ -3,7 +3,7 @@
 export default function Loading() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0e0e0d]">
-      <div className="flex flex-col items-center gap-4">
+      <div className="animate-loader-reveal flex flex-col items-center gap-4">
         <svg
           viewBox="0 0 400 400"
           className="h-12 w-12 animate-pulse rounded-xl border border-white/10"
