@@ -56,6 +56,26 @@ function ActivityIcon() {
   );
 }
 
+function ProjectsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
+      <path d="M14 4v5h5" />
+      <path d="M8 13h6M8 17h6" />
+    </svg>
+  );
+}
+
+function ProductionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="15" rx="2" />
+      <path d="M3 10h18" />
+      <path d="m6 5-1 5M11 5l-1 5M16 5l-1 5" />
+    </svg>
+  );
+}
+
 function PersonasIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
@@ -101,6 +121,8 @@ const navLinks: NavLink[] = [
   { key: "dashboard", href: "/", label: "Dashboard", icon: <HomeIcon /> },
   { key: "leads", href: "/leads", label: "Leads", icon: <LeadsIcon /> },
   { key: "sales", href: "/sales", label: "Sales", icon: <SalesIcon /> },
+  { key: "projects", href: "/projects", label: "Production", icon: <ProjectsIcon /> },
+  { key: "production", href: "/production", label: "Playbook", icon: <ProductionIcon />, ownerOnly: true },
   {
     key: "activity",
     href: "/activity",
@@ -278,18 +300,20 @@ export function Shell({
         </div>
 
         <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-8">
-          <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="text-[26px] font-bold tracking-tight text-zinc-50">
-                {title}
-              </h1>
-              {subtitle && (
-                <p className="mt-1.5 text-sm text-zinc-400">{subtitle}</p>
-              )}
-            </div>
-            {action}
-          </header>
-          <div className="flex flex-col gap-6 animate-fade-up">{children}</div>
+          <div key={active} className="animate-page-in">
+            <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h1 className="text-[26px] font-bold tracking-tight text-zinc-50">
+                  {title}
+                </h1>
+                {subtitle && (
+                  <p className="mt-1.5 text-sm text-zinc-400">{subtitle}</p>
+                )}
+              </div>
+              {action}
+            </header>
+            <div className="flex flex-col gap-6">{children}</div>
+          </div>
         </main>
       </div>
     </div>
