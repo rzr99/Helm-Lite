@@ -10,10 +10,10 @@ const series = [
   { key: "deals" as const, label: "Closed", fill: "bg-[var(--border-strong)]", top: false },
 ];
 
-function Legend() {
+function Legend({ items }: { items: typeof series }) {
   return (
     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      {series.map((s) => (
+      {items.map((s) => (
         <span
           key={s.key}
           className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]"
@@ -31,20 +31,28 @@ function Legend() {
 export function ActivityTimeline({
   days,
   subject,
+  focus,
 }: {
   days: DayRow[];
   subject: string;
+  focus?: "leads" | "followUps" | "deals";
 }) {
+  // When one metric is in focus, show only it — as a single amber series.
+  const shown = focus
+    ? series
+        .filter((s) => s.key === focus)
+        .map((s) => ({ ...s, fill: "bg-amber-600", top: true }))
+    : series;
   const max = Math.max(
     1,
-    ...days.map((d) => d.leads + d.followUps + d.deals)
+    ...days.map((d) => shown.reduce((sum, s) => sum + d[s.key], 0))
   );
   const dense = days.length > 16;
   const step = Math.max(1, Math.ceil(days.length / 8));
   const hasActivity = days.some((d) => d.leads + d.followUps + d.deals > 0);
 
   return (
-    <Card title="Activity over time" description={subject} action={<Legend />}>
+    <Card title="Activity over time" description={subject} action={<Legend items={shown} />}>
       {!hasActivity ? (
         <p className="py-10 text-center text-sm text-[var(--text-muted)]">
           No activity in this period.
@@ -81,7 +89,7 @@ export function ActivityTimeline({
                 className="flex min-w-0 flex-1 flex-col justify-end gap-0.5"
                 style={{ height: H }}
               >
-                {series.map((s) => {
+                {shown.map((s) => {
                   const v = d[s.key];
                   if (v <= 0) return null;
                   return (

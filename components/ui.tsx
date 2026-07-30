@@ -78,15 +78,22 @@ export function Readout({
   note,
   negative = false,
   amber = false,
+  dim = false,
 }: {
   label: string;
   value: React.ReactNode;
   note?: React.ReactNode;
   negative?: boolean;
   amber?: boolean;
+  dim?: boolean;
 }) {
   return (
-    <div className="bg-[var(--surface)] px-5 py-[18px]">
+    <div
+      className={
+        "bg-[var(--surface)] px-5 py-[18px] transition-opacity " +
+        (dim ? "opacity-40" : "")
+      }
+    >
       <p className={eyebrowClass}>{label}</p>
       <p
         className={
