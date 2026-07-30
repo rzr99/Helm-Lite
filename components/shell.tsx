@@ -201,12 +201,28 @@ function BrandMark({ className = "h-9 w-9" }: { className?: string }) {
   );
 }
 
+const pageEyebrow: Record<string, string> = {
+  dashboard: "Overview",
+  leads: "Pipeline",
+  sales: "Revenue",
+  activity: "Derived · not typed",
+  personas: "Owner · identities",
+  expenses: "Owner · finances",
+  training: "Playbook",
+  team: "People",
+};
+
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-3">
-      <BrandMark />
-      <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
-        Helm Lite
+      <BrandMark className="h-8 w-8" />
+      <span className="leading-tight">
+        <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
+          Helm Lite
+        </span>
+        <span className="block font-mono text-[8.5px] uppercase tracking-[0.22em] text-[var(--text-faint)]">
+          Linear Solutions
+        </span>
       </span>
     </Link>
   );
@@ -283,7 +299,13 @@ export function Shell({
           <div key={active} className="animate-page-in">
             <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h1 className="text-[27px] font-semibold tracking-tight text-[var(--text)]">
+                {pageEyebrow[active] && (
+                  <p className="mb-3 flex items-center gap-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.18em] text-[var(--text-faint)]">
+                    <span className="h-1.5 w-1.5 rotate-45 bg-amber-600" />
+                    {pageEyebrow[active]}
+                  </p>
+                )}
+                <h1 className="text-[29px] font-semibold tracking-tight text-[var(--text)]">
                   {title}
                 </h1>
                 {subtitle && (

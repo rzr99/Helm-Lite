@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 const eyebrow =
   "font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-[var(--text-faint)]";
 const bigMoney =
-  "mt-3 text-[28px] font-medium tabular-nums tracking-tight text-[var(--text)]";
+  "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight text-[var(--text)]";
 const statCard =
-  "rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--card-shadow)]";
+  "rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5";
 
 function shiftMonth(month: string, delta: number) {
   const [y, m] = month.split("-").map(Number);
@@ -160,7 +160,7 @@ export default async function ExpensesPage({
           <p className={eyebrow}>Net balance</p>
           <p
             className={
-              "mt-3 text-[28px] font-medium tabular-nums tracking-tight " +
+              "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight " +
               (balance < 0 ? "text-[var(--negative)]" : "text-[var(--text)]")
             }
           >

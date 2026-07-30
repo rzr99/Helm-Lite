@@ -106,7 +106,7 @@ export default async function PersonasPage({
               "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
               (!activeStatus
                 ? "bg-amber-600 text-[#0e0e0d]"
-                : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 dark:border-white/15 dark:text-zinc-300")
+                : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
             }
           >
             All
@@ -119,7 +119,7 @@ export default async function PersonasPage({
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
                 (activeStatus === s.value
                   ? "bg-amber-600 text-[#0e0e0d]"
-                  : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 dark:border-white/15 dark:text-zinc-300")
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
               }
             >
               <span

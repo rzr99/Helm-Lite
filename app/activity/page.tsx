@@ -5,7 +5,8 @@ import {
   Card,
   EmptyState,
   Avatar,
-  Stat,
+  Readouts,
+  Readout,
   btnPrimary,
   btnSecondary,
   inputClass,
@@ -162,7 +163,7 @@ export default async function ActivityPage({
                 "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
                 (activePreset === p.key
                   ? "bg-amber-600 text-[#0e0e0d]"
-                  : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 hover:text-amber-600 dark:border-white/15 dark:text-zinc-300 dark:hover:border-amber-500/70 dark:hover:text-amber-400")
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
               }
             >
               {p.label}
@@ -215,22 +216,20 @@ export default async function ActivityPage({
         </form>
       </Card>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Stat
+      <Readouts cols={3}>
+        <Readout
           label="Leads added"
           value={totals.added}
           note={
             <span title="Distinct clients — the same client added by two agents counts once.">
-              <span className="text-amber-600 dark:text-amber-500">
-                {uniqueAddedCount}
-              </span>{" "}
-              unique client{uniqueAddedCount === 1 ? "" : "s"}
+              <span className="text-amber-600">{uniqueAddedCount}</span> unique
+              client{uniqueAddedCount === 1 ? "" : "s"}
             </span>
           }
         />
-        <Stat label="Follow-ups logged" value={totals.followUps} />
-        <Stat label="Deals closed" value={totals.closes} />
-      </div>
+        <Readout label="Follow-ups logged" value={totals.followUps} />
+        <Readout label="Deals closed" value={totals.closes} />
+      </Readouts>
 
       <Card
         title={`Per agent, per day (${fromDate} → ${toDate})`}

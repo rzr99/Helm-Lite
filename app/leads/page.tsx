@@ -186,7 +186,7 @@ export default async function LeadsPage({
                 "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
                 (activePreset === r.key
                   ? "bg-amber-600 text-[#0e0e0d]"
-                  : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 hover:text-amber-600 dark:border-white/15 dark:text-zinc-300 dark:hover:border-amber-500/70 dark:hover:text-amber-400")
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
               }
             >
               {r.label}

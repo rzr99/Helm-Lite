@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
-import { Card, EmptyState, Avatar, btnPrimary, btnGhost, eyebrowClass } from "@/components/ui";
+import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnGhost } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
 import { setFollowUpDone } from "@/app/leads/actions";
@@ -14,22 +14,6 @@ type FollowUpRow = {
   note: string;
   lead: { id: string; handle: string; persona: string | null } | null;
   agent: { full_name: string } | null;
-};
-
-const stageAccent: Record<string, string> = {
-  new: "text-[var(--text)]",
-  in_conversation: "text-[var(--text)]",
-  qualified: "text-[var(--text)]",
-  closed: "text-amber-600",
-  lost: "text-[var(--text-faint)]",
-};
-
-const stageBar: Record<string, string> = {
-  new: "bg-[var(--text-faint)]",
-  in_conversation: "bg-[var(--text-faint)]",
-  qualified: "bg-[var(--text-faint)]",
-  closed: "bg-amber-600",
-  lost: "bg-[var(--border)]",
 };
 
 export default async function Dashboard() {
@@ -161,6 +145,13 @@ export default async function Dashboard() {
     );
   }
 
+  // The stage carrying the most leads is lit like a keyframe on the track.
+  let keyStage: string = STAGES[0].value;
+  for (const s of STAGES) {
+    if ((counts[s.value] ?? 0) > (counts[keyStage] ?? 0)) keyStage = s.value;
+  }
+  const dueNow = overdue.length + dueToday.length;
+
   return (
     <Shell
       profile={profile}
@@ -177,58 +168,61 @@ export default async function Dashboard() {
         </Link>
       }
     >
-      <Card
-        title="Pipeline"
-        description={
-          floor
-            ? "All leads by stage — click a stage to open it."
-            : "Your leads by stage — click a stage to open it."
-        }
-      >
-        <div className="mb-5 flex flex-wrap items-baseline gap-x-8 gap-y-2 border-b border-[var(--border-soft)] pb-5">
-          <div className="flex items-baseline gap-2.5">
-            <span className="text-2xl font-medium tabular-nums text-[var(--text)]">
-              {totals.total_clients}
-            </span>
-            <span className={eyebrowClass}>leads logged</span>
-          </div>
-          {floor && (
-            <div
-              className="flex items-baseline gap-2.5"
-              title="Distinct clients — the same client worked by two agents counts once here."
-            >
-              <span className="text-2xl font-medium tabular-nums text-amber-600">
-                {totals.unique_clients}
-              </span>
-              <span className={eyebrowClass}>unique clients</span>
-            </div>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      {/* Pipeline — a keyframe track, framed like a viewfinder */}
+      <div className="relative my-1 px-6 py-9">
+        <span className="pointer-events-none absolute left-0 top-0 h-3.5 w-3.5 border-l border-t border-[var(--border-strong)]" />
+        <span className="pointer-events-none absolute right-0 top-0 h-3.5 w-3.5 border-r border-t border-[var(--border-strong)]" />
+        <span className="pointer-events-none absolute bottom-0 left-0 h-3.5 w-3.5 border-b border-l border-[var(--border-strong)]" />
+        <span className="pointer-events-none absolute bottom-0 right-0 h-3.5 w-3.5 border-b border-r border-[var(--border-strong)]" />
+
+        <div className="grid grid-cols-5 text-center">
           {STAGES.map((s) => (
             <Link
               key={s.value}
               href={`/leads?stage=${s.value}`}
-              className="group relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--hover)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--border)]"
+              className="font-mono text-[30px] font-medium tabular-nums tracking-tight text-[var(--text)] transition-colors hover:text-amber-600"
             >
-              <span
-                className={
-                  "absolute inset-x-0 top-0 h-0.5 opacity-70 " +
-                  (stageBar[s.value] ?? "bg-zinc-600")
-                }
-              />
-              <p
-                className={
-                  "text-3xl font-medium tabular-nums " + (stageAccent[s.value] ?? "")
-                }
-              >
-                {counts[s.value] ?? 0}
-              </p>
-              <p className={"mt-1.5 " + eyebrowClass}>{stageLabel(s.value)}</p>
+              {counts[s.value] ?? 0}
             </Link>
           ))}
         </div>
-      </Card>
+        <div className="relative my-3.5 grid grid-cols-5">
+          <span className="pointer-events-none absolute inset-x-[9%] top-1/2 h-px -translate-y-1/2 bg-[var(--border)]" />
+          {STAGES.map((s) => {
+            const lit = s.value === keyStage && (counts[keyStage] ?? 0) > 0;
+            return (
+              <span key={s.value} className="flex justify-center">
+                <span
+                  className={
+                    "relative z-10 h-2.5 w-2.5 rotate-45 " +
+                    (lit
+                      ? "border border-amber-600 bg-amber-600"
+                      : "border-[1.5px] border-[var(--text-faint)] bg-[var(--canvas)]")
+                  }
+                  style={lit ? { boxShadow: "0 0 0 5px var(--accent-soft)" } : undefined}
+                />
+              </span>
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-5 text-center">
+          {STAGES.map((s) => (
+            <span
+              key={s.value}
+              className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-[var(--text-muted)]"
+            >
+              {stageLabel(s.value)}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <Readouts cols={4}>
+        <Readout label="Clients logged" value={totals.total_clients} />
+        <Readout label="Unique clients" value={totals.unique_clients} amber />
+        <Readout label="Deals closed" value={counts["closed"] ?? 0} />
+        <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
+      </Readouts>
 
       {floor && byAgent.length > 0 && (
         <Card

@@ -4,7 +4,8 @@ import {
   Card,
   EmptyState,
   Avatar,
-  Stat,
+  Readouts,
+  Readout,
   btnPrimary,
   btnSecondary,
   inputClass,
@@ -225,17 +226,17 @@ export default async function SalesPage({
         </form>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Stat
+      <Readouts cols={3}>
+        <Readout
           label={`Revenue received${hasFilters ? " · filtered" : ""}`}
           value={fmtMoney(totalRevenue)}
         />
-        <Stat
+        <Readout
           label={`Deals closed${hasFilters ? " · filtered" : ""}`}
           value={dealCount}
         />
-        <Stat label="Average deal size" value={fmtMoney(avgDeal)} />
-      </div>
+        <Readout label="Average deal size" value={fmtMoney(avgDeal)} />
+      </Readouts>
 
       {byCategory.length > 0 && (
         <Card

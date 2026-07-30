@@ -14,45 +14,45 @@
 
   /* Light theme (default). Semantic surface/text/border tokens so the whole
      app themes from one place. */
-  --canvas: #f0eee8;
+  --canvas: #eeece5;
   --surface: #ffffff;
-  --surface-2: #ecebe4;
-  --sunken: #f6f4ef;
-  --field: #f7f5f0;
-  --border: rgba(24, 22, 16, 0.1);
-  --border-soft: rgba(24, 22, 16, 0.06);
-  --hover: rgba(24, 22, 16, 0.04);
-  --text: #1a1813;
-  --text-muted: #6c675c;
-  --text-faint: #9c968a;
+  --surface-2: #e7e4db;
+  --sunken: #f3f1ea;
+  --field: #f3f1ea;
+  --border: rgba(20, 18, 12, 0.1);
+  --border-soft: rgba(20, 18, 12, 0.06);
+  --border-strong: rgba(20, 18, 12, 0.18);
+  --hover: rgba(20, 18, 12, 0.04);
+  --text: #191712;
+  --text-muted: #6a6459;
+  --text-faint: #9a9488;
   --accent-soft: rgba(232, 112, 0, 0.12);
   --negative: #a8452f;
-  --card-shadow: 0 1px 1px rgba(24, 22, 16, 0.04),
-    0 10px 24px -20px rgba(24, 22, 16, 0.16);
-  --card-top: rgba(255, 255, 255, 0.85);
-  --scrollbar: rgba(24, 22, 16, 0.16);
+  --card-shadow: none;
+  --card-top: transparent;
+  --scrollbar: rgba(20, 18, 12, 0.16);
 
   --background: var(--canvas);
   --foreground: var(--text);
 }
 
 .dark {
-  --canvas: #0e0e0d;
-  --surface: #161613;
-  --surface-2: #100f0d;
-  --sunken: #121210;
-  --field: #141412;
-  --border: rgba(245, 243, 237, 0.1);
-  --border-soft: rgba(245, 243, 237, 0.06);
-  --hover: rgba(245, 243, 237, 0.05);
-  --text: #f4f2ec;
-  --text-muted: #a29d92;
-  --text-faint: #6d685d;
-  --accent-soft: rgba(232, 112, 0, 0.16);
-  --negative: #d17d64;
-  --card-shadow: 0 1px 1px rgba(0, 0, 0, 0.3),
-    0 14px 34px -24px rgba(0, 0, 0, 0.7);
-  --card-top: rgba(255, 255, 255, 0.04);
+  --canvas: #0b0b0a;
+  --surface: #141311;
+  --surface-2: #0e0d0c;
+  --sunken: #100f0d;
+  --field: #100f0d;
+  --border: rgba(244, 240, 230, 0.08);
+  --border-soft: rgba(244, 240, 230, 0.05);
+  --border-strong: rgba(244, 240, 230, 0.14);
+  --hover: rgba(244, 240, 230, 0.05);
+  --text: #f4f1ea;
+  --text-muted: #928c7e;
+  --text-faint: #605a4f;
+  --accent-soft: rgba(255, 125, 10, 0.14);
+  --negative: #cf7a5a;
+  --card-shadow: none;
+  --card-top: transparent;
   --scrollbar: #2b2b26;
 
   --background: var(--canvas);
