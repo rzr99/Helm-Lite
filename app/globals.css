@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Drive `dark:` off the .dark class (set by the theme toggle), NOT the OS
+   preference — otherwise light mode still shows dark: styles on dark-OS users. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Linear Solutions brand system — exactly three colours, no tints beyond
    opacity. Ink canvas (content canvas / secondary), warm off-white type,
    a single amber accent used sparingly. */
