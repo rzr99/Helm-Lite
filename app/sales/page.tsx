@@ -4,6 +4,7 @@ import {
   Card,
   EmptyState,
   Avatar,
+  Stat,
   btnPrimary,
   btnSecondary,
   inputClass,
@@ -224,31 +225,16 @@ export default async function SalesPage({
         </form>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <Card padded>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Revenue received{hasFilters ? " (filtered)" : ""}
-          </p>
-          <p className="mt-1 text-3xl font-bold text-[var(--text)]">
-            {fmtMoney(totalRevenue)}
-          </p>
-        </Card>
-        <Card padded>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Deals closed{hasFilters ? " (filtered)" : ""}
-          </p>
-          <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            {dealCount}
-          </p>
-        </Card>
-        <Card padded>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Average deal size
-          </p>
-          <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            {fmtMoney(avgDeal)}
-          </p>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Stat
+          label={`Revenue received${hasFilters ? " · filtered" : ""}`}
+          value={fmtMoney(totalRevenue)}
+        />
+        <Stat
+          label={`Deals closed${hasFilters ? " · filtered" : ""}`}
+          value={dealCount}
+        />
+        <Stat label="Average deal size" value={fmtMoney(avgDeal)} />
       </div>
 
       {byCategory.length > 0 && (
@@ -303,7 +289,7 @@ export default async function SalesPage({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              <thead className="border-b border-[var(--border)] font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Client</th>
                   <th className="px-5 py-3 font-semibold">Category</th>

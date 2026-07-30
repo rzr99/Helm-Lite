@@ -16,6 +16,45 @@ export const inputClass =
 export const labelClass =
   "mb-1.5 block text-sm font-medium text-[var(--text-muted)]";
 
+// Mono, tracked micro-label — the brand's editorial eyebrow.
+export const eyebrowClass =
+  "font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-[var(--text-faint)]";
+
+// Mono, tracked table header cell.
+export const thClass =
+  "px-5 py-3 text-left font-mono text-[10.5px] font-medium uppercase tracking-[0.13em] text-[var(--text-faint)]";
+
+// A summary metric tile: mono eyebrow, big tabular figure, optional note.
+export function Stat({
+  label,
+  value,
+  note,
+  negative = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  note?: React.ReactNode;
+  negative?: boolean;
+}) {
+  return (
+    <div
+      className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
+      style={{ boxShadow: "var(--card-shadow)" }}
+    >
+      <p className={eyebrowClass}>{label}</p>
+      <p
+        className={
+          "mt-3 text-[28px] font-medium tabular-nums tracking-tight " +
+          (negative ? "text-[var(--negative)]" : "text-[var(--text)]")
+        }
+      >
+        {value}
+      </p>
+      {note && <p className="mt-2 text-xs text-[var(--text-muted)]">{note}</p>}
+    </div>
+  );
+}
+
 // The keyframe diamond — the brand's core mark. Amber = key, muted = default.
 export function Diamond({
   amber = false,

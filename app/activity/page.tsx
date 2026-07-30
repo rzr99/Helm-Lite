@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   Avatar,
+  Stat,
   btnPrimary,
   btnSecondary,
   inputClass,
@@ -214,33 +215,21 @@ export default async function ActivityPage({
         </form>
       </Card>
 
-      <div className="grid grid-cols-3 gap-6">
-        <Card padded>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Leads added</p>
-          <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            {totals.added}
-          </p>
-          <p
-            className="mt-1 text-xs text-amber-600 dark:text-amber-500"
-            title="Distinct clients — the same client added by two agents counts once."
-          >
-            {uniqueAddedCount} unique client{uniqueAddedCount === 1 ? "" : "s"}
-          </p>
-        </Card>
-        <Card padded>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Follow-ups logged
-          </p>
-          <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            {totals.followUps}
-          </p>
-        </Card>
-        <Card padded>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Deals closed</p>
-          <p className="mt-1 text-3xl font-bold text-[var(--text)]">
-            {totals.closes}
-          </p>
-        </Card>
+      <div className="grid grid-cols-3 gap-4">
+        <Stat
+          label="Leads added"
+          value={totals.added}
+          note={
+            <span title="Distinct clients — the same client added by two agents counts once.">
+              <span className="text-amber-600 dark:text-amber-500">
+                {uniqueAddedCount}
+              </span>{" "}
+              unique client{uniqueAddedCount === 1 ? "" : "s"}
+            </span>
+          }
+        />
+        <Stat label="Follow-ups logged" value={totals.followUps} />
+        <Stat label="Deals closed" value={totals.closes} />
       </div>
 
       <Card
@@ -257,7 +246,7 @@ export default async function ActivityPage({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              <thead className="border-b border-[var(--border)] font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Date</th>
                   <th className="px-5 py-3 font-semibold">Agent</th>

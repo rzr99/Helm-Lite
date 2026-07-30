@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
-import { Card, EmptyState, Avatar, btnPrimary, btnGhost } from "@/components/ui";
+import { Card, EmptyState, Avatar, btnPrimary, btnGhost, eyebrowClass } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
 import { setFollowUpDone } from "@/app/leads/actions";
@@ -185,23 +185,22 @@ export default async function Dashboard() {
             : "Your leads by stage — click a stage to open it."
         }
       >
-        <div className="mb-4 flex flex-wrap items-center gap-x-8 gap-y-1 border-b border-[var(--border-soft)] pb-4">
-          <div>
-            <span className="text-2xl font-bold tabular-nums text-[var(--text)]">
+        <div className="mb-5 flex flex-wrap items-baseline gap-x-8 gap-y-2 border-b border-[var(--border-soft)] pb-5">
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-2xl font-medium tabular-nums text-[var(--text)]">
               {totals.total_clients}
             </span>
-            <span className="ml-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-              leads logged
-            </span>
+            <span className={eyebrowClass}>leads logged</span>
           </div>
           {floor && (
-            <div title="Distinct clients — the same client worked by two agents counts once here.">
-              <span className="text-2xl font-bold tabular-nums text-amber-500">
+            <div
+              className="flex items-baseline gap-2.5"
+              title="Distinct clients — the same client worked by two agents counts once here."
+            >
+              <span className="text-2xl font-medium tabular-nums text-amber-600">
                 {totals.unique_clients}
               </span>
-              <span className="ml-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-                unique clients
-              </span>
+              <span className={eyebrowClass}>unique clients</span>
             </div>
           )}
         </div>
@@ -210,7 +209,7 @@ export default async function Dashboard() {
             <Link
               key={s.value}
               href={`/leads?stage=${s.value}`}
-              className="group relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--hover)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--border)] hover:bg-[var(--hover)]"
+              className="group relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--hover)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--border)]"
             >
               <span
                 className={
@@ -220,14 +219,12 @@ export default async function Dashboard() {
               />
               <p
                 className={
-                  "text-3xl font-bold tabular-nums " + (stageAccent[s.value] ?? "")
+                  "text-3xl font-medium tabular-nums " + (stageAccent[s.value] ?? "")
                 }
               >
                 {counts[s.value] ?? 0}
               </p>
-              <p className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-500">
-                {stageLabel(s.value)}
-              </p>
+              <p className={"mt-1.5 " + eyebrowClass}>{stageLabel(s.value)}</p>
             </Link>
           ))}
         </div>
