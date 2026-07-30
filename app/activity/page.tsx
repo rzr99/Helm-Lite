@@ -11,6 +11,7 @@ import {
   btnSecondary,
   inputClass,
 } from "@/components/ui";
+import { FloorCompare, AgentTrend } from "@/components/activity-chart";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { todayStr, weekRange, monthRange } from "@/lib/dates";
 
@@ -119,6 +120,57 @@ export default async function ActivityPage({
     { added: 0, followUps: 0, closes: 0 }
   );
   const uniqueAddedCount = (uniqueAdded as number | null) ?? 0;
+
+  // --- Chart data ---------------------------------------------------------
+  // Floor: totals per agent (all active agents, so quiet ones still show).
+  const seriesById = new Map(
+    (users ?? []).map((u) => [
+      u.id,
+      { id: u.id, name: u.full_name, leads: 0, followUps: 0, deals: 0 },
+    ])
+  );
+  for (const r of rows) {
+    const s = seriesById.get(r.agentId);
+    if (s) {
+      s.leads += r.added;
+      s.followUps += r.followUps;
+      s.deals += r.closes;
+    }
+  }
+  const floorSeries = [...seriesById.values()]
+    .filter((s) => s.leads + s.followUps + s.deals > 0)
+    .sort((a, b) => b.leads - a.leads || b.followUps - a.followUps);
+
+  // One agent selected → their day-by-day trend (fill empty days with zero).
+  function eachDay(from: string, to: string) {
+    const [fy, fm, fd] = from.split("-").map(Number);
+    const [ty, tm, td] = to.split("-").map(Number);
+    let cur = Date.UTC(fy, fm - 1, fd);
+    const end = Date.UTC(ty, tm - 1, td);
+    const out: string[] = [];
+    let guard = 0;
+    while (cur <= end && guard < 400) {
+      out.push(new Date(cur).toISOString().slice(0, 10));
+      cur += 86400000;
+      guard++;
+    }
+    return out;
+  }
+  const agentDays = agent
+    ? (() => {
+        const byDay = new Map(rows.map((r) => [r.date, r]));
+        return eachDay(fromDate, toDate).map((d) => {
+          const r = byDay.get(d);
+          return {
+            day: d,
+            leads: r?.added ?? 0,
+            followUps: r?.followUps ?? 0,
+            deals: r?.closes ?? 0,
+          };
+        });
+      })()
+    : null;
+  const selectedName = agent ? nameOf.get(agent) ?? "Agent" : "";
 
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
@@ -230,6 +282,12 @@ export default async function ActivityPage({
         <Readout label="Follow-ups logged" value={totals.followUps} />
         <Readout label="Deals closed" value={totals.closes} />
       </Readouts>
+
+      {agent && agentDays ? (
+        <AgentTrend name={selectedName} days={agentDays} />
+      ) : (
+        <FloorCompare series={floorSeries} />
+      )}
 
       <Card
         title={`Per agent, per day (${fromDate} → ${toDate})`}
