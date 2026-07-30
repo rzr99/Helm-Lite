@@ -10,8 +10,17 @@ import {
 } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { addPlatform } from "@/app/personas/actions";
+import {
+  ACCOUNT_STATUSES,
+  STATUS_DOT,
+  STATUS_TINT,
+  STATUS_SEVERITY,
+  statusLabel,
+} from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
+
+type Account = { id: string; platform: string; handle: string; status: string };
 
 type PersonaRow = {
   id: string;
@@ -19,18 +28,35 @@ type PersonaRow = {
   contact_email: string | null;
   contact_phone: string | null;
   manager: { full_name: string; avatar_url: string | null } | null;
-  accounts: { count: number }[];
+  accounts: Account[];
 };
 
-export default async function PersonasPage() {
+// The colour a row takes: its worst (most attention-needing) account status.
+function worstStatus(accounts: Account[]): string | null {
+  if (!accounts.length) return null;
+  for (const s of STATUS_SEVERITY) {
+    if (accounts.some((a) => a.status === s)) return s;
+  }
+  return accounts[0].status;
+}
+
+export default async function PersonasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/");
+
+  const { status } = await searchParams;
+  const activeStatus =
+    status && ACCOUNT_STATUSES.some((s) => s.value === status) ? status : null;
 
   const [{ data: personasData }, { data: platforms }] = await Promise.all([
     supabase
       .from("personas")
       .select(
-        "id, persona_name, contact_email, contact_phone, manager:users(full_name, avatar_url), accounts(count)"
+        "id, persona_name, contact_email, contact_phone, manager:users(full_name, avatar_url), accounts(id, platform, handle, status)"
       )
       .order("persona_name"),
     supabase.from("platforms").select("name").order("name"),
@@ -38,29 +64,89 @@ export default async function PersonasPage() {
 
   const personas = (personasData ?? []) as unknown as PersonaRow[];
 
+  // Count accounts per status across everything (drives the filter chips).
+  const counts: Record<string, number> = {};
+  for (const p of personas)
+    for (const a of p.accounts ?? [])
+      counts[a.status] = (counts[a.status] ?? 0) + 1;
+
+  // When a status is picked, keep only personas that have such an account, and
+  // colour those rows by that status; otherwise colour by the worst account.
+  const rows = personas
+    .map((p) => {
+      const accounts = p.accounts ?? [];
+      const matching = activeStatus
+        ? accounts.filter((a) => a.status === activeStatus)
+        : accounts;
+      const tintStatus = activeStatus ?? worstStatus(accounts);
+      return { ...p, accounts, matchingCount: matching.length, tintStatus };
+    })
+    .filter((p) => !activeStatus || p.matchingCount > 0);
+
+  const presentStatuses = ACCOUNT_STATUSES.filter((s) => counts[s.value] > 0);
+
   return (
     <Shell
       profile={profile}
       active="personas"
       title="Personas & accounts"
-      subtitle="Owner-only. The identities your team operates and the accounts behind them."
+      subtitle="Owner-only. The identities your team operates and the health of every account behind them."
       action={
         <Link href="/personas/new" className={btnPrimary}>
           + New persona
         </Link>
       }
     >
-      <Card
-        title={`${personas.length} persona${personas.length === 1 ? "" : "s"}`}
-        padded={false}
-      >
-        {personas.length === 0 ? (
+      <Card padded={false}>
+        {/* Health filter */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
+          <Link
+            href="/personas"
+            className={
+              "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
+              (!activeStatus
+                ? "bg-amber-600 text-[#0e0e0d]"
+                : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 dark:border-white/15 dark:text-zinc-300")
+            }
+          >
+            All
+          </Link>
+          {presentStatuses.map((s) => (
+            <Link
+              key={s.value}
+              href={`/personas?status=${s.value}`}
+              className={
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
+                (activeStatus === s.value
+                  ? "bg-amber-600 text-[#0e0e0d]"
+                  : "border border-zinc-300 text-zinc-600 hover:border-amber-500/70 dark:border-white/15 dark:text-zinc-300")
+              }
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: STATUS_DOT[s.value] ?? "#71717a" }}
+              />
+              {s.label}
+              <span className="opacity-60">{counts[s.value]}</span>
+            </Link>
+          ))}
+        </div>
+
+        {rows.length === 0 ? (
           <EmptyState
-            emoji="🎭"
-            title="No personas yet"
-            hint="A persona is an operating identity — create one and add its accounts."
-            actionHref="/personas/new"
-            actionLabel="+ New persona"
+            emoji={activeStatus ? "🔍" : "🎭"}
+            title={
+              activeStatus
+                ? `No ${statusLabel(activeStatus).toLowerCase()} accounts`
+                : "No personas yet"
+            }
+            hint={
+              activeStatus
+                ? "Nothing in this state right now — try another filter."
+                : "A persona is an operating identity — create one and add its accounts."
+            }
+            actionHref={activeStatus ? undefined : "/personas/new"}
+            actionLabel={activeStatus ? undefined : "+ New persona"}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -75,10 +161,15 @@ export default async function PersonasPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {personas.map((p) => (
+                {rows.map((p) => (
                   <tr
                     key={p.id}
-                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    style={
+                      p.tintStatus
+                        ? { backgroundColor: STATUS_TINT[p.tintStatus] }
+                        : undefined
+                    }
+                    className="transition-colors"
                   >
                     <td className="px-5 py-3.5">
                       <Link
@@ -108,8 +199,31 @@ export default async function PersonasPage() {
                     <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {p.contact_phone ?? "—"}
                     </td>
-                    <td className="px-5 py-3.5 font-semibold text-zinc-900 dark:text-zinc-50">
-                      {p.accounts?.[0]?.count ?? 0}
+                    <td className="px-5 py-3.5">
+                      {p.accounts.length === 0 ? (
+                        <span className="text-zinc-400">no accounts</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                          {p.accounts
+                            .slice()
+                            .sort((a, b) => a.platform.localeCompare(b.platform))
+                            .map((a) => (
+                              <span
+                                key={a.id}
+                                title={`${a.handle || a.platform} — ${statusLabel(a.status)}`}
+                                className="inline-flex items-center gap-1.5 text-xs text-zinc-700 dark:text-zinc-200"
+                              >
+                                <span
+                                  className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/10"
+                                  style={{
+                                    backgroundColor: STATUS_DOT[a.status] ?? "#71717a",
+                                  }}
+                                />
+                                {a.platform}
+                              </span>
+                            ))}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

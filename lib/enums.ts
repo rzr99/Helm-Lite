@@ -81,10 +81,13 @@ export function fmtPKR(value: number) {
   );
 }
 
+// Ordered healthiest → worst. `active` keeps its DB value but reads "Healthy".
 export const ACCOUNT_STATUSES = [
-  { value: "active", label: "Active" },
+  { value: "active", label: "Healthy" },
   { value: "warming", label: "Warming" },
+  { value: "restricted", label: "Restricted" },
   { value: "recovery", label: "Recovery" },
+  { value: "compromised", label: "Compromised" },
   { value: "banned", label: "Banned" },
   { value: "reserve", label: "Reserve" },
 ] as const;
@@ -92,10 +95,46 @@ export const ACCOUNT_STATUSES = [
 export const STATUS_BADGE: Record<string, string> = {
   active: "bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200",
   warming: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  restricted: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
   recovery: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
+  compromised: "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950 dark:text-fuchsia-200",
   banned: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
   reserve: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
 };
+
+// Explicit hex so the health colors survive the brand's 3-colour remap and
+// read like a real traffic-light signal (green healthy → red banned).
+export const STATUS_DOT: Record<string, string> = {
+  active: "#22c55e",
+  warming: "#f59e0b",
+  restricted: "#fb923c",
+  recovery: "#38bdf8",
+  compromised: "#c026d3",
+  banned: "#ef4444",
+  reserve: "#71717a",
+};
+
+// Translucent row tints — same signal, soft enough to sit behind text.
+export const STATUS_TINT: Record<string, string> = {
+  active: "rgba(34,197,94,0.13)",
+  warming: "rgba(245,158,11,0.15)",
+  restricted: "rgba(251,146,60,0.15)",
+  recovery: "rgba(56,189,248,0.13)",
+  compromised: "rgba(192,38,211,0.15)",
+  banned: "rgba(239,68,68,0.16)",
+  reserve: "rgba(113,113,122,0.10)",
+};
+
+// Worst-first, so a row takes the colour of its most attention-needing account.
+export const STATUS_SEVERITY = [
+  "banned",
+  "compromised",
+  "restricted",
+  "warming",
+  "recovery",
+  "reserve",
+  "active",
+];
 
 export function statusLabel(value: string) {
   return ACCOUNT_STATUSES.find((s) => s.value === value)?.label ?? value;
