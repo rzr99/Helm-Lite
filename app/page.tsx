@@ -265,7 +265,7 @@ export default async function Dashboard() {
                     today
                   </span>
                   <span className="text-zinc-500 dark:text-zinc-400">
-                    <span className="font-semibold text-green-500 dark:text-green-400">
+                    <span className="font-semibold text-[var(--text)]">
                       {a.closed}
                     </span>{" "}
                     closed

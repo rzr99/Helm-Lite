@@ -237,7 +237,7 @@ export default async function ActivityPage({
         </Card>
         <Card padded>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Deals closed</p>
-          <p className="mt-1 text-3xl font-bold text-green-500 dark:text-green-400">
+          <p className="mt-1 text-3xl font-bold text-[var(--text)]">
             {totals.closes}
           </p>
         </Card>
@@ -287,7 +287,7 @@ export default async function ActivityPage({
                     <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {r.followUps}
                     </td>
-                    <td className="px-5 py-3.5 font-semibold text-green-500 dark:text-green-400">
+                    <td className="px-5 py-3.5 font-semibold text-[var(--text)]">
                       {r.closes}
                     </td>
                   </tr>

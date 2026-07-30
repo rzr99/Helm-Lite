@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
-import { Card, btnSecondary, inputClass } from "@/components/ui";
+import { Card, btnSecondary } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { EXPENSE_CATEGORIES, fmtPKR } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
 import { createExpense, setMonthlyClosing } from "@/app/expenses/actions";
 
 export const dynamic = "force-dynamic";
+
+const eyebrow =
+  "font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-[var(--text-faint)]";
+const bigMoney =
+  "mt-3 text-[28px] font-medium tabular-nums tracking-tight text-[var(--text)]";
+const statCard =
+  "rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--card-shadow)]";
 
 function shiftMonth(month: string, delta: number) {
   const [y, m] = month.split("-").map(Number);
@@ -32,34 +39,6 @@ type ExpenseRow = {
   date: string;
 };
 
-// Each sheet section gets its own color band.
-const sectionStyle: Record<string, { band: string; text: string }> = {
-  subscription: {
-    band: "bg-indigo-50 border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900",
-    text: "text-indigo-700 dark:text-indigo-300",
-  },
-  others: {
-    band: "bg-zinc-100 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700",
-    text: "text-zinc-700 dark:text-zinc-300",
-  },
-  utilities: {
-    band: "bg-sky-50 border-sky-100 dark:bg-sky-950/40 dark:border-sky-900",
-    text: "text-sky-700 dark:text-sky-300",
-  },
-  production: {
-    band: "bg-violet-50 border-violet-100 dark:bg-violet-950/40 dark:border-violet-900",
-    text: "text-violet-700 dark:text-violet-300",
-  },
-  salary: {
-    band: "bg-amber-50 border-amber-100 dark:bg-amber-950/40 dark:border-amber-900",
-    text: "text-amber-700 dark:text-amber-300",
-  },
-  extras: {
-    band: "bg-pink-50 border-pink-100 dark:bg-pink-950/40 dark:border-pink-900",
-    text: "text-pink-700 dark:text-pink-300",
-  },
-};
-
 export default async function ExpensesPage({
   searchParams,
 }: {
@@ -75,8 +54,6 @@ export default async function ExpensesPage({
       : todayStr().slice(0, 7);
   const start = `${month}-01`;
   const end = `${shiftMonth(month, 1)}-01`;
-  // New items land in the month you're viewing (today if it's the current
-  // month, otherwise the 1st of that month) — so you can log past months.
   const addDate =
     month === todayStr().slice(0, 7) ? todayStr() : `${month}-01`;
 
@@ -121,6 +98,8 @@ export default async function ExpensesPage({
     }))
     .filter((s) => s.value !== "" || s.items.length > 0);
 
+  const maxTotal = Math.max(1, ...sections.map((s) => s.total));
+
   return (
     <Shell
       profile={profile}
@@ -136,7 +115,7 @@ export default async function ExpensesPage({
           >
             ‹
           </Link>
-          <span className="min-w-32 text-center text-base font-bold text-zinc-900 dark:text-zinc-50">
+          <span className="min-w-32 text-center font-mono text-[13px] tracking-[0.02em] text-[var(--text)]">
             {monthTitle(month)}
           </span>
           <Link
@@ -150,99 +129,71 @@ export default async function ExpensesPage({
       }
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-red-200 bg-red-50/70 p-5 dark:border-red-950 dark:bg-red-950/30">
-          <p className="text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-300">
-            Spending
-          </p>
-          <p className="mt-1 text-3xl font-bold tabular-nums text-red-700 dark:text-red-300">
-            {fmtPKR(spending)}
-          </p>
-          <p className="mt-1 text-xs text-red-600/70 dark:text-red-300/70">
+        <div className={statCard}>
+          <p className={eyebrow}>Spending</p>
+          <p className={bigMoney}>{fmtPKR(spending)}</p>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
             {expenses.length} item{expenses.length === 1 ? "" : "s"} this month
           </p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Closing
-          </p>
-          <p className="mt-1 text-3xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50">
-            {fmtPKR(closing)}
-          </p>
-          <form action={saveClosing} className="mt-2 flex items-center gap-1.5">
+        <div className={statCard}>
+          <p className={eyebrow}>Closing balance</p>
+          <p className={bigMoney}>{fmtPKR(closing)}</p>
+          <form action={saveClosing} className="mt-3 flex items-center gap-2">
             <input
               name="closing"
               inputMode="numeric"
-              placeholder="update…"
-              className="w-full rounded-lg border border-[#2a2a37] bg-[#101017] px-2.5 py-1.5 text-sm tabular-nums text-zinc-100 outline-none focus:border-violet-500"
+              placeholder="Set closing…"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--sunken)] px-3 py-2 text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-amber-600 focus:ring-2 focus:ring-amber-600/20"
             />
             <button
               type="submit"
-              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-[#14100b] transition-colors hover:bg-amber-500"
             >
-              Set
+              Save
             </button>
           </form>
         </div>
 
-        <div
-          className={
-            "rounded-2xl border p-5 " +
-            (balance >= 0
-              ? "border-green-900 bg-green-950/30"
-              : "border-red-200 bg-red-50/70 dark:border-red-950 dark:bg-red-950/30")
-          }
-        >
+        <div className={statCard}>
+          <p className={eyebrow}>Net balance</p>
           <p
             className={
-              "text-xs font-bold uppercase tracking-wide " +
-              (balance >= 0
-                ? "text-green-400"
-                : "text-red-700 dark:text-red-300")
-            }
-          >
-            Balance
-          </p>
-          <p
-            className={
-              "mt-1 text-3xl font-bold tabular-nums " +
-              (balance >= 0
-                ? "text-green-400"
-                : "text-red-700 dark:text-red-300")
+              "mt-3 text-[28px] font-medium tabular-nums tracking-tight " +
+              (balance < 0 ? "text-[var(--negative)]" : "text-[var(--text)]")
             }
           >
             {fmtPKR(balance)}
           </p>
-          <p
-            className={
-              "mt-1 text-xs " +
-              (balance >= 0
-                ? "text-green-500/70"
-                : "text-red-600/70 dark:text-red-300/70")
-            }
-          >
-            closing − spending
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            Closing minus spending
           </p>
         </div>
       </div>
 
-      <Card padded={false}>
+      <Card
+        title="By category"
+        action={
+          <span className="font-mono text-xs text-[var(--text-muted)]">
+            {sections.length} categor{sections.length === 1 ? "y" : "ies"}
+          </span>
+        }
+        padded={false}
+      >
         {sections.map((s) => (
           <details key={s.label} className="group" open={s.value === openSection}>
-            <summary
-              className={
-                "flex cursor-pointer list-none select-none items-center justify-between border-b border-t px-5 py-2.5 first:border-t-0 [&::-webkit-details-marker]:hidden " +
-                (sectionStyle[s.value]?.band ??
-                  "bg-zinc-100 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700")
-              }
-            >
-              <span className="flex items-center gap-2.5">
+            <summary className="relative flex cursor-pointer list-none select-none items-center justify-between border-t border-[var(--border)] px-5 py-3.5 transition-colors first:border-t-0 hover:bg-[var(--sunken)] [&::-webkit-details-marker]:hidden">
+              <span className="pointer-events-none absolute inset-x-5 bottom-0 h-0.5 overflow-hidden rounded bg-[var(--border)]">
+                <span
+                  className="block h-full bg-amber-600/80"
+                  style={{ width: `${(s.total / maxTotal) * 100}%` }}
+                />
+              </span>
+              <span className="flex items-baseline gap-2.5">
                 <svg
                   viewBox="0 0 24 24"
-                  className={
-                    "h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90 " +
-                    (sectionStyle[s.value]?.text ?? "text-zinc-500")
-                  }
+                  className="h-3 w-3 shrink-0 self-center text-[var(--text-faint)] transition-transform group-open:rotate-90"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
@@ -252,49 +203,35 @@ export default async function ExpensesPage({
                 >
                   <path d="M9 6l6 6-6 6" />
                 </svg>
-                <span
-                  className={
-                    "text-base font-extrabold uppercase tracking-widest " +
-                    (sectionStyle[s.value]?.text ??
-                      "text-zinc-700 dark:text-zinc-300")
-                  }
-                >
-                  {s.label}
-                </span>
-                <span className="text-xs font-medium tabular-nums text-zinc-400">
+                <span className="text-[14.5px] text-[var(--text)]">{s.label}</span>
+                <span className="font-mono text-[11.5px] tabular-nums text-[var(--text-faint)]">
                   {s.items.length}
                 </span>
               </span>
-              <span
-                className={
-                  "text-base font-bold tabular-nums " +
-                  (sectionStyle[s.value]?.text ??
-                    "text-zinc-900 dark:text-zinc-50")
-                }
-              >
-                {s.total > 0 ? fmtPKR(s.total) : ""}
+              <span className="font-mono text-[13.5px] font-medium tabular-nums text-[var(--text-muted)]">
+                {s.total > 0 ? fmtPKR(s.total) : "—"}
               </span>
             </summary>
 
             {s.items.map((e) => (
               <div
                 key={e.id}
-                className="group flex items-center justify-between gap-3 border-b border-zinc-100 px-5 py-2 last:border-b-0 hover:bg-zinc-50 dark:border-zinc-800/60 dark:hover:bg-zinc-800/50"
+                className="group/item flex items-center justify-between gap-3 border-t border-[var(--border-soft)] px-5 py-2.5 transition-colors hover:bg-[var(--sunken)]"
               >
-                <p className="min-w-0 truncate text-sm text-zinc-800 dark:text-zinc-200">
+                <p className="min-w-0 truncate text-sm text-[var(--text)]">
                   {e.description || "(unnamed)"}
-                  <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">
-                    {e.date.slice(8)}·{e.date.slice(5, 7)}
+                  <span className="ml-2 font-mono text-xs text-[var(--text-faint)]">
+                    {e.date.slice(8)}/{e.date.slice(5, 7)}
                   </span>
                 </p>
                 <p className="flex shrink-0 items-center gap-3">
                   <Link
                     href={`/expenses/${e.id}`}
-                    className="text-xs font-semibold text-violet-400 opacity-0 transition-opacity hover:underline group-hover:opacity-100"
+                    className="text-xs font-medium text-amber-600 opacity-0 transition-opacity hover:underline group-hover/item:opacity-100"
                   >
                     edit
                   </Link>
-                  <span className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                  <span className="font-mono text-sm tabular-nums text-[var(--text)]">
                     {Number(e.amount).toLocaleString("en-US")}
                   </span>
                 </p>
@@ -304,27 +241,27 @@ export default async function ExpensesPage({
             {s.value !== "" && (
               <form
                 action={createExpense}
-                className="flex items-center gap-2 border-b border-zinc-100 px-5 py-1.5 dark:border-zinc-800/60"
+                className="flex items-center gap-2 border-t border-[var(--border-soft)] px-5 py-2"
               >
                 <input type="hidden" name="category" value={s.value} />
                 <input type="hidden" name="date" value={addDate} />
-                <span className="text-zinc-300 dark:text-zinc-600">+</span>
+                <span className="text-[var(--text-faint)]">+</span>
                 <input
                   name="description"
                   required
-                  placeholder="add item…"
-                  className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-zinc-800 outline-none placeholder:text-zinc-300 dark:text-zinc-200 dark:placeholder:text-zinc-600"
+                  placeholder="Add item…"
+                  className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
                 />
                 <input
                   name="amount"
                   required
                   inputMode="numeric"
                   placeholder="0"
-                  className="w-24 border-0 bg-transparent py-1 text-right text-sm tabular-nums text-zinc-800 outline-none placeholder:text-zinc-300 dark:text-zinc-200 dark:placeholder:text-zinc-600"
+                  className="w-24 border-0 bg-transparent py-1 text-right font-mono text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
                 />
                 <button
                   type="submit"
-                  className="rounded-md px-2 py-1 text-xs font-bold text-violet-400 hover:bg-violet-950/40"
+                  className="rounded-md px-2.5 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-[var(--accent-soft)]"
                 >
                   Add
                 </button>
@@ -333,19 +270,19 @@ export default async function ExpensesPage({
           </details>
         ))}
 
-        <div className="flex items-center justify-between bg-zinc-900 px-5 py-3 dark:bg-zinc-100">
-          <p className="text-xs font-bold uppercase tracking-widest text-zinc-100 dark:text-zinc-900">
+        <div className="flex items-center justify-between border-t border-[var(--border)] bg-[var(--sunken)] px-5 py-3.5">
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Total spending
           </p>
-          <p className="text-base font-bold tabular-nums text-white dark:text-zinc-900">
+          <p className="font-mono text-[15px] font-medium tabular-nums text-[var(--text)]">
             {fmtPKR(spending)}
           </p>
         </div>
       </Card>
 
-      <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
+      <p className="text-center text-xs text-[var(--text-faint)]">
         Click a section to expand it, then type an item and hit Add. New items
-        are dated to the month you're viewing ({monthTitle(month)}) — flip
+        are dated to the month you&apos;re viewing ({monthTitle(month)}) — flip
         months with ‹ › to log a past one. Change the day later via edit.
       </p>
     </Shell>

@@ -283,7 +283,7 @@ export function Shell({
           <div key={active} className="animate-page-in">
             <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h1 className="text-[26px] font-bold tracking-tight text-[var(--text)]">
+                <h1 className="text-[27px] font-semibold tracking-tight text-[var(--text)]">
                   {title}
                 </h1>
                 {subtitle && (

@@ -256,7 +256,7 @@ export default async function DealDetailPage({
             </div>
             <div>
               <dt className="text-zinc-500 dark:text-zinc-400">Received</dt>
-              <dd className="font-medium text-green-500 dark:text-green-400">
+              <dd className="font-medium text-[var(--text)]">
                 {fmtMoney(Number(deal.revenue_received))}
               </dd>
             </div>
