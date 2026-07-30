@@ -171,7 +171,16 @@ export default async function PersonasPage({
                     }
                     className="transition-colors"
                   >
-                    <td className="px-5 py-3.5">
+                    <td
+                      className="py-3.5 pl-5 pr-5"
+                      style={
+                        p.tintStatus
+                          ? {
+                              boxShadow: `inset 3px 0 0 0 ${STATUS_DOT[p.tintStatus]}`,
+                            }
+                          : undefined
+                      }
+                    >
                       <Link
                         href={`/personas/${p.id}`}
                         className="font-semibold text-zinc-900 hover:underline dark:text-zinc-50"

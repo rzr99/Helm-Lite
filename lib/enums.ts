@@ -114,15 +114,16 @@ export const STATUS_DOT: Record<string, string> = {
   reserve: "#71717a",
 };
 
-// Translucent row tints — same signal, soft enough to sit behind text.
+// Whisper-soft row tints — just enough context so text stays crisp on the
+// near-black canvas; the vivid left accent carries the actual signal.
 export const STATUS_TINT: Record<string, string> = {
-  active: "rgba(34,197,94,0.13)",
-  warming: "rgba(245,158,11,0.15)",
-  restricted: "rgba(251,146,60,0.15)",
-  recovery: "rgba(56,189,248,0.13)",
-  compromised: "rgba(192,38,211,0.15)",
-  banned: "rgba(239,68,68,0.16)",
-  reserve: "rgba(113,113,122,0.10)",
+  active: "rgba(34,197,94,0.05)",
+  warming: "rgba(245,158,11,0.06)",
+  restricted: "rgba(251,146,60,0.06)",
+  recovery: "rgba(56,189,248,0.05)",
+  compromised: "rgba(192,38,211,0.06)",
+  banned: "rgba(239,68,68,0.07)",
+  reserve: "rgba(113,113,122,0.04)",
 };
 
 // Worst-first, so a row takes the colour of its most attention-needing account.
