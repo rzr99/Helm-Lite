@@ -6,7 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { startSession } from "@/app/actions";
 
 const inputClass =
-  "w-full rounded-lg border border-white/15 bg-[#141412] px-3.5 py-2.5 text-sm text-[#f8f7f4] outline-none transition-colors placeholder:text-[#f8f7f4]/35 focus:border-amber-600/70 focus:ring-2 focus:ring-amber-600/20";
+  "w-full rounded-lg border border-[var(--border)] bg-[var(--field)] px-3.5 py-2.5 text-sm text-[var(--text)] outline-none transition-colors placeholder:text-[var(--text-faint)] focus:border-amber-600/70 focus:ring-2 focus:ring-amber-600/25";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,10 +55,10 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-6 font-sans">
       {/* Corner-bracket frame (structural element E1) */}
-      <span className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l border-t border-[#f8f7f4]/25" />
-      <span className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r border-t border-[#f8f7f4]/25" />
-      <span className="pointer-events-none absolute bottom-5 left-5 h-4 w-4 border-b border-l border-[#f8f7f4]/25" />
-      <span className="pointer-events-none absolute bottom-5 right-5 h-4 w-4 border-b border-r border-[#f8f7f4]/25" />
+      <span className="pointer-events-none absolute left-5 top-5 h-4 w-4 border-l border-t border-[var(--text-faint)]" />
+      <span className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r border-t border-[var(--text-faint)]" />
+      <span className="pointer-events-none absolute bottom-5 left-5 h-4 w-4 border-b border-l border-[var(--text-faint)]" />
+      <span className="pointer-events-none absolute bottom-5 right-5 h-4 w-4 border-b border-r border-[var(--text-faint)]" />
 
       <div className="relative z-10 w-full max-w-sm animate-fade-up">
         <div className="mb-7">
@@ -77,27 +77,27 @@ export default function LoginPage() {
               </g>
               <polygon points="200,146 254,200 200,254 146,200" fill="#E87000" />
             </svg>
-            <span className="text-[15px] font-semibold tracking-tight text-[#f8f7f4]">
+            <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
               Helm Lite
             </span>
           </div>
 
-          <p className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[#f8f7f4]/40">
-            <span className="h-1.5 w-1.5 rotate-45 border border-[#f8f7f4]/40" />
+          <p className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <span className="h-1.5 w-1.5 rotate-45 border border-[var(--text-muted)]" />
             00 — Linear.Solutions
           </p>
 
-          <h1 className="mt-3 text-[28px] font-semibold leading-tight tracking-tight text-[#f8f7f4]">
+          <h1 className="mt-3 text-[28px] font-semibold leading-tight tracking-tight text-[var(--text)]">
             Sign in to the <span className="text-amber-600">floor</span>.
           </h1>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-lg border border-white/10 bg-[#141412]/80 p-6 backdrop-blur-sm"
+          className="flex flex-col gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]/80 p-6 backdrop-blur-sm"
         >
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#f8f7f4]/70">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--text-muted)]">
               Email
             </label>
             <input
@@ -112,7 +112,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#f8f7f4]/70">
+            <label className="mb-1.5 block text-sm font-medium text-[var(--text-muted)]">
               Password
             </label>
             <input

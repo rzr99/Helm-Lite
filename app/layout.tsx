@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -27,19 +28,19 @@ export const viewport: Viewport = {
   themeColor: "#0e0e0d",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Default to dark; "light" only when the user has chosen it.
+  const theme = (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${theme === "dark" ? "dark" : ""} ${geistSans.variable} ${geistMono.variable} h-full antialiased`.trim()}
     >
-      <body className="min-h-full flex flex-col bg-[#0e0e0d] text-[#f8f7f4]">
-        {children}
-      </body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

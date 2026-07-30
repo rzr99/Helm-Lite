@@ -2,19 +2,19 @@ import Link from "next/link";
 
 // Amber is the single accent — used for primary actions only.
 export const btnPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-[#0e0e0d] transition-colors hover:bg-amber-500 disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-[#0e0e0d] shadow-sm transition-colors hover:bg-amber-500 active:translate-y-px disabled:opacity-50";
 
 export const btnSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-transparent px-4 py-2.5 text-sm font-medium text-[#f8f7f4] transition-colors hover:bg-white/[0.06] active:translate-y-px";
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-transparent px-4 py-2.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--hover)] active:translate-y-px";
 
 export const btnGhost =
-  "inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium text-[#f8f7f4]/60 transition-colors hover:bg-white/[0.06] hover:text-[#f8f7f4]";
+  "inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--text)]";
 
 export const inputClass =
-  "w-full rounded-lg border border-white/15 bg-[#141412] px-3.5 py-2.5 text-sm text-[#f8f7f4] outline-none transition-colors placeholder:text-[#f8f7f4]/35 focus:border-amber-600/70 focus:ring-2 focus:ring-amber-600/20";
+  "w-full rounded-lg border border-[var(--border)] bg-[var(--field)] px-3.5 py-2.5 text-sm text-[var(--text)] outline-none transition-colors placeholder:text-[var(--text-faint)] focus:border-amber-600/70 focus:ring-2 focus:ring-amber-600/25";
 
 export const labelClass =
-  "mb-1.5 block text-sm font-medium text-[#f8f7f4]/70";
+  "mb-1.5 block text-sm font-medium text-[var(--text-muted)]";
 
 // The keyframe diamond — the brand's core mark. Amber = key, muted = default.
 export function Diamond({
@@ -29,7 +29,7 @@ export function Diamond({
       aria-hidden
       className={
         "inline-block h-2 w-2 rotate-45 " +
-        (amber ? "bg-amber-600" : "bg-[#f8f7f4]/30") +
+        (amber ? "bg-amber-600" : "bg-[var(--text-faint)]") +
         " " +
         className
       }
@@ -51,19 +51,25 @@ export function Card({
   padded?: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.09] bg-[#161613]">
+    <section
+      className="overflow-hidden rounded-xl border border-[var(--border)]"
+      style={{
+        background: "var(--surface)",
+        boxShadow: "var(--card-shadow), inset 0 1px 0 0 var(--card-top)",
+      }}
+    >
       {(title || action) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-soft)] px-5 py-4">
           <div className="flex items-start gap-2.5">
             {title && <Diamond amber className="mt-[7px]" />}
             <div>
               {title && (
-                <h2 className="text-[15px] font-semibold tracking-tight text-[#f8f7f4]">
+                <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="mt-0.5 text-sm text-[#f8f7f4]/55">
+                <p className="mt-0.5 text-sm text-[var(--text-muted)]">
                   {description}
                 </p>
               )}
@@ -91,10 +97,10 @@ export function EmptyState({
   actionLabel?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 py-10 text-center">
+    <div className="flex flex-col items-center gap-2 py-12 text-center">
       <span className="text-2xl opacity-80">{emoji}</span>
-      <p className="font-medium text-[#f8f7f4]">{title}</p>
-      {hint && <p className="max-w-sm text-sm text-[#f8f7f4]/55">{hint}</p>}
+      <p className="font-medium text-[var(--text)]">{title}</p>
+      {hint && <p className="max-w-sm text-sm text-[var(--text-muted)]">{hint}</p>}
       {actionHref && actionLabel && (
         <Link href={actionHref} className={btnPrimary + " mt-2"}>
           {actionLabel}
@@ -128,7 +134,7 @@ export function Avatar({
       <img
         src={src}
         alt={name}
-        className={`inline-block ${sizeClass} shrink-0 rounded-full border border-white/15 object-cover`}
+        className={`inline-block ${sizeClass} shrink-0 rounded-full border border-[var(--border)] object-cover`}
       />
     );
   }
@@ -141,7 +147,7 @@ export function Avatar({
     .join("");
   return (
     <span
-      className={`inline-flex ${sizeClass} shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] font-medium text-[#f8f7f4]`}
+      className={`inline-flex ${sizeClass} shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--hover)] font-medium text-[var(--text)]`}
       aria-hidden
     >
       {initials || "?"}

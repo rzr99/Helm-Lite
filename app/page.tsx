@@ -17,19 +17,19 @@ type FollowUpRow = {
 };
 
 const stageAccent: Record<string, string> = {
-  new: "text-[#f8f7f4]",
-  in_conversation: "text-[#f8f7f4]",
-  qualified: "text-[#f8f7f4]",
+  new: "text-[var(--text)]",
+  in_conversation: "text-[var(--text)]",
+  qualified: "text-[var(--text)]",
   closed: "text-amber-600",
-  lost: "text-[#f8f7f4]/40",
+  lost: "text-[var(--text-faint)]",
 };
 
 const stageBar: Record<string, string> = {
-  new: "bg-[#f8f7f4]/20",
-  in_conversation: "bg-[#f8f7f4]/20",
-  qualified: "bg-[#f8f7f4]/20",
+  new: "bg-[var(--text-faint)]",
+  in_conversation: "bg-[var(--text-faint)]",
+  qualified: "bg-[var(--text-faint)]",
   closed: "bg-amber-600",
-  lost: "bg-[#f8f7f4]/10",
+  lost: "bg-[var(--border)]",
 };
 
 export default async function Dashboard() {
@@ -185,9 +185,9 @@ export default async function Dashboard() {
             : "Your leads by stage — click a stage to open it."
         }
       >
-        <div className="mb-4 flex flex-wrap items-center gap-x-8 gap-y-1 border-b border-white/[0.06] pb-4">
+        <div className="mb-4 flex flex-wrap items-center gap-x-8 gap-y-1 border-b border-[var(--border-soft)] pb-4">
           <div>
-            <span className="text-2xl font-bold tabular-nums text-[#f8f7f4]">
+            <span className="text-2xl font-bold tabular-nums text-[var(--text)]">
               {totals.total_clients}
             </span>
             <span className="ml-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
@@ -210,7 +210,7 @@ export default async function Dashboard() {
             <Link
               key={s.value}
               href={`/leads?stage=${s.value}`}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.05]"
+              className="group relative overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--hover)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--border)] hover:bg-[var(--hover)]"
             >
               <span
                 className={

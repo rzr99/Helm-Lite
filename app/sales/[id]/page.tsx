@@ -217,9 +217,9 @@ export default async function DealDetailPage({
               </div>
             </div>
 
-            <p className="text-sm text-[#f8f7f4]/60">
+            <p className="text-sm text-[var(--text-muted)]">
               Remaining:{" "}
-              <span className="font-medium text-[#f8f7f4]">
+              <span className="font-medium text-[var(--text)]">
                 {fmtMoney(remaining)}
               </span>
             </p>

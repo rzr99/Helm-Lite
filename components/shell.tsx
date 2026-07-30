@@ -3,6 +3,7 @@ import { signOut } from "@/app/actions";
 import type { Profile } from "@/lib/profile";
 import { Avatar } from "@/components/ui";
 import { MobileNav } from "@/components/mobile-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const roleLabel: Record<string, string> = {
   owner: "Owner",
@@ -157,8 +158,8 @@ function NavList({ active, role }: { active: string; role: string }) {
             className={
               "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors " +
               (isActive
-                ? "bg-white/[0.05] font-medium text-[#f8f7f4]"
-                : "text-[#f8f7f4]/50 hover:bg-white/[0.03] hover:text-[#f8f7f4]")
+                ? "bg-[var(--hover)] font-medium text-[var(--text)]"
+                : "text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]")
             }
           >
             <span
@@ -166,7 +167,7 @@ function NavList({ active, role }: { active: string; role: string }) {
                 "h-2 w-2 rotate-45 transition-colors " +
                 (isActive
                   ? "bg-amber-600"
-                  : "border border-[#f8f7f4]/30 group-hover:border-[#f8f7f4]/60")
+                  : "border border-[var(--text-faint)] group-hover:border-[var(--text-muted)]")
               }
             />
             {l.label}
@@ -204,7 +205,7 @@ function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 px-3">
       <BrandMark />
-      <span className="text-[15px] font-semibold tracking-tight text-[#f8f7f4]">
+      <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
         Helm Lite
       </span>
     </Link>
@@ -229,18 +230,18 @@ export function Shell({
   return (
     <div className="min-h-screen font-sans lg:flex">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-white/[0.07] bg-[#100f0d] px-3 py-6 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-[var(--border)] bg-[var(--surface-2)] px-3 py-6 lg:flex">
         <Brand />
         <NavList active={active} role={profile.role} />
-        <div className="mt-auto flex flex-col gap-3 border-t border-white/[0.06] px-1 pt-4">
+        <div className="mt-auto flex flex-col gap-2 border-t border-[var(--border-soft)] px-1 pt-4">
           <Link
             href="/profile"
-            className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-[#16161e]"
+            className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-[var(--hover)]"
             title="Your profile — name and picture"
           >
             <Avatar name={profile.full_name} src={profile.avatar_url} size={9} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-zinc-50">
+              <p className="truncate text-sm font-medium text-[var(--text)]">
                 {profile.full_name}
               </p>
               <span
@@ -253,10 +254,11 @@ export function Shell({
               </span>
             </div>
           </Link>
+          <ThemeToggle />
           <form action={signOut}>
             <button
               type="submit"
-              className="w-full rounded-xl border border-[#2a2a37] px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-[#1e1e28] hover:text-white"
+              className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--text)]"
             >
               Sign out
             </button>
@@ -266,7 +268,7 @@ export function Shell({
 
       {/* Mobile header */}
       <div className="flex-1">
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/[0.07] bg-[#100f0d] px-4 py-3 lg:hidden">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 lg:hidden">
           <Brand />
           <MobileNav
             items={visibleLinks(profile.role)}
@@ -281,11 +283,11 @@ export function Shell({
           <div key={active} className="animate-page-in">
             <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h1 className="text-[26px] font-bold tracking-tight text-zinc-50">
+                <h1 className="text-[26px] font-bold tracking-tight text-[var(--text)]">
                   {title}
                 </h1>
                 {subtitle && (
-                  <p className="mt-1.5 text-sm text-zinc-400">{subtitle}</p>
+                  <p className="mt-1.5 text-sm text-[var(--text-muted)]">{subtitle}</p>
                 )}
               </div>
               {action}

@@ -7,8 +7,46 @@
   --ink: #0e0e0d;
   --paper: #f8f7f4;
   --amber: #e87000;
-  --background: var(--ink);
-  --foreground: var(--paper);
+
+  /* Light theme (default). Semantic surface/text/border tokens so the whole
+     app themes from one place. */
+  --canvas: #f3f2ee;
+  --surface: #ffffff;
+  --surface-2: #efeeea;
+  --field: #ffffff;
+  --border: rgba(14, 14, 13, 0.12);
+  --border-soft: rgba(14, 14, 13, 0.07);
+  --hover: rgba(14, 14, 13, 0.045);
+  --text: #1b1b18;
+  --text-muted: rgba(27, 27, 24, 0.62);
+  --text-faint: rgba(27, 27, 24, 0.42);
+  --card-shadow: 0 1px 2px rgba(14, 14, 13, 0.05),
+    0 10px 28px -14px rgba(14, 14, 13, 0.14);
+  --card-top: rgba(255, 255, 255, 0.9);
+  --scrollbar: rgba(14, 14, 13, 0.18);
+
+  --background: var(--canvas);
+  --foreground: var(--text);
+}
+
+.dark {
+  --canvas: #0e0e0d;
+  --surface: #161613;
+  --surface-2: #100f0d;
+  --field: #141412;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --hover: rgba(255, 255, 255, 0.05);
+  --text: #f8f7f4;
+  --text-muted: rgba(248, 247, 244, 0.55);
+  --text-faint: rgba(248, 247, 244, 0.35);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 14px 34px -18px rgba(0, 0, 0, 0.65);
+  --card-top: rgba(255, 255, 255, 0.05);
+  --scrollbar: #2b2b26;
+
+  --background: var(--canvas);
+  --foreground: var(--text);
 }
 
 @theme inline {
@@ -88,43 +126,43 @@ html {
 }
 
 body {
-  background-color: var(--ink);
-  /* Ink-dither halftone — a fine off-white stipple over the canvas,
-     two offset grids so it reads as scatter, not a rigid dot matrix. */
-  background-image:
-    radial-gradient(rgba(248, 247, 244, 0.11) 0.7px, transparent 0.8px),
-    radial-gradient(rgba(248, 247, 244, 0.08) 0.7px, transparent 0.8px);
-  background-size: 3px 3px, 3px 3px;
-  background-position: 0 0, 1.5px 1.5px;
-  color: var(--paper);
+  background-color: var(--canvas);
+  color: var(--text);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.011em;
 }
 
+/* Ink-dither halftone — a fine off-white stipple, only over the dark ink
+   canvas (it would read as grime on the light theme). */
+.dark body {
+  background-image:
+    radial-gradient(rgba(248, 247, 244, 0.11) 0.7px, transparent 0.8px),
+    radial-gradient(rgba(248, 247, 244, 0.08) 0.7px, transparent 0.8px);
+  background-size: 3px 3px, 3px 3px;
+  background-position: 0 0, 1.5px 1.5px;
+}
+
 ::selection {
   background: var(--amber);
-  color: var(--ink);
+  color: #fff;
 }
 
 /* Thin brand scrollbars. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #33332e transparent;
+  scrollbar-color: var(--scrollbar) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #2b2b26;
+  background: var(--scrollbar);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: #3a3a33;
 }
 
 /* Display / hero type per brand: tight tracking, sentence case. */

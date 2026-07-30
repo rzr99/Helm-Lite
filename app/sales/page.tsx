@@ -343,7 +343,7 @@ export default async function SalesPage({
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5">
                       {deal.service_category ? (
-                        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-[#f8f7f4]/80">
+                        <span className="rounded-full bg-[var(--hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)]">
                           {deal.service_category}
                         </span>
                       ) : (
