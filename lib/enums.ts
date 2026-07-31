@@ -81,13 +81,14 @@ export function fmtPKR(value: number) {
   );
 }
 
-// Ordered healthiest → worst. `active` keeps its DB value but reads "Healthy".
+// The real states the team faces, healthiest → worst. `restricted` = "DM
+// restricted" (reuses the existing value so current data carries over).
+// recovery/compromised remain valid DB values (fallback) but aren't offered.
 export const ACCOUNT_STATUSES = [
   { value: "active", label: "Healthy" },
-  { value: "warming", label: "Warming" },
-  { value: "restricted", label: "Restricted" },
-  { value: "recovery", label: "Recovery" },
-  { value: "compromised", label: "Compromised" },
+  { value: "warming", label: "Warming up" },
+  { value: "ghost_banned", label: "Ghost banned" },
+  { value: "restricted", label: "DM restricted" },
   { value: "banned", label: "Banned" },
   { value: "reserve", label: "Reserve" },
 ] as const;
@@ -95,7 +96,8 @@ export const ACCOUNT_STATUSES = [
 export const STATUS_BADGE: Record<string, string> = {
   active: "bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200",
   warming: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
-  restricted: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
+  ghost_banned: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
+  restricted: "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950 dark:text-fuchsia-200",
   recovery: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
   compromised: "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950 dark:text-fuchsia-200",
   banned: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
@@ -107,7 +109,8 @@ export const STATUS_BADGE: Record<string, string> = {
 export const STATUS_DOT: Record<string, string> = {
   active: "#22c55e",
   warming: "#f59e0b",
-  restricted: "#fb923c",
+  ghost_banned: "#f97316",
+  restricted: "#c026d3",
   recovery: "#38bdf8",
   compromised: "#c026d3",
   banned: "#ef4444",
@@ -119,7 +122,8 @@ export const STATUS_DOT: Record<string, string> = {
 export const STATUS_TINT: Record<string, string> = {
   active: "rgba(34,197,94,0.05)",
   warming: "rgba(245,158,11,0.06)",
-  restricted: "rgba(251,146,60,0.06)",
+  ghost_banned: "rgba(249,115,22,0.07)",
+  restricted: "rgba(192,38,211,0.06)",
   recovery: "rgba(56,189,248,0.05)",
   compromised: "rgba(192,38,211,0.06)",
   banned: "rgba(239,68,68,0.07)",
@@ -129,12 +133,13 @@ export const STATUS_TINT: Record<string, string> = {
 // Worst-first, so a row takes the colour of its most attention-needing account.
 export const STATUS_SEVERITY = [
   "banned",
-  "compromised",
+  "ghost_banned",
   "restricted",
+  "compromised",
   "warming",
   "recovery",
-  "reserve",
   "active",
+  "reserve",
 ];
 
 export function statusLabel(value: string) {
