@@ -11,7 +11,6 @@ import {
   btnSecondary,
   inputClass,
 } from "@/components/ui";
-import { ActivityTimeline } from "@/components/activity-chart";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { todayStr, weekRange, monthRange } from "@/lib/dates";
 
@@ -23,28 +22,12 @@ const filterLabel =
 export default async function ActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    agent?: string;
-    from?: string;
-    to?: string;
-    metric?: string;
-  }>;
+  searchParams: Promise<{ agent?: string; from?: string; to?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
   if (!isFloorRole(profile.role)) redirect("/");
 
-  const { agent, from, to, metric } = await searchParams;
-  // Metric focus narrows the whole page to one measure.
-  const focus =
-    metric === "leads" || metric === "followups" || metric === "closed"
-      ? metric
-      : null;
-  const metrics = [
-    { key: "", label: "All" },
-    { key: "leads", label: "Leads" },
-    { key: "followups", label: "Follow-ups" },
-    { key: "closed", label: "Closed" },
-  ];
+  const { agent, from, to } = await searchParams;
   // Default view is Today; the Daily/Weekly/Monthly buttons set exact ranges.
   const fromDate = from || todayStr();
   const toDate = to || todayStr();
@@ -62,29 +45,10 @@ export default async function ActivityPage({
   const presetHref = (p: { from: string; to: string }) => {
     const sp = new URLSearchParams();
     if (agent) sp.set("agent", agent);
-    if (focus) sp.set("metric", focus);
     sp.set("from", p.from);
     sp.set("to", p.to);
     return `/activity?${sp.toString()}`;
   };
-  const metricHref = (m: string) => {
-    const sp = new URLSearchParams();
-    if (agent) sp.set("agent", agent);
-    if (from) sp.set("from", from);
-    if (to) sp.set("to", to);
-    if (m) sp.set("metric", m);
-    const s = sp.toString();
-    return s ? `/activity?${s}` : "/activity";
-  };
-  // Which chart series the focus maps to.
-  const chartFocus =
-    focus === "leads"
-      ? ("leads" as const)
-      : focus === "followups"
-        ? ("followUps" as const)
-        : focus === "closed"
-          ? ("deals" as const)
-          : undefined;
 
   // Per-day/per-agent counts come pre-aggregated from Postgres, filtered to the
   // date range (and agent) server-side — no full-table scan into the app.
@@ -156,38 +120,6 @@ export default async function ActivityPage({
   );
   const uniqueAddedCount = (uniqueAdded as number | null) ?? 0;
 
-  // --- Chart data: stacked activity per day across the selected range -----
-  function eachDay(from: string, to: string) {
-    const [fy, fm, fd] = from.split("-").map(Number);
-    const [ty, tm, td] = to.split("-").map(Number);
-    let cur = Date.UTC(fy, fm - 1, fd);
-    const end = Date.UTC(ty, tm - 1, td);
-    const out: string[] = [];
-    let guard = 0;
-    while (cur <= end && guard < 400) {
-      out.push(new Date(cur).toISOString().slice(0, 10));
-      cur += 86400000;
-      guard++;
-    }
-    return out;
-  }
-  const timeline = eachDay(fromDate, toDate).map((day) => {
-    let leads = 0;
-    let followUps = 0;
-    let deals = 0;
-    for (const r of rows) {
-      if (r.date === day) {
-        leads += r.added;
-        followUps += r.followUps;
-        deals += r.closes;
-      }
-    }
-    return { day, leads, followUps, deals };
-  });
-  const chartSubject =
-    (agent ? `${nameOf.get(agent) ?? "Agent"}` : "Whole floor") +
-    ` · ${fromDate} → ${toDate}`;
-
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
   type DupRow = {
@@ -212,16 +144,7 @@ export default async function ActivityPage({
   }
   const duplicates = [...dupMap.values()];
 
-  const hasFilters = Boolean(agent || from || to || focus);
-
-  // Table numeric cell: amber when in focus, dimmed when another metric is.
-  const numCell = (m: string) =>
-    "px-5 py-3.5 font-mono tabular-nums " +
-    (focus === m
-      ? "font-semibold text-amber-600"
-      : focus
-        ? "text-[var(--text-faint)]"
-        : "text-[var(--text-muted)]");
+  const hasFilters = Boolean(agent || from || to);
 
   return (
     <Shell
@@ -231,7 +154,7 @@ export default async function ActivityPage({
       subtitle="Derived automatically from leads, follow-ups, and deals — nothing here is typed in by hand."
     >
       <Card padded={false}>
-        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-5 py-4">
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
           {presets.map((p) => (
             <Link
               key={p.key}
@@ -246,34 +169,11 @@ export default async function ActivityPage({
               {p.label}
             </Link>
           ))}
-          <span className="ml-1 text-xs text-[var(--text-faint)]">
+          <span className="ml-1 text-xs text-zinc-400 dark:text-zinc-500">
             or pick a custom range below
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-5 py-3.5">
-          <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-            Focus
-          </span>
-          {metrics.map((m) => {
-            const on = (focus ?? "") === m.key;
-            return (
-              <Link
-                key={m.key || "all"}
-                href={metricHref(m.key)}
-                className={
-                  "rounded-lg px-3.5 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] transition-colors " +
-                  (on
-                    ? "bg-amber-600 text-[#140d05]"
-                    : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
-                }
-              >
-                {m.label}
-              </Link>
-            );
-          })}
-        </div>
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
-          {focus && <input type="hidden" name="metric" value={focus} />}
           <div>
             <label className={filterLabel}>Agent</label>
             <select name="agent" defaultValue={agent ?? ""} className={inputClass}>
@@ -320,7 +220,6 @@ export default async function ActivityPage({
         <Readout
           label="Leads added"
           value={totals.added}
-          dim={focus !== null && focus !== "leads"}
           note={
             <span title="Distinct clients — the same client added by two agents counts once.">
               <span className="text-amber-600">{uniqueAddedCount}</span> unique
@@ -328,19 +227,9 @@ export default async function ActivityPage({
             </span>
           }
         />
-        <Readout
-          label="Follow-ups logged"
-          value={totals.followUps}
-          dim={focus !== null && focus !== "followups"}
-        />
-        <Readout
-          label="Deals closed"
-          value={totals.closes}
-          dim={focus !== null && focus !== "closed"}
-        />
+        <Readout label="Follow-ups logged" value={totals.followUps} />
+        <Readout label="Deals closed" value={totals.closes} />
       </Readouts>
-
-      <ActivityTimeline days={timeline} subject={chartSubject} focus={chartFocus} />
 
       <Card
         title={`Per agent, per day (${fromDate} → ${toDate})`}
@@ -365,24 +254,30 @@ export default async function ActivityPage({
                   <th className="px-5 py-3 font-semibold">Deals closed</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--border)]">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {rows.map((r) => (
                   <tr
                     key={`${r.date}|${r.agentId}`}
-                    className="transition-colors hover:bg-[var(--hover)]"
+                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                   >
-                    <td className="px-5 py-3.5 font-mono text-[var(--text)]">
+                    <td className="px-5 py-3.5 font-medium text-zinc-900 dark:text-zinc-50">
                       {r.date}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="flex items-center gap-2 text-[var(--text)]">
+                      <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
                         <Avatar name={nameOf.get(r.agentId) ?? "?"} size={7} />
                         {nameOf.get(r.agentId) ?? "Unknown"}
                       </span>
                     </td>
-                    <td className={numCell("leads")}>{r.added}</td>
-                    <td className={numCell("followups")}>{r.followUps}</td>
-                    <td className={numCell("closed")}>{r.closes}</td>
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {r.added}
+                    </td>
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {r.followUps}
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-[var(--text)]">
+                      {r.closes}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnGhost } from "@/components/ui";
+import { DashboardSummary } from "@/components/dashboard-summary";
+import { getDashboardSummary } from "@/lib/dashboard-summary";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
 import { setFollowUpDone } from "@/app/leads/actions";
@@ -16,12 +18,24 @@ type FollowUpRow = {
   agent: { full_name: string } | null;
 };
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; win?: string; agent?: string }>;
+}) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
+  const owner = profile.role === "owner";
   const firstName = profile.full_name.split(" ")[0] || profile.full_name;
 
   const today = todayStr();
+
+  const { view, win: winRaw, agent } = await searchParams;
+  const isSummary = view === "summary";
+  const win = winRaw === "day" || winRaw === "week" ? winRaw : "month";
+  const summary = isSummary
+    ? await getDashboardSummary(supabase, { win, agent, floor, owner, today })
+    : null;
 
   // Counts come pre-aggregated from Postgres (views group by unique client),
   // so the dashboard never loads the whole leads table to add it up.
@@ -168,6 +182,35 @@ export default async function Dashboard() {
         </Link>
       }
     >
+      <div className="mb-3 flex gap-1">
+        <Link
+          href="/"
+          className={
+            "rounded-lg px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors " +
+            (!isSummary
+              ? "bg-amber-600 text-[#140d05]"
+              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+          }
+        >
+          Overview
+        </Link>
+        <Link
+          href="/?view=summary"
+          className={
+            "rounded-lg px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors " +
+            (isSummary
+              ? "bg-amber-600 text-[#140d05]"
+              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+          }
+        >
+          Summary
+        </Link>
+      </div>
+
+      {isSummary && summary ? (
+        <DashboardSummary {...summary} />
+      ) : (
+        <>
       {/* Pipeline — a keyframe track, framed like a viewfinder */}
       <div className="relative my-1 px-6 py-9">
         <span className="pointer-events-none absolute left-0 top-0 h-3.5 w-3.5 border-l border-t border-[var(--border-strong)]" />
@@ -327,11 +370,13 @@ export default async function Dashboard() {
         )}
       </Card>
 
-      <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
+      <p className="text-center text-xs text-[var(--text-faint)]">
         {floor
           ? "You can see every agent's leads and follow-ups."
           : "You only see your own leads and follow-ups."}
       </p>
+        </>
+      )}
     </Shell>
   );
 }
