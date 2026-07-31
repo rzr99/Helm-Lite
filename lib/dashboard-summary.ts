@@ -4,6 +4,20 @@ import { fmtMoney, fmtPKR, STATUS_DOT, statusLabel } from "@/lib/enums";
 
 const SPAN: Record<string, number> = { day: 1, week: 7, month: 30 };
 
+function addDaysISO(iso: string, delta: number) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10);
+}
+function daysInclusive(a: string, b: string) {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  return (
+    Math.round(
+      (Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000
+    ) + 1
+  );
+}
+
 function eachDay(from: string, to: string) {
   const [fy, fm, fd] = from.split("-").map(Number);
   const [ty, tm, td] = to.split("-").map(Number);
@@ -26,26 +40,59 @@ type Key = "leads" | "fu" | "deals" | "rev";
 // agent leaderboard, money, account health — for the chosen window + agent.
 export async function getDashboardSummary(
   supabase: SupabaseClient,
-  opts: { win: string; agent?: string; floor: boolean; owner: boolean; today: string }
+  opts: {
+    win: string;
+    from?: string;
+    to?: string;
+    agent?: string;
+    floor: boolean;
+    owner: boolean;
+    today: string;
+  }
 ) {
-  const { win, agent, floor, owner, today } = opts;
-  const n = SPAN[win] ?? 30;
-  const cur0 = daysAgoStr(n - 1);
-  const prev0 = daysAgoStr(2 * n - 1);
-  const prev1 = daysAgoStr(n);
-  const range0 = daysAgoStr(59);
-  const cmpLabel =
-    win === "day" ? "vs yesterday" : win === "week" ? "vs last week" : "vs prev 30d";
+  const { win, from, to, agent, floor, owner, today } = opts;
+
+  // Resolve the window: a valid custom From–To wins; otherwise a rolling preset.
+  const custom = Boolean(from && to && from <= to);
+  let cur0: string;
+  let curTo: string;
+  let prev0: string;
+  let prev1: string;
+  let cmpLabel: string;
+  if (custom) {
+    cur0 = from!;
+    curTo = to!;
+    const len = daysInclusive(cur0, curTo);
+    prev1 = addDaysISO(cur0, -1);
+    prev0 = addDaysISO(cur0, -len);
+    cmpLabel = `vs prev ${len}d`;
+  } else {
+    const n = SPAN[win] ?? 30;
+    cur0 = daysAgoStr(n - 1);
+    curTo = today;
+    prev0 = daysAgoStr(2 * n - 1);
+    prev1 = daysAgoStr(n);
+    cmpLabel =
+      win === "day" ? "vs yesterday" : win === "week" ? "vs last week" : "vs prev 30d";
+  }
+  const sparkStart = daysAgoStr(13);
+  const rangeStart = prev0 < sparkStart ? prev0 : sparkStart;
+  const rangeEnd = curTo > today ? curTo : today;
 
   const sq = (t: string) => {
-    let q = supabase.from(t).select("agent_id, day, n").gte("day", range0);
+    let q = supabase
+      .from(t)
+      .select("agent_id, day, n")
+      .gte("day", rangeStart)
+      .lte("day", rangeEnd);
     if (agent) q = q.eq("agent_id", agent);
     return q;
   };
   let dealsQ = supabase
     .from("deals")
     .select("agent_id, date_closed, revenue_received")
-    .gte("date_closed", range0);
+    .gte("date_closed", rangeStart)
+    .lte("date_closed", rangeEnd);
   if (agent) dealsQ = dealsQ.eq("agent_id", agent);
 
   const empty = Promise.resolve({ data: [] as unknown[] });
@@ -58,7 +105,7 @@ export async function getDashboardSummary(
       ? supabase.from("users").select("id, full_name").eq("active", true).order("full_name")
       : empty,
     owner
-      ? supabase.from("expenses").select("amount").gte("date", `${today.slice(0, 7)}-01`)
+      ? supabase.from("expenses").select("amount").gte("date", cur0).lte("date", curTo)
       : empty,
     owner ? supabase.from("accounts").select("status") : empty,
   ]);
@@ -87,7 +134,7 @@ export async function getDashboardSummary(
   const sparkOf = (key: Key) => sparkDays.map((d) => dayMap.get(d)?.[key] ?? 0);
 
   const mkMetric = (label: string, key: Key, money = false) => {
-    const cur = sumRange(cur0, today, key);
+    const cur = sumRange(cur0, curTo, key);
     const prev = sumRange(prev0, prev1, key);
     const diff = cur - prev;
     const dir = (diff > 0 ? "up" : diff < 0 ? "down" : "flat") as
@@ -117,10 +164,10 @@ export async function getDashboardSummary(
   const agLeads = new Map<string, number>();
   const agDeals = new Map<string, number>();
   for (const r of (leadsR.data ?? []) as SR[])
-    if (r.day >= cur0 && r.day <= today)
+    if (r.day >= cur0 && r.day <= curTo)
       agLeads.set(r.agent_id, (agLeads.get(r.agent_id) ?? 0) + r.n);
   for (const r of (dealCntR.data ?? []) as SR[])
-    if (r.day >= cur0 && r.day <= today)
+    if (r.day >= cur0 && r.day <= curTo)
       agDeals.set(r.agent_id, (agDeals.get(r.agent_id) ?? 0) + r.n);
   const usersList = (usersR.data ?? []) as { id: string; full_name: string }[];
   const leaderboard = usersList
@@ -142,8 +189,8 @@ export async function getDashboardSummary(
       )
     : null;
   const money = {
-    revenue: fmtMoney(sumRange(cur0, today, "rev")),
-    deals: sumRange(cur0, today, "deals"),
+    revenue: fmtMoney(sumRange(cur0, curTo, "rev")),
+    deals: sumRange(cur0, curTo, "deals"),
     expenses,
   };
 
@@ -158,6 +205,9 @@ export async function getDashboardSummary(
 
   return {
     win,
+    from: custom ? cur0 : "",
+    to: custom ? curTo : "",
+    custom,
     agent,
     floor,
     owner,

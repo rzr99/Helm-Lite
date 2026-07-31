@@ -1,22 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-const base =
+const pill =
   "font-mono text-[10.5px] uppercase tracking-[0.08em] transition-colors rounded-lg px-3.5 py-2";
 const on = "bg-amber-600 text-[#140d05]";
 const off =
   "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]";
+const dateInput =
+  "rounded-lg border border-[var(--border-strong)] bg-[var(--field)] px-2.5 py-1.5 text-[12.5px] text-[var(--text)] outline-none [color-scheme:light] dark:[color-scheme:dark]";
 
-// Window + agent controls for the dashboard Summary. Navigates via URL params
-// so the whole summary re-renders server-side.
+// Window (Day/Week/Month) OR a custom From–To range, plus agent — all via URL.
 export function SummaryFilter({
   win,
+  from,
+  to,
+  custom,
   agent,
   agents,
   floor,
 }: {
   win: string;
+  from: string;
+  to: string;
+  custom: boolean;
   agent?: string;
   agents: { id: string; full_name: string }[];
   floor: boolean;
@@ -24,6 +32,8 @@ export function SummaryFilter({
   const router = useRouter();
   const sp = useSearchParams();
   const path = usePathname();
+  const [f, setF] = useState(from || "");
+  const [t, setT] = useState(to || "");
 
   function go(patch: Record<string, string>) {
     const p = new URLSearchParams(sp.toString());
@@ -42,19 +52,48 @@ export function SummaryFilter({
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {/* presets — clear any custom range */}
       <div className="flex gap-1">
         {windows.map(([w, label]) => (
           <button
             key={w}
             type="button"
-            onClick={() => go({ win: w })}
-            className={base + " " + (win === w ? on : off)}
+            onClick={() => go({ win: w, from: "", to: "" })}
+            className={pill + " " + (!custom && win === w ? on : off)}
           >
             {label}
           </button>
         ))}
       </div>
+
+      {/* custom range */}
+      <div className="flex items-center gap-1.5">
+        <input
+          type="date"
+          value={f}
+          max={t || undefined}
+          onChange={(e) => setF(e.target.value)}
+          className={dateInput}
+        />
+        <span className="text-[var(--text-faint)]">→</span>
+        <input
+          type="date"
+          value={t}
+          min={f || undefined}
+          onChange={(e) => setT(e.target.value)}
+          className={dateInput}
+        />
+        <button
+          type="button"
+          disabled={!f || !t || f > t}
+          onClick={() => go({ from: f, to: t })}
+          className={pill + " " + (custom ? on : off) + " disabled:opacity-40"}
+        >
+          Apply
+        </button>
+      </div>
+
       {floor && (
         <select
           value={agent || ""}

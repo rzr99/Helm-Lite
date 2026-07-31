@@ -21,7 +21,13 @@ type FollowUpRow = {
 export default async function Dashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; win?: string; agent?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    win?: string;
+    from?: string;
+    to?: string;
+    agent?: string;
+  }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
@@ -30,11 +36,11 @@ export default async function Dashboard({
 
   const today = todayStr();
 
-  const { view, win: winRaw, agent } = await searchParams;
+  const { view, win: winRaw, from, to, agent } = await searchParams;
   const isSummary = view === "summary";
   const win = winRaw === "day" || winRaw === "week" ? winRaw : "month";
   const summary = isSummary
-    ? await getDashboardSummary(supabase, { win, agent, floor, owner, today })
+    ? await getDashboardSummary(supabase, { win, from, to, agent, floor, owner, today })
     : null;
 
   // Counts come pre-aggregated from Postgres (views group by unique client),

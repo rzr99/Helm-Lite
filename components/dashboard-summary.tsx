@@ -49,6 +49,9 @@ const eyebrow =
 
 export function DashboardSummary({
   win,
+  from,
+  to,
+  custom,
   agent,
   agents,
   floor,
@@ -60,6 +63,9 @@ export function DashboardSummary({
   health,
 }: {
   win: string;
+  from: string;
+  to: string;
+  custom: boolean;
   agent?: string;
   agents: { id: string; full_name: string }[];
   floor: boolean;
@@ -75,7 +81,15 @@ export function DashboardSummary({
 
   return (
     <div className="flex flex-col gap-6">
-      <SummaryFilter win={win} agent={agent} agents={agents} floor={floor} />
+      <SummaryFilter
+        win={win}
+        from={from}
+        to={to}
+        custom={custom}
+        agent={agent}
+        agents={agents}
+        floor={floor}
+      />
 
       {/* Momentum */}
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] lg:grid-cols-4">
@@ -168,7 +182,7 @@ export function DashboardSummary({
             </div>
             {owner && (
               <div className="px-5 py-4">
-                <p className={eyebrow}>Expenses · mo</p>
+                <p className={eyebrow}>Expenses</p>
                 <p className="mt-2 font-mono text-[20px] font-medium tabular-nums text-[var(--text)]">
                   {money.expenses ?? "—"}
                 </p>
