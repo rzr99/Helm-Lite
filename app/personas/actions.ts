@@ -8,6 +8,15 @@ function text(formData: FormData, key: string) {
   return ((formData.get(key) as string) || "").trim();
 }
 
+// Accounts carry a list of states; default to Healthy when none is ticked.
+function statusList(formData: FormData) {
+  const arr = formData
+    .getAll("statuses")
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+  return arr.length ? arr : ["active"];
+}
+
 // Never allow anything that looks like a full card number to be stored.
 // Card fields are reference labels only, e.g. "Kripicard 6190".
 function cardLabel(formData: FormData, key: string) {
@@ -85,6 +94,7 @@ export async function deletePersona(personaId: string) {
 export async function createAccount(personaId: string, formData: FormData) {
   const supabase = await createClient();
 
+  const sts = statusList(formData);
   const values = {
     persona_id: personaId,
     platform: text(formData, "platform"),
@@ -93,7 +103,8 @@ export async function createAccount(personaId: string, formData: FormData) {
     renewal_date: text(formData, "renewal_date") || null,
     assigned_card: cardLabel(formData, "assigned_card"),
     assigned_proxy: text(formData, "assigned_proxy") || null,
-    status: text(formData, "status") || "active",
+    statuses: sts,
+    status: sts[0],
   };
 
   if (!values.handle) throw new Error("The account needs a handle.");
@@ -114,6 +125,7 @@ export async function updateAccount(
 ) {
   const supabase = await createClient();
 
+  const sts = statusList(formData);
   const values = {
     platform: text(formData, "platform"),
     handle: text(formData, "handle"),
@@ -121,7 +133,8 @@ export async function updateAccount(
     renewal_date: text(formData, "renewal_date") || null,
     assigned_card: cardLabel(formData, "assigned_card"),
     assigned_proxy: text(formData, "assigned_proxy") || null,
-    status: text(formData, "status") || "active",
+    statuses: sts,
+    status: sts[0],
   };
 
   if (!values.handle) throw new Error("The account needs a handle.");

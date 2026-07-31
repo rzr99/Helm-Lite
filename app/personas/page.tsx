@@ -20,7 +20,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type Account = { id: string; platform: string; handle: string; status: string };
+type Account = {
+  id: string;
+  platform: string;
+  handle: string;
+  statuses: string[];
+};
 
 type PersonaRow = {
   id: string;
@@ -31,13 +36,15 @@ type PersonaRow = {
   accounts: Account[];
 };
 
-// The colour a row takes: its worst (most attention-needing) account status.
+// The colour a row takes: its worst (most attention-needing) status across all
+// of its accounts (each account can carry several states at once).
 function worstStatus(accounts: Account[]): string | null {
-  if (!accounts.length) return null;
+  const all = accounts.flatMap((a) => a.statuses ?? []);
+  if (!all.length) return null;
   for (const s of STATUS_SEVERITY) {
-    if (accounts.some((a) => a.status === s)) return s;
+    if (all.includes(s)) return s;
   }
-  return accounts[0].status;
+  return all[0];
 }
 
 export default async function PersonasPage({
@@ -56,7 +63,7 @@ export default async function PersonasPage({
     supabase
       .from("personas")
       .select(
-        "id, persona_name, contact_email, contact_phone, manager:users(full_name, avatar_url), accounts(id, platform, handle, status)"
+        "id, persona_name, contact_email, contact_phone, manager:users(full_name, avatar_url), accounts(id, platform, handle, statuses)"
       )
       .order("persona_name"),
     supabase.from("platforms").select("name").order("name"),
@@ -65,18 +72,20 @@ export default async function PersonasPage({
   const personas = (personasData ?? []) as unknown as PersonaRow[];
 
   // Count accounts per status across everything (drives the filter chips).
+  // An account with several states counts toward each one.
   const counts: Record<string, number> = {};
   for (const p of personas)
     for (const a of p.accounts ?? [])
-      counts[a.status] = (counts[a.status] ?? 0) + 1;
+      for (const s of a.statuses ?? [])
+        counts[s] = (counts[s] ?? 0) + 1;
 
-  // When a status is picked, keep only personas that have such an account, and
-  // colour those rows by that status; otherwise colour by the worst account.
+  // When a status is picked, keep only personas with an account in that state,
+  // and colour those rows by it; otherwise colour by the worst account.
   const rows = personas
     .map((p) => {
       const accounts = p.accounts ?? [];
       const matching = activeStatus
-        ? accounts.filter((a) => a.status === activeStatus)
+        ? accounts.filter((a) => (a.statuses ?? []).includes(activeStatus))
         : accounts;
       const tintStatus = activeStatus ?? worstStatus(accounts);
       return { ...p, accounts, matchingCount: matching.length, tintStatus };
@@ -210,27 +219,37 @@ export default async function PersonasPage({
                     </td>
                     <td className="px-5 py-3.5">
                       {p.accounts.length === 0 ? (
-                        <span className="text-zinc-400">no accounts</span>
+                        <span className="text-[var(--text-faint)]">no accounts</span>
                       ) : (
                         <div className="flex flex-wrap gap-x-3 gap-y-1.5">
                           {p.accounts
                             .slice()
                             .sort((a, b) => a.platform.localeCompare(b.platform))
-                            .map((a) => (
-                              <span
-                                key={a.id}
-                                title={`${a.handle || a.platform} — ${statusLabel(a.status)}`}
-                                className="inline-flex items-center gap-1.5 text-xs text-zinc-700 dark:text-zinc-200"
-                              >
+                            .map((a) => {
+                              const sts = (a.statuses ?? []).length
+                                ? a.statuses
+                                : ["active"];
+                              return (
                                 <span
-                                  className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/10"
-                                  style={{
-                                    backgroundColor: STATUS_DOT[a.status] ?? "#71717a",
-                                  }}
-                                />
-                                {a.platform}
-                              </span>
-                            ))}
+                                  key={a.id}
+                                  title={`${a.handle || a.platform} — ${sts.map(statusLabel).join(", ")}`}
+                                  className="inline-flex items-center gap-1.5 text-xs text-[var(--text)]"
+                                >
+                                  <span className="flex gap-0.5">
+                                    {sts.map((s, i) => (
+                                      <span
+                                        key={i}
+                                        className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/10"
+                                        style={{
+                                          backgroundColor: STATUS_DOT[s] ?? "#71717a",
+                                        }}
+                                      />
+                                    ))}
+                                  </span>
+                                  {a.platform}
+                                </span>
+                              );
+                            })}
                         </div>
                       )}
                     </td>

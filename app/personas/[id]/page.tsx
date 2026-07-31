@@ -23,7 +23,7 @@ type AccountRow = {
   renewal_date: string | null;
   assigned_card: string | null;
   assigned_proxy: string | null;
-  status: string;
+  statuses: string[];
 };
 
 const platformChip: Record<string, string> = {
@@ -60,7 +60,7 @@ export default async function PersonaDetailPage({
   const { data: accountsData } = await supabase
     .from("accounts")
     .select(
-      "id, platform, handle, subscription_date, renewal_date, assigned_card, assigned_proxy, status"
+      "id, platform, handle, subscription_date, renewal_date, assigned_card, assigned_proxy, statuses"
     )
     .eq("persona_id", id)
     .order("platform")
@@ -216,7 +216,7 @@ export default async function PersonaDetailPage({
                   key={a.id}
                   className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={
                         "rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide " +
@@ -226,14 +226,19 @@ export default async function PersonaDetailPage({
                     >
                       {a.platform}
                     </span>
-                    <span
-                      className={
-                        "rounded-full px-2.5 py-1 text-xs font-semibold " +
-                        (STATUS_BADGE[a.status] ?? "")
-                      }
-                    >
-                      {statusLabel(a.status)}
-                    </span>
+                    {((a.statuses ?? []).length ? a.statuses : ["active"]).map(
+                      (s) => (
+                        <span
+                          key={s}
+                          className={
+                            "rounded-full px-2.5 py-1 text-xs font-semibold " +
+                            (STATUS_BADGE[s] ?? "")
+                          }
+                        >
+                          {statusLabel(s)}
+                        </span>
+                      )
+                    )}
                   </div>
 
                   <p className="text-lg font-bold text-zinc-900 dark:text-zinc-50">

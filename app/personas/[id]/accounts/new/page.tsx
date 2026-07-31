@@ -8,8 +8,8 @@ import {
   inputClass,
   labelClass,
 } from "@/components/ui";
+import { StatusPicker } from "@/components/status-picker";
 import { requireProfile } from "@/lib/profile";
-import { ACCOUNT_STATUSES } from "@/lib/enums";
 import { createAccount } from "@/app/personas/actions";
 
 export const dynamic = "force-dynamic";
@@ -80,14 +80,13 @@ export default async function NewAccountPage({
             </div>
 
             <div>
-              <label className={labelClass}>Status</label>
-              <select name="status" defaultValue="active" className={inputClass}>
-                {ACCOUNT_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+              <label className={labelClass}>
+                Status{" "}
+                <span className="font-normal text-[var(--text-faint)]">
+                  — tick all that apply
+                </span>
+              </label>
+              <StatusPicker />
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

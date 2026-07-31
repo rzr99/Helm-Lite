@@ -89,6 +89,7 @@ export const ACCOUNT_STATUSES = [
   { value: "warming", label: "Warming up" },
   { value: "ghost_banned", label: "Ghost banned" },
   { value: "restricted", label: "DM restricted" },
+  { value: "red_label", label: "Red label" },
   { value: "banned", label: "Banned" },
   { value: "reserve", label: "Reserve" },
 ] as const;
@@ -98,6 +99,7 @@ export const STATUS_BADGE: Record<string, string> = {
   warming: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
   ghost_banned: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
   restricted: "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950 dark:text-fuchsia-200",
+  red_label: "bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-200",
   recovery: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
   compromised: "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950 dark:text-fuchsia-200",
   banned: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
@@ -111,6 +113,7 @@ export const STATUS_DOT: Record<string, string> = {
   warming: "#f59e0b",
   ghost_banned: "#f97316",
   restricted: "#c026d3",
+  red_label: "#e11d48",
   recovery: "#38bdf8",
   compromised: "#c026d3",
   banned: "#ef4444",
@@ -124,6 +127,7 @@ export const STATUS_TINT: Record<string, string> = {
   warming: "rgba(245,158,11,0.06)",
   ghost_banned: "rgba(249,115,22,0.07)",
   restricted: "rgba(192,38,211,0.06)",
+  red_label: "rgba(225,29,72,0.07)",
   recovery: "rgba(56,189,248,0.05)",
   compromised: "rgba(192,38,211,0.06)",
   banned: "rgba(239,68,68,0.07)",
@@ -133,6 +137,7 @@ export const STATUS_TINT: Record<string, string> = {
 // Worst-first, so a row takes the colour of its most attention-needing account.
 export const STATUS_SEVERITY = [
   "banned",
+  "red_label",
   "ghost_banned",
   "restricted",
   "compromised",

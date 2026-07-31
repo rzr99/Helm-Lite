@@ -107,7 +107,7 @@ export async function getDashboardSummary(
     owner
       ? supabase.from("expenses").select("amount").gte("date", cur0).lte("date", curTo)
       : empty,
-    owner ? supabase.from("accounts").select("status") : empty,
+    owner ? supabase.from("accounts").select("statuses") : empty,
   ]);
 
   const dayMap = new Map<string, { leads: number; fu: number; deals: number; rev: number }>();
@@ -195,8 +195,9 @@ export async function getDashboardSummary(
   };
 
   const statusCount = new Map<string, number>();
-  for (const a of (acctR.data ?? []) as { status: string }[])
-    statusCount.set(a.status, (statusCount.get(a.status) ?? 0) + 1);
+  for (const a of (acctR.data ?? []) as { statuses: string[] }[])
+    for (const s of a.statuses ?? [])
+      statusCount.set(s, (statusCount.get(s) ?? 0) + 1);
   const health = [...statusCount.entries()].map(([s, c]) => ({
     label: statusLabel(s),
     count: c,

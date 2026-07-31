@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
 import { Card, btnPrimary, inputClass, labelClass } from "@/components/ui";
+import { StatusPicker } from "@/components/status-picker";
 import { requireProfile } from "@/lib/profile";
-import { ACCOUNT_STATUSES } from "@/lib/enums";
 import { updateAccount, deleteAccount } from "@/app/personas/actions";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function AccountDetailPage({
     supabase
       .from("accounts")
       .select(
-        "id, persona_id, platform, handle, subscription_date, renewal_date, assigned_card, assigned_proxy, status, persona:personas(persona_name)"
+        "id, persona_id, platform, handle, subscription_date, renewal_date, assigned_card, assigned_proxy, statuses, status, persona:personas(persona_name)"
       )
       .eq("id", id)
       .single(),
@@ -83,19 +83,16 @@ export default async function AccountDetailPage({
                 className={inputClass}
               />
             </div>
-            <div>
-              <label className={labelClass}>Status</label>
-              <select
-                name="status"
-                defaultValue={account.status}
-                className={inputClass}
-              >
-                {ACCOUNT_STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+            <div className="sm:col-span-2">
+              <label className={labelClass}>
+                Status{" "}
+                <span className="font-normal text-[var(--text-faint)]">
+                  — tick all that apply
+                </span>
+              </label>
+              <StatusPicker
+                selected={(account.statuses as string[] | null) ?? []}
+              />
             </div>
             <div>
               <label className={labelClass}>Card ref (label only)</label>
