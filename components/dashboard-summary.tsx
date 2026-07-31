@@ -148,7 +148,12 @@ export function DashboardSummary({
         )}
 
         <Card title="Money" padded={false}>
-          <div className="grid grid-cols-3 divide-x divide-[var(--border)]">
+          <div
+            className={
+              "grid divide-x divide-[var(--border)] " +
+              (owner ? "grid-cols-3" : "grid-cols-2")
+            }
+          >
             <div className="px-5 py-4">
               <p className={eyebrow}>Revenue</p>
               <p className="mt-2 font-mono text-[20px] font-medium tabular-nums text-[var(--text)]">
@@ -161,12 +166,14 @@ export function DashboardSummary({
                 {money.deals}
               </p>
             </div>
-            <div className="px-5 py-4">
-              <p className={eyebrow}>Expenses · mo</p>
-              <p className="mt-2 font-mono text-[20px] font-medium tabular-nums text-[var(--text)]">
-                {money.expenses ?? "—"}
-              </p>
-            </div>
+            {owner && (
+              <div className="px-5 py-4">
+                <p className={eyebrow}>Expenses · mo</p>
+                <p className="mt-2 font-mono text-[20px] font-medium tabular-nums text-[var(--text)]">
+                  {money.expenses ?? "—"}
+                </p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
