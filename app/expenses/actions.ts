@@ -53,63 +53,63 @@ export async function createExpense(formData: FormData) {
   );
 }
 
-export async function setMonthlyClosing(month: string, formData: FormData) {
+// Log a payment received (a Linear LLC payout, etc.). They accumulate into the
+// month's income and lift the live bank balance.
+export async function addIncome(formData: FormData) {
   const supabase = await createClient();
 
-  const closing = money(formData, "closing");
+  const values = {
+    source: text(formData, "source"),
+    amount: money(formData, "amount"),
+    date: text(formData, "date") || todayStr(),
+  };
 
-  const { error } = await supabase
-    .from("monthly_finances")
-    .upsert({ month, closing });
+  const { error } = await supabase.from("income").insert(values);
 
-  if (error) throw new Error("Could not save the closing: " + error.message);
+  if (error) throw new Error("Could not save the payment: " + error.message);
+
+  revalidatePath("/expenses");
+  redirect(`/expenses?month=${values.date.slice(0, 7)}`);
+}
+
+export async function deleteIncome(incomeId: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("income").delete().eq("id", incomeId);
+
+  if (error) throw new Error("Could not delete the payment: " + error.message);
 
   revalidatePath("/expenses");
 }
 
-// Correct the running bank balance to a real figure. We don't store the balance
-// itself (it's derived); instead we save the difference between the number the
-// owner typed and what the carry-forward currently computes, as this month's
-// `adjustment`. That correction then rides along in every later month too.
-export async function setBankBalance(month: string, formData: FormData) {
+// Set the bank balance to a real figure. The balance itself is derived
+// (baseline + all income − all expenses), so we store the baseline that makes
+// today's balance equal the number the owner typed. From then on it moves live
+// as receipts and expenses are logged, and can be re-set at any time.
+export async function setBankBalance(formData: FormData) {
   const supabase = await createClient();
 
   const target = signedMoney(formData, "balance");
 
-  // First day of the month AFTER the one being viewed (exclusive spend cutoff).
-  const [y, m] = month.split("-").map(Number);
-  const end = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
-
-  const [{ data: fins }, { data: spend }] = await Promise.all([
-    supabase
-      .from("monthly_finances")
-      .select("month, closing, adjustment")
-      .lte("month", month),
-    supabase.from("expenses").select("amount").lt("date", end),
+  const [{ data: inc }, { data: exp }] = await Promise.all([
+    supabase.from("income").select("amount").limit(100000),
+    supabase.from("expenses").select("amount").limit(100000),
   ]);
 
-  const rows = (fins ?? []) as {
-    month: string;
-    closing: number | null;
-    adjustment: number | null;
-  }[];
-  const cumIn = rows.reduce((s, r) => s + Number(r.closing ?? 0), 0);
-  // Every prior correction except this month's — we're about to overwrite it.
-  const cumAdjustExclThis = rows
-    .filter((r) => r.month !== month)
-    .reduce((s, r) => s + Number(r.adjustment ?? 0), 0);
-  const cumOut = ((spend ?? []) as { amount: number }[]).reduce(
-    (s, e) => s + Number(e.amount),
+  const totalIn = ((inc ?? []) as { amount: number }[]).reduce(
+    (s, r) => s + Number(r.amount),
+    0
+  );
+  const totalOut = ((exp ?? []) as { amount: number }[]).reduce(
+    (s, r) => s + Number(r.amount),
     0
   );
 
-  const base = cumIn - cumOut + cumAdjustExclThis;
-  const adjustment = target - base;
-  const thisClosing = Number(rows.find((r) => r.month === month)?.closing ?? 0);
+  const baseline = target - totalIn + totalOut;
 
   const { error } = await supabase
-    .from("monthly_finances")
-    .upsert({ month, closing: thisClosing, adjustment });
+    .from("finance_settings")
+    .upsert({ id: true, bank_baseline: baseline });
 
   if (error) throw new Error("Could not save the balance: " + error.message);
 

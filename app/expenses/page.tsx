@@ -7,7 +7,8 @@ import { EXPENSE_CATEGORIES, fmtPKR } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
 import {
   createExpense,
-  setMonthlyClosing,
+  addIncome,
+  deleteIncome,
   setBankBalance,
 } from "@/app/expenses/actions";
 
@@ -43,6 +44,13 @@ type ExpenseRow = {
   date: string;
 };
 
+type IncomeRow = {
+  id: string;
+  source: string;
+  amount: number;
+  date: string;
+};
+
 export default async function ExpensesPage({
   searchParams,
 }: {
@@ -59,51 +67,58 @@ export default async function ExpensesPage({
   const end = `${shiftMonth(month, 1)}-01`;
   const addDate = month === currentMonth ? todayStr() : `${month}-01`;
 
-  const [{ data }, { data: finance }, { data: pastFinances }, { data: pastSpend }] =
-    await Promise.all([
-      supabase
-        .from("expenses")
-        .select("id, category, description, amount, date")
-        .gte("date", start)
-        .lt("date", end)
-        .order("date")
-        .order("created_at"),
-      supabase
-        .from("monthly_finances")
-        .select("closing, adjustment")
-        .eq("month", month)
-        .maybeSingle(),
-      // Every month up to and including this one — for the running bank balance.
-      supabase
-        .from("monthly_finances")
-        .select("closing, adjustment")
-        .lte("month", month),
-      supabase.from("expenses").select("amount").lt("date", end),
-    ]);
+  const isCurrentMonth = month === currentMonth;
+
+  const [
+    { data },
+    { data: monthIncomeData },
+    { data: allInc },
+    { data: allExp },
+    { data: settings },
+  ] = await Promise.all([
+    supabase
+      .from("expenses")
+      .select("id, category, description, amount, date")
+      .gte("date", start)
+      .lt("date", end)
+      .order("date")
+      .order("created_at"),
+    supabase
+      .from("income")
+      .select("id, source, amount, date")
+      .gte("date", start)
+      .lt("date", end)
+      .order("date")
+      .order("created_at"),
+    // All-time sums drive the live bank balance. limit() defeats the default
+    // 1000-row cap; swap to a DB aggregate if this ever gets huge.
+    supabase.from("income").select("amount").limit(100000),
+    supabase.from("expenses").select("amount").limit(100000),
+    supabase
+      .from("finance_settings")
+      .select("bank_baseline")
+      .eq("id", true)
+      .maybeSingle(),
+  ]);
 
   const expenses = (data ?? []) as ExpenseRow[];
+  const incomes = (monthIncomeData ?? []) as IncomeRow[];
   const spending = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const closing = Number(finance?.closing ?? 0);
-  const balance = closing - spending;
+  const received = incomes.reduce((sum, e) => sum + Number(e.amount), 0);
+  const net = received - spending;
 
-  // Running bank balance: cumulative net (closing − spending) across every month
-  // through the one being viewed, plus any manual corrections (adjustment).
-  const cumIn = ((pastFinances ?? []) as { closing: number | null }[]).reduce(
-    (s, r) => s + Number(r.closing ?? 0),
+  // Live bank balance: an editable baseline the owner sets, plus every rupee in
+  // and out ever recorded. It moves the instant an expense or receipt is logged.
+  const totalIn = ((allInc ?? []) as { amount: number }[]).reduce(
+    (s, r) => s + Number(r.amount),
     0
   );
-  const cumAdjust = (
-    (pastFinances ?? []) as { adjustment: number | null }[]
-  ).reduce((s, r) => s + Number(r.adjustment ?? 0), 0);
-  const cumOut = ((pastSpend ?? []) as { amount: number }[]).reduce(
-    (s, e) => s + Number(e.amount),
+  const totalOut = ((allExp ?? []) as { amount: number }[]).reduce(
+    (s, r) => s + Number(r.amount),
     0
   );
-  const bankBalance = cumIn - cumOut + cumAdjust;
-  const thisAdjustment = Number(finance?.adjustment ?? 0);
-
-  const saveClosing = setMonthlyClosing.bind(null, month);
-  const saveBankBalance = setBankBalance.bind(null, month);
+  const baseline = Number(settings?.bank_baseline ?? 0);
+  const bankBalance = baseline + totalIn - totalOut;
 
   const known = new Set(EXPENSE_CATEGORIES.map((c) => c.value as string));
   const sections = [
@@ -164,7 +179,12 @@ export default async function ExpensesPage({
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div
+        className={
+          "grid grid-cols-2 gap-4 " +
+          (isCurrentMonth ? "lg:grid-cols-4" : "sm:grid-cols-3")
+        }
+      >
         <div className={statCard}>
           <p className={eyebrow}>Spending</p>
           <p className={bigMoney}>{fmtPKR(spending)}</p>
@@ -174,22 +194,11 @@ export default async function ExpensesPage({
         </div>
 
         <div className={statCard}>
-          <p className={eyebrow}>Closing balance</p>
-          <p className={bigMoney}>{fmtPKR(closing)}</p>
-          <form action={saveClosing} className="mt-3 flex items-center gap-2">
-            <input
-              name="closing"
-              inputMode="numeric"
-              placeholder="Set closing…"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--sunken)] px-3 py-2 text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-amber-600 focus:ring-2 focus:ring-amber-600/20"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-[#14100b] transition-colors hover:bg-amber-500"
-            >
-              Save
-            </button>
-          </form>
+          <p className={eyebrow}>Money received</p>
+          <p className={bigMoney}>{fmtPKR(received)}</p>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            {incomes.length} payment{incomes.length === 1 ? "" : "s"} this month
+          </p>
         </div>
 
         <div className={statCard}>
@@ -197,54 +206,131 @@ export default async function ExpensesPage({
           <p
             className={
               "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight " +
-              (balance < 0 ? "text-[var(--negative)]" : "text-[var(--text)]")
+              (net < 0 ? "text-[var(--negative)]" : "text-[var(--text)]")
             }
           >
-            {fmtPKR(balance)}
+            {fmtPKR(net)}
           </p>
           <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Closing minus spending
+            Received minus spending
           </p>
         </div>
 
-        <div
-          className={statCard + " border-amber-600/40 bg-[var(--accent-soft)]"}
-        >
-          <p className={eyebrow}>Bank balance</p>
-          <p
-            className={
-              "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight " +
-              (bankBalance < 0 ? "text-[var(--negative)]" : "text-[var(--text)]")
-            }
+        {isCurrentMonth && (
+          <div
+            className={statCard + " border-amber-600/40 bg-[var(--accent-soft)]"}
           >
-            {fmtPKR(bankBalance)}
-          </p>
-          <form
-            action={saveBankBalance}
-            className="mt-3 flex items-center gap-2"
-          >
-            <input
-              name="balance"
-              inputMode="numeric"
-              placeholder="Correct balance…"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-amber-600 focus:ring-2 focus:ring-amber-600/20"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-[#14100b] transition-colors hover:bg-amber-500"
+            <p className={eyebrow}>Bank balance</p>
+            <p
+              className={
+                "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight " +
+                (bankBalance < 0
+                  ? "text-[var(--negative)]"
+                  : "text-[var(--text)]")
+              }
             >
-              Fix
-            </button>
-          </form>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
-            {thisAdjustment !== 0
-              ? `Carried forward · includes a ${
-                  thisAdjustment < 0 ? "−" : "+"
-                }${fmtPKR(Math.abs(thisAdjustment))} correction`
-              : `Carried forward through ${monthTitle(month)}`}
+              {fmtPKR(bankBalance)}
+            </p>
+            <form
+              action={setBankBalance}
+              className="mt-3 flex items-center gap-2"
+            >
+              <input
+                name="balance"
+                inputMode="numeric"
+                placeholder="Set balance…"
+                className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-amber-600 focus:ring-2 focus:ring-amber-600/20"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-[#14100b] transition-colors hover:bg-amber-500"
+              >
+                Set
+              </button>
+            </form>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              Live — set it once, then it moves with money in and out.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Money received — log each payout as it lands. */}
+      <Card
+        title="Money received"
+        description="Log each payout as it comes in — they add up into the month's income and lift the bank balance."
+        action={
+          <span className="font-mono text-xs text-[var(--text-muted)]">
+            {fmtPKR(received)}
+          </span>
+        }
+        padded={false}
+      >
+        {incomes.map((e) => {
+          const removeIncome = deleteIncome.bind(null, e.id);
+          return (
+            <div
+              key={e.id}
+              className="group/item flex items-center justify-between gap-3 border-t border-[var(--border-soft)] px-5 py-2.5 transition-colors first:border-t-0 hover:bg-[var(--sunken)]"
+            >
+              <p className="min-w-0 truncate text-sm text-[var(--text)]">
+                {e.source || "(unlabelled)"}
+                <span className="ml-2 font-mono text-xs text-[var(--text-faint)]">
+                  {e.date.slice(8)}/{e.date.slice(5, 7)}
+                </span>
+              </p>
+              <p className="flex shrink-0 items-center gap-3">
+                <form action={removeIncome}>
+                  <button
+                    type="submit"
+                    className="text-xs font-medium text-[var(--text-faint)] opacity-0 transition-opacity hover:text-[var(--negative)] hover:underline group-hover/item:opacity-100"
+                  >
+                    remove
+                  </button>
+                </form>
+                <span className="font-mono text-sm tabular-nums text-[var(--text)]">
+                  {Number(e.amount).toLocaleString("en-US")}
+                </span>
+              </p>
+            </div>
+          );
+        })}
+
+        <form
+          action={addIncome}
+          className="flex items-center gap-2 border-t border-[var(--border-soft)] px-5 py-2"
+        >
+          <input type="hidden" name="date" value={addDate} />
+          <span className="text-[var(--text-faint)]">+</span>
+          <input
+            name="source"
+            placeholder="Source, e.g. Linear LLC payout"
+            className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
+          />
+          <input
+            name="amount"
+            required
+            inputMode="numeric"
+            placeholder="0"
+            className="w-24 border-0 bg-transparent py-1 text-right font-mono text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
+          />
+          <button
+            type="submit"
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-[var(--accent-soft)]"
+          >
+            Add
+          </button>
+        </form>
+
+        <div className="flex items-center justify-between border-t border-[var(--border)] bg-[var(--sunken)] px-5 py-3.5">
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            Total received
+          </p>
+          <p className="font-mono text-[15px] font-medium tabular-nums text-[var(--text)]">
+            {fmtPKR(received)}
           </p>
         </div>
-      </div>
+      </Card>
 
       <Card
         title="By category"
