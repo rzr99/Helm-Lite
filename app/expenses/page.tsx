@@ -104,8 +104,11 @@ export default async function ExpensesPage({
   const expenses = (data ?? []) as ExpenseRow[];
   const incomes = (monthIncomeData ?? []) as IncomeRow[];
   const spending = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  // "Closing" = the month's money in, i.e. the sum of received payments.
+  // "Closing" = the month's money in from that month's sales (sum of the
+  // payments logged against it, whatever day the payout actually lands).
   const received = incomes.reduce((sum, e) => sum + Number(e.amount), 0);
+  // Net profit for the month.
+  const netProfit = received - spending;
 
   // Live bank balance: an editable baseline the owner sets, plus every rupee in
   // and out ever recorded. It moves the instant an expense or receipt is logged.
@@ -182,11 +185,21 @@ export default async function ExpensesPage({
       <div
         className={
           "grid grid-cols-2 gap-4 " +
-          (isCurrentMonth ? "sm:grid-cols-3" : "sm:grid-cols-2")
+          (isCurrentMonth ? "lg:grid-cols-4" : "sm:grid-cols-3")
         }
       >
         <div className={statCard}>
-          <p className={eyebrow}>Spending</p>
+          <p className={eyebrow}>Closing</p>
+          <p className={bigMoney}>{fmtPKR(received)}</p>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            This month&apos;s sales
+            {incomes.length > 0 &&
+              ` · ${incomes.length} payment${incomes.length === 1 ? "" : "s"}`}
+          </p>
+        </div>
+
+        <div className={statCard}>
+          <p className={eyebrow}>Expenses</p>
           <p className={bigMoney}>{fmtPKR(spending)}</p>
           <p className="mt-2 text-xs text-[var(--text-muted)]">
             {expenses.length} item{expenses.length === 1 ? "" : "s"} this month
@@ -194,12 +207,17 @@ export default async function ExpensesPage({
         </div>
 
         <div className={statCard}>
-          <p className={eyebrow}>Closing</p>
-          <p className={bigMoney}>{fmtPKR(received)}</p>
+          <p className={eyebrow}>Net profit</p>
+          <p
+            className={
+              "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight " +
+              (netProfit < 0 ? "text-[var(--negative)]" : "text-[var(--text)]")
+            }
+          >
+            {fmtPKR(netProfit)}
+          </p>
           <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Sum of money received
-            {incomes.length > 0 &&
-              ` · ${incomes.length} payment${incomes.length === 1 ? "" : "s"}`}
+            Closing minus expenses
           </p>
         </div>
 
@@ -236,7 +254,8 @@ export default async function ExpensesPage({
               </button>
             </form>
             <p className="mt-2 text-xs text-[var(--text-muted)]">
-              Live — set it once, then it moves with money in and out.
+              Running sum of every month&apos;s net profit. Set it to your real
+              balance anytime.
             </p>
           </div>
         )}
