@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
-import { Card, btnSecondary } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { EXPENSE_CATEGORIES, fmtPKR } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
@@ -104,22 +104,24 @@ export default async function ExpensesPage({
       active="expenses"
       title="Expenses"
       subtitle="Owner-only. Your spending sheet, live."
-      action={
-        <div className="flex items-center gap-1">
+    >
+      {/* Month stepper — defaults to the current month, step back for history. */}
+      <Card padded={false}>
+        <div className="flex flex-wrap items-center gap-3 px-5 py-3.5">
           <Link
             href={`/expenses?month=${shiftMonth(month, -1)}`}
-            className={btnSecondary + " px-3"}
             aria-label="Previous month"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-strong)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
           >
             ‹
           </Link>
-          <span className="min-w-32 text-center font-mono text-[13px] tracking-[0.02em] text-[var(--text)]">
+          <span className="min-w-40 text-center font-mono text-[13px] tracking-[0.02em] text-[var(--text)]">
             {monthTitle(month)}
           </span>
           <Link
             href={`/expenses?month=${shiftMonth(month, 1)}`}
-            className={btnSecondary + " px-3"}
             aria-label="Next month"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-strong)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
           >
             ›
           </Link>
@@ -132,8 +134,8 @@ export default async function ExpensesPage({
             </Link>
           )}
         </div>
-      }
-    >
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className={statCard}>
           <p className={eyebrow}>Spending</p>
