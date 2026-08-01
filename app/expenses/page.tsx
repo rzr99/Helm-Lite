@@ -55,25 +55,41 @@ export default async function ExpensesPage({
   const end = `${shiftMonth(month, 1)}-01`;
   const addDate = month === currentMonth ? todayStr() : `${month}-01`;
 
-  const [{ data }, { data: finance }] = await Promise.all([
-    supabase
-      .from("expenses")
-      .select("id, category, description, amount, date")
-      .gte("date", start)
-      .lt("date", end)
-      .order("date")
-      .order("created_at"),
-    supabase
-      .from("monthly_finances")
-      .select("closing")
-      .eq("month", month)
-      .maybeSingle(),
-  ]);
+  const [{ data }, { data: finance }, { data: pastFinances }, { data: pastSpend }] =
+    await Promise.all([
+      supabase
+        .from("expenses")
+        .select("id, category, description, amount, date")
+        .gte("date", start)
+        .lt("date", end)
+        .order("date")
+        .order("created_at"),
+      supabase
+        .from("monthly_finances")
+        .select("closing")
+        .eq("month", month)
+        .maybeSingle(),
+      // Every month up to and including this one — for the running bank balance.
+      supabase.from("monthly_finances").select("closing").lte("month", month),
+      supabase.from("expenses").select("amount").lt("date", end),
+    ]);
 
   const expenses = (data ?? []) as ExpenseRow[];
   const spending = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const closing = Number(finance?.closing ?? 0);
   const balance = closing - spending;
+
+  // Running bank balance: cumulative net (closing − spending) across every month
+  // through the one being viewed. Σ(closing) − Σ(spending) over months ≤ current.
+  const cumIn = ((pastFinances ?? []) as { closing: number }[]).reduce(
+    (s, r) => s + Number(r.closing),
+    0
+  );
+  const cumOut = ((pastSpend ?? []) as { amount: number }[]).reduce(
+    (s, e) => s + Number(e.amount),
+    0
+  );
+  const bankBalance = cumIn - cumOut;
 
   const saveClosing = setMonthlyClosing.bind(null, month);
 
@@ -136,7 +152,7 @@ export default async function ExpensesPage({
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className={statCard}>
           <p className={eyebrow}>Spending</p>
           <p className={bigMoney}>{fmtPKR(spending)}</p>
@@ -165,7 +181,7 @@ export default async function ExpensesPage({
         </div>
 
         <div className={statCard}>
-          <p className={eyebrow}>Net balance</p>
+          <p className={eyebrow}>Net this month</p>
           <p
             className={
               "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight " +
@@ -176,6 +192,25 @@ export default async function ExpensesPage({
           </p>
           <p className="mt-2 text-xs text-[var(--text-muted)]">
             Closing minus spending
+          </p>
+        </div>
+
+        <div
+          className={
+            statCard + " border-amber-600/40 bg-[var(--accent-soft)]"
+          }
+        >
+          <p className={eyebrow}>Bank balance</p>
+          <p
+            className={
+              "mt-3 font-mono text-[25px] font-medium tabular-nums tracking-tight " +
+              (bankBalance < 0 ? "text-[var(--negative)]" : "text-[var(--text)]")
+            }
+          >
+            {fmtPKR(bankBalance)}
+          </p>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            Carried forward through {monthTitle(month)}
           </p>
         </div>
       </div>
