@@ -5,7 +5,11 @@ import { Card } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { EXPENSE_CATEGORIES, fmtPKR } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
-import { createExpense, setMonthlyClosing } from "@/app/expenses/actions";
+import {
+  createExpense,
+  setMonthlyClosing,
+  setBankBalance,
+} from "@/app/expenses/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -66,11 +70,14 @@ export default async function ExpensesPage({
         .order("created_at"),
       supabase
         .from("monthly_finances")
-        .select("closing")
+        .select("closing, adjustment")
         .eq("month", month)
         .maybeSingle(),
       // Every month up to and including this one — for the running bank balance.
-      supabase.from("monthly_finances").select("closing").lte("month", month),
+      supabase
+        .from("monthly_finances")
+        .select("closing, adjustment")
+        .lte("month", month),
       supabase.from("expenses").select("amount").lt("date", end),
     ]);
 
@@ -80,18 +87,23 @@ export default async function ExpensesPage({
   const balance = closing - spending;
 
   // Running bank balance: cumulative net (closing − spending) across every month
-  // through the one being viewed. Σ(closing) − Σ(spending) over months ≤ current.
-  const cumIn = ((pastFinances ?? []) as { closing: number }[]).reduce(
-    (s, r) => s + Number(r.closing),
+  // through the one being viewed, plus any manual corrections (adjustment).
+  const cumIn = ((pastFinances ?? []) as { closing: number | null }[]).reduce(
+    (s, r) => s + Number(r.closing ?? 0),
     0
   );
+  const cumAdjust = (
+    (pastFinances ?? []) as { adjustment: number | null }[]
+  ).reduce((s, r) => s + Number(r.adjustment ?? 0), 0);
   const cumOut = ((pastSpend ?? []) as { amount: number }[]).reduce(
     (s, e) => s + Number(e.amount),
     0
   );
-  const bankBalance = cumIn - cumOut;
+  const bankBalance = cumIn - cumOut + cumAdjust;
+  const thisAdjustment = Number(finance?.adjustment ?? 0);
 
   const saveClosing = setMonthlyClosing.bind(null, month);
+  const saveBankBalance = setBankBalance.bind(null, month);
 
   const known = new Set(EXPENSE_CATEGORIES.map((c) => c.value as string));
   const sections = [
@@ -196,9 +208,7 @@ export default async function ExpensesPage({
         </div>
 
         <div
-          className={
-            statCard + " border-amber-600/40 bg-[var(--accent-soft)]"
-          }
+          className={statCard + " border-amber-600/40 bg-[var(--accent-soft)]"}
         >
           <p className={eyebrow}>Bank balance</p>
           <p
@@ -209,8 +219,29 @@ export default async function ExpensesPage({
           >
             {fmtPKR(bankBalance)}
           </p>
+          <form
+            action={saveBankBalance}
+            className="mt-3 flex items-center gap-2"
+          >
+            <input
+              name="balance"
+              inputMode="numeric"
+              placeholder="Correct balance…"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)] focus:border-amber-600 focus:ring-2 focus:ring-amber-600/20"
+            />
+            <button
+              type="submit"
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-[#14100b] transition-colors hover:bg-amber-500"
+            >
+              Fix
+            </button>
+          </form>
           <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Carried forward through {monthTitle(month)}
+            {thisAdjustment !== 0
+              ? `Carried forward · includes a ${
+                  thisAdjustment < 0 ? "−" : "+"
+                }${fmtPKR(Math.abs(thisAdjustment))} correction`
+              : `Carried forward through ${monthTitle(month)}`}
           </p>
         </div>
       </div>
