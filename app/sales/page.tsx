@@ -12,10 +12,29 @@ import {
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { SERVICE_CATEGORIES, SERVICE_SUGGESTIONS, fmtMoney } from "@/lib/enums";
+import { todayStr } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
+
+function shiftMonth(month: string, delta: number) {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function monthTitle(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+function monthLastDay(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+}
 
 const filterLabel =
   "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
@@ -44,15 +63,21 @@ export default async function SalesPage({
     service?: string;
     category?: string;
     agent?: string;
-    from?: string;
-    to?: string;
+    month?: string;
     page?: string;
   }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { service, category, agent, from, to, page } = await searchParams;
+  const { service, category, agent, month: monthRaw, page } = await searchParams;
   const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
+
+  // Default to the current month, so a fresh month starts empty until deals land.
+  const currentMonth = todayStr().slice(0, 7);
+  const month = monthRaw && /^\d{4}-\d{2}$/.test(monthRaw) ? monthRaw : currentMonth;
+  const monthStart = `${month}-01`;
+  const nextMonthStart = `${shiftMonth(month, 1)}-01`;
+  const monthEnd = monthLastDay(month);
 
   let teammates: { id: string; full_name: string }[] = [];
   if (floor) {
@@ -76,8 +101,9 @@ export default async function SalesPage({
   if (service) query = query.eq("service", service);
   if (category) query = query.eq("service_category", category);
   if (floor && agent) query = query.eq("agent_id", agent);
-  if (from) query = query.gte("date_closed", from);
-  if (to) query = query.lte("date_closed", to);
+  query = query
+    .gte("date_closed", monthStart)
+    .lt("date_closed", nextMonthStart);
   query = query.range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE - 1);
 
   // Totals + category breakdown for the WHOLE filtered set come from the DB,
@@ -88,15 +114,15 @@ export default async function SalesPage({
       p_service: service || null,
       p_category: category || null,
       p_agent: floor && agent ? agent : null,
-      p_from: from || null,
-      p_to: to || null,
+      p_from: monthStart,
+      p_to: monthEnd,
     }),
   ]);
 
   const deals = (data ?? []) as unknown as DealRow[];
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const hasFilters = Boolean(service || category || agent || from || to);
+  const hasFilters = Boolean(service || category || agent);
 
   const summary = (summaryData ?? {}) as {
     total_received?: number;
@@ -114,17 +140,20 @@ export default async function SalesPage({
   }));
   const maxCategoryRevenue = Math.max(1, ...byCategory.map((c) => c.revenue));
 
-  const pageHref = (p: number) => {
+  const buildHref = (over: { month?: string; page?: number }) => {
     const sp = new URLSearchParams();
     if (service) sp.set("service", service);
     if (category) sp.set("category", category);
     if (agent) sp.set("agent", agent);
-    if (from) sp.set("from", from);
-    if (to) sp.set("to", to);
+    const m = over.month ?? month;
+    if (m !== currentMonth) sp.set("month", m);
+    const p = over.page ?? 1;
     if (p > 1) sp.set("page", String(p));
     const s = sp.toString();
     return s ? `/sales?${s}` : "/sales";
   };
+  const pageHref = (p: number) => buildHref({ page: p });
+  const monthHref = (m: string) => buildHref({ month: m });
 
   return (
     <Shell
@@ -143,7 +172,39 @@ export default async function SalesPage({
       }
     >
       <Card padded={false}>
+        {/* Month stepper — defaults to the current month, step back for history. */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] px-5 py-3.5">
+          <Link
+            href={monthHref(shiftMonth(month, -1))}
+            aria-label="Previous month"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-strong)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            ‹
+          </Link>
+          <span className="min-w-40 text-center font-mono text-[13px] tracking-[0.02em] text-[var(--text)]">
+            {monthTitle(month)}
+          </span>
+          <Link
+            href={monthHref(shiftMonth(month, 1))}
+            aria-label="Next month"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-strong)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            ›
+          </Link>
+          {month !== currentMonth && (
+            <Link
+              href={monthHref(currentMonth)}
+              className="ml-1 font-mono text-[11px] uppercase tracking-[0.08em] text-amber-600 hover:underline"
+            >
+              This month
+            </Link>
+          )}
+        </div>
+
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
+          {month !== currentMonth && (
+            <input type="hidden" name="month" value={month} />
+          )}
           <div>
             <label className={filterLabel}>Category</label>
             <select
@@ -194,31 +255,12 @@ export default async function SalesPage({
             </div>
           )}
 
-          <div>
-            <label className={filterLabel}>Closed from</label>
-            <input
-              type="date"
-              name="from"
-              defaultValue={from ?? ""}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={filterLabel}>Closed to</label>
-            <input
-              type="date"
-              name="to"
-              defaultValue={to ?? ""}
-              className={inputClass}
-            />
-          </div>
-
           <div className="flex gap-2">
             <button type="submit" className={btnPrimary}>
               Filter
             </button>
             {hasFilters && (
-              <Link href="/sales" className={btnSecondary}>
+              <Link href={monthHref(month)} className={btnSecondary}>
                 Clear
               </Link>
             )}
@@ -278,14 +320,20 @@ export default async function SalesPage({
         {deals.length === 0 ? (
           <EmptyState
             emoji={hasFilters ? "🔍" : "💰"}
-            title={hasFilters ? "Nothing matches these filters" : "No deals yet"}
+            title={
+              hasFilters
+                ? "Nothing matches these filters"
+                : `No deals in ${monthTitle(month)}`
+            }
             hint={
               hasFilters
-                ? "Try widening the date range or clearing a filter."
-                : "When you close a lead, log the deal here and it counts toward revenue."
+                ? "Try clearing a filter or picking another month."
+                : month === currentMonth
+                  ? "Nothing closed yet this month. Log a deal and it counts toward revenue."
+                  : "No deals were closed this month. Step to another month to look back."
             }
-            actionHref={hasFilters ? undefined : "/sales/new"}
-            actionLabel={hasFilters ? undefined : "+ Log deal"}
+            actionHref={hasFilters || month !== currentMonth ? undefined : "/sales/new"}
+            actionLabel={hasFilters || month !== currentMonth ? undefined : "+ Log deal"}
           />
         ) : (
           <div className="overflow-x-auto">
