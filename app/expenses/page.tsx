@@ -48,14 +48,12 @@ export default async function ExpensesPage({
   if (profile.role !== "owner") redirect("/");
 
   const { month: rawMonth, open: openSection } = await searchParams;
+  const currentMonth = todayStr().slice(0, 7);
   const month =
-    rawMonth && /^\d{4}-\d{2}$/.test(rawMonth)
-      ? rawMonth
-      : todayStr().slice(0, 7);
+    rawMonth && /^\d{4}-\d{2}$/.test(rawMonth) ? rawMonth : currentMonth;
   const start = `${month}-01`;
   const end = `${shiftMonth(month, 1)}-01`;
-  const addDate =
-    month === todayStr().slice(0, 7) ? todayStr() : `${month}-01`;
+  const addDate = month === currentMonth ? todayStr() : `${month}-01`;
 
   const [{ data }, { data: finance }] = await Promise.all([
     supabase
@@ -125,6 +123,14 @@ export default async function ExpensesPage({
           >
             ›
           </Link>
+          {month !== currentMonth && (
+            <Link
+              href="/expenses"
+              className="ml-1 font-mono text-[11px] uppercase tracking-[0.08em] text-amber-600 hover:underline"
+            >
+              This month
+            </Link>
+          )}
         </div>
       }
     >
