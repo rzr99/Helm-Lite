@@ -37,13 +37,14 @@ export default async function AssignedLeadsPage({
 
   const rows = (data ?? []) as LeadRow[];
 
-  // Names of the people who handed these over (best effort — RLS may hide some).
-  const fromIds = [...new Set(rows.map((r) => r.agent_id))];
-  const { data: usersData } = fromIds.length
-    ? await supabase.from("users").select("id, full_name").in("id", fromIds)
-    : { data: [] };
+  // Names of the people who handed these over. Uses a security-definer lookup
+  // so an agent (who can't read other users' rows) still sees who sent them.
+  const { data: dirData } = await supabase.rpc("user_directory");
   const nameById = new Map(
-    (usersData ?? []).map((u) => [u.id, u.full_name as string])
+    ((dirData ?? []) as { id: string; full_name: string }[]).map((u) => [
+      u.id,
+      u.full_name,
+    ])
   );
 
   // One row per client (handle_key); the latest outreach represents it.
