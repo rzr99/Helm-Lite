@@ -44,11 +44,13 @@ export function ReassignLeads({
   fromId,
   clients,
   keysByAgent,
+  pendingName,
 }: {
   users: UserRow[];
   fromId: string;
   clients: ClientRow[];
   keysByAgent: Record<string, string[]>;
+  pendingName: Record<string, string>;
 }) {
   const router = useRouter();
   const [toId, setToId] = useState("");
@@ -193,10 +195,10 @@ export function ReassignLeads({
                   {overlapSelected} selected
                 </span>{" "}
                 {overlapSelected === 1 ? "client is" : "clients are"} already
-                worked by {toName} —{" "}
+                owned by or offered to {toName} —{" "}
                 {skip
-                  ? "these will be left as-is, not moved."
-                  : "these WILL be moved (duplicates merged under one agent)."}
+                  ? "these will be left as-is, not assigned."
+                  : "these WILL be assigned anyway."}
               </p>
             )}
           </div>
@@ -270,9 +272,14 @@ export function ReassignLeads({
                     <span className="hidden shrink-0 text-xs text-[var(--text-muted)] sm:inline">
                       {STAGE_LABEL[c.rep_stage] ?? c.rep_stage}
                     </span>
+                    {pendingName[c.handle_key] && (
+                      <span className="shrink-0 rounded-full border border-[var(--border-strong)] px-2 py-0.5 text-[10.5px] font-medium text-[var(--text-faint)]">
+                        pending → {pendingName[c.handle_key]}
+                      </span>
+                    )}
                     {overlap && (
                       <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-amber-600">
-                        already works
+                        already has
                       </span>
                     )}
                   </label>
@@ -287,13 +294,13 @@ export function ReassignLeads({
               <span className="font-medium text-[var(--text)]">
                 {willMove}
               </span>{" "}
-              {willMove === 1 ? "client" : "clients"} will move
+              {willMove === 1 ? "client" : "clients"} will be assigned
               {skip && overlapSelected > 0 && ` · ${overlapSelected} skipped`}
               {" · "}
               {clients.length} total on this person
             </p>
             <button type="submit" disabled={!canSubmit} className={btnPrimary}>
-              Move {willMove || ""} to {toName}
+              Assign {willMove || ""} to {toName}
             </button>
           </div>
         </form>

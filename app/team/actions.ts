@@ -42,11 +42,12 @@ export async function updateTeammate(userId: string, formData: FormData) {
   revalidatePath("/team");
 }
 
-// Move a set of clients (by canonical handle_key) from one agent to another.
-// Each client's lead rows AND its still-open follow-ups move to the new agent;
-// closed follow-ups and deals stay with the original person (their history and
-// revenue credit). Clients the target already works are skipped when asked, so
-// reassigning never doubles a client under one agent.
+// Offer a set of clients (by canonical handle_key) from one agent to another.
+// This sets `assigned_to` — it does NOT change ownership. The receiving agent
+// gets them in their "Assigned to me" inbox and chooses to accept (one by one
+// or all) or work them directly; only on accept do they become that agent's own
+// leads. Clients the target already works OR already has offered to them are
+// skipped when asked, so a transfer never doubles a client under one agent.
 export async function reassignLeads(formData: FormData) {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/");
@@ -64,11 +65,11 @@ export async function reassignLeads(formData: FormData) {
     redirect(`/team/reassign?from=${fromId}&err=1`);
   }
 
-  // Which of the chosen clients the target already works — the overlaps.
+  // Which chosen clients the target already owns or has pending — the overlaps.
   const { data: toRows } = await supabase
     .from("leads")
     .select("handle_key")
-    .eq("agent_id", toId)
+    .or(`agent_id.eq.${toId},assigned_to.eq.${toId}`)
     .in("handle_key", keys);
   const targetHas = new Set((toRows ?? []).map((r) => r.handle_key as string));
 
@@ -87,24 +88,16 @@ export async function reassignLeads(formData: FormData) {
     if (leadIds.length > 0) {
       const { error } = await supabase
         .from("leads")
-        .update({ agent_id: toId })
+        .update({ assigned_to: toId })
         .in("id", leadIds);
-      if (error) throw new Error("Could not reassign leads: " + error.message);
+      if (error) throw new Error("Could not assign leads: " + error.message);
       movedLeads = leadIds.length;
-
-      // Hand over pending work so nothing is orphaned under the old agent.
-      await supabase
-        .from("follow_ups")
-        .update({ agent_id: toId })
-        .in("lead_id", leadIds)
-        .eq("done", false);
     }
   }
 
   revalidatePath("/team/reassign");
   revalidatePath("/leads");
-  revalidatePath("/activity");
-  revalidatePath("/");
+  revalidatePath("/leads/assigned");
   redirect(
     `/team/reassign?from=${fromId}&moved=${moveKeys.length}&leads=${movedLeads}&skipped=${skipped}`
   );

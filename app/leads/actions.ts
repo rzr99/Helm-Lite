@@ -9,6 +9,41 @@ function text(formData: FormData, key: string) {
   return ((formData.get(key) as string) || "").trim();
 }
 
+// Accept leads that were assigned to me: take ownership (agent_id = me) and
+// clear the pending flag. `all=on` accepts everything in my inbox; otherwise
+// only the given client handle_keys. RLS lets an agent do this only for leads
+// where assigned_to is already them.
+export async function acceptAssignedLeads(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const acceptAll = formData.get("all") === "on";
+  const keys = formData
+    .getAll("keys")
+    .map(String)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  let q = supabase
+    .from("leads")
+    .update({ agent_id: user.id, assigned_to: null })
+    .eq("assigned_to", user.id);
+  if (!acceptAll) {
+    if (keys.length === 0) redirect("/leads/assigned");
+    q = q.in("handle_key", keys);
+  }
+  const { error } = await q;
+  if (error) throw new Error("Could not accept the leads: " + error.message);
+
+  revalidatePath("/leads");
+  revalidatePath("/leads/assigned");
+  revalidatePath("/");
+  redirect("/leads/assigned?accepted=1");
+}
+
 export async function createLead(formData: FormData) {
   const supabase = await createClient();
   const {

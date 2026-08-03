@@ -115,10 +115,14 @@ export default async function LeadsPage({
       })
     : null;
 
-  const [{ data, count }, uniqueRes] = await Promise.all([
+  const [{ data, count }, uniqueRes, assignedRes] = await Promise.all([
     query,
     uniquePromise,
+    supabase.from("leads").select("handle_key").eq("assigned_to", profile.id),
   ]);
+  const assignedCount = new Set(
+    (assignedRes.data ?? []).map((r) => r.handle_key as string)
+  ).size;
   const clients = (data ?? []) as unknown as ClientRow[];
   const total = count ?? 0;
   const uniqueClients = (uniqueRes?.data as number | null) ?? total;
@@ -176,6 +180,20 @@ export default async function LeadsPage({
         </Link>
       }
     >
+      {assignedCount > 0 && (
+        <Link
+          href="/leads/assigned"
+          className="flex items-center justify-between gap-3 rounded-xl border border-amber-600/40 bg-[var(--accent-soft)] px-5 py-3.5 text-sm text-[var(--text)] transition-opacity hover:opacity-90"
+        >
+          <span>
+            <span className="font-semibold text-amber-600">{assignedCount}</span>{" "}
+            {assignedCount === 1 ? "client" : "clients"} assigned to you by
+            another agent — kept separate from your list until you accept.
+          </span>
+          <span className="shrink-0 font-medium text-amber-600">Review →</span>
+        </Link>
+      )}
+
       <Card padded={false}>
         <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
           {datePresets.map((r) => (
