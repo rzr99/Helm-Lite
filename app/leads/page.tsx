@@ -65,12 +65,15 @@ export default async function LeadsPage({
     id: string;
     full_name: string;
     avatar_url: string | null;
+    active: boolean;
   }[] = [];
   if (floor) {
+    // All users, active first — so a deactivated leaver's leads still show their
+    // name and stay filterable until their book is reassigned.
     const { data } = await supabase
       .from("users")
-      .select("id, full_name, avatar_url")
-      .eq("active", true)
+      .select("id, full_name, avatar_url, active")
+      .order("active", { ascending: false })
       .order("full_name");
     teammates = data ?? [];
   }
@@ -253,6 +256,7 @@ export default async function LeadsPage({
                 {teammates.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.full_name}
+                    {t.active ? "" : " · deactivated"}
                   </option>
                 ))}
               </select>
@@ -402,6 +406,11 @@ export default async function LeadsPage({
                                 size={7}
                               />
                               {ag.full_name}
+                              {!ag.active && (
+                                <span className="rounded-full border border-[var(--border-strong)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-faint)]">
+                                  inactive
+                                </span>
+                              )}
                             </span>
                           ) : (
                             "—"
