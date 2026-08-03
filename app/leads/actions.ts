@@ -27,15 +27,49 @@ export async function acceptAssignedLeads(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  let q = supabase
+  // Grab the affected leads (+ their current owner) first, so the transfer log
+  // can record how to undo this accept.
+  let sel = supabase
     .from("leads")
-    .update({ agent_id: user.id, assigned_to: null })
+    .select("id, agent_id")
     .eq("assigned_to", user.id);
   if (!acceptAll) {
     if (keys.length === 0) redirect("/leads/assigned");
-    q = q.in("handle_key", keys);
+    sel = sel.in("handle_key", keys);
   }
-  const { error } = await q;
+  const { data: rowsData } = await sel;
+  const rows = (rowsData ?? []) as { id: string; agent_id: string }[];
+  if (rows.length === 0) redirect("/leads/assigned");
+
+  const { data: batch } = await supabase
+    .from("lead_transfer_batches")
+    .insert({
+      actor_id: user.id,
+      kind: "accept",
+      from_agent_id: rows[0].agent_id,
+      to_agent_id: user.id,
+      lead_count: rows.length,
+    })
+    .select("id")
+    .single();
+  if (batch) {
+    await supabase.from("lead_transfer_items").insert(
+      rows.map((r) => ({
+        batch_id: batch.id,
+        lead_id: r.id,
+        prev_agent_id: r.agent_id,
+        prev_assigned_to: user.id,
+      }))
+    );
+  }
+
+  const { error } = await supabase
+    .from("leads")
+    .update({ agent_id: user.id, assigned_to: null })
+    .in(
+      "id",
+      rows.map((r) => r.id)
+    );
   if (error) throw new Error("Could not accept the leads: " + error.message);
 
   revalidatePath("/leads");

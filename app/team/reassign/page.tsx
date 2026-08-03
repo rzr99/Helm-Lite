@@ -1,11 +1,24 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
-import { btnSecondary } from "@/components/ui";
+import { Card, btnSecondary } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { ReassignLeads } from "@/components/reassign-leads";
+import { revertTransferBatch } from "@/app/team/actions";
 
 export const dynamic = "force-dynamic";
+
+type Batch = {
+  id: string;
+  actor_id: string;
+  kind: string;
+  from_agent_id: string | null;
+  to_agent_id: string | null;
+  lead_count: number;
+  created_at: string;
+  reverted_at: string | null;
+  reverted_by: string | null;
+};
 
 type ClientRow = {
   agent_id: string;
@@ -26,30 +39,40 @@ export default async function ReassignPage({
     leads?: string;
     skipped?: string;
     err?: string;
+    reverted?: string;
   }>;
 }) {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/");
 
-  const { from, moved, leads, skipped, err } = await searchParams;
+  const { from, moved, leads, skipped, err, reverted } = await searchParams;
   const fromId = typeof from === "string" ? from : "";
 
-  const [{ data: usersData }, { data: clientsData }, { data: assignedData }] =
-    await Promise.all([
-      supabase
-        .from("users")
-        .select("id, full_name, active, role")
-        .order("full_name"),
-      supabase
-        .from("lead_clients")
-        .select(
-          "agent_id, handle_key, rep_handle, rep_name, rep_stage, outreach_count, rep_date_added"
-        ),
-      supabase
-        .from("leads")
-        .select("handle_key, assigned_to, agent_id")
-        .not("assigned_to", "is", null),
-    ]);
+  const [
+    { data: usersData },
+    { data: clientsData },
+    { data: assignedData },
+    { data: batchesData },
+  ] = await Promise.all([
+    supabase
+      .from("users")
+      .select("id, full_name, active, role")
+      .order("full_name"),
+    supabase
+      .from("lead_clients")
+      .select(
+        "agent_id, handle_key, rep_handle, rep_name, rep_stage, outreach_count, rep_date_added"
+      ),
+    supabase
+      .from("leads")
+      .select("handle_key, assigned_to, agent_id")
+      .not("assigned_to", "is", null),
+    supabase
+      .from("lead_transfer_batches")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(15),
+  ]);
 
   const users = usersData ?? [];
   const clients = (clientsData ?? []) as ClientRow[];
@@ -88,9 +111,19 @@ export default async function ReassignPage({
         .sort((a, b) => a.rep_handle.localeCompare(b.rep_handle))
     : [];
 
+  const batches = (batchesData ?? []) as Batch[];
+
   const movedN = moved ? parseInt(moved, 10) : null;
   const skippedN = skipped ? parseInt(skipped, 10) : 0;
   const leadsN = leads ? parseInt(leads, 10) : 0;
+
+  const fmtWhen = (iso: string) =>
+    new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
 
   return (
     <Shell
@@ -130,6 +163,12 @@ export default async function ReassignPage({
         </div>
       )}
 
+      {reverted && (
+        <div className="rounded-xl border border-amber-600/40 bg-[var(--accent-soft)] px-5 py-3.5 text-sm text-[var(--text)]">
+          Transfer undone — those leads are back with their previous owner.
+        </div>
+      )}
+
       <ReassignLeads
         users={users}
         fromId={fromId}
@@ -137,6 +176,67 @@ export default async function ReassignPage({
         keysByAgent={keysByAgent}
         pendingName={pendingName}
       />
+
+      <Card
+        title="Transfer history"
+        description="Every handoff is logged here. Undo restores each lead to its previous owner."
+        padded={false}
+      >
+        {batches.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-[var(--text-muted)]">
+            No transfers yet.
+          </p>
+        ) : (
+          <ul className="divide-y divide-[var(--border-soft)]">
+            {batches.map((b) => {
+              const revert = revertTransferBatch.bind(null, b.id);
+              const fromName = b.from_agent_id
+                ? nameById.get(b.from_agent_id) ?? "—"
+                : "—";
+              const toName = b.to_agent_id
+                ? nameById.get(b.to_agent_id) ?? "—"
+                : "—";
+              const actor = nameById.get(b.actor_id) ?? "someone";
+              return (
+                <li
+                  key={b.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5"
+                >
+                  <div className="min-w-0 text-sm">
+                    <p className="text-[var(--text)]">
+                      <span className="font-medium">
+                        {b.kind === "accept" ? "Accepted" : "Assigned"}
+                      </span>{" "}
+                      <span className="font-mono text-[13px]">
+                        {b.lead_count}
+                      </span>{" "}
+                      {b.lead_count === 1 ? "lead" : "leads"} · {fromName} →{" "}
+                      {toName}
+                    </p>
+                    <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-faint)]">
+                      {fmtWhen(b.created_at)} · by {actor}
+                    </p>
+                  </div>
+                  {b.reverted_at ? (
+                    <span className="shrink-0 rounded-full border border-[var(--border-strong)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-faint)]">
+                      undone
+                    </span>
+                  ) : (
+                    <form action={revert}>
+                      <button
+                        type="submit"
+                        className="shrink-0 rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:border-amber-600 hover:text-amber-600"
+                      >
+                        Undo
+                      </button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
     </Shell>
   );
 }
