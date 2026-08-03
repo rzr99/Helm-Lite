@@ -170,3 +170,30 @@ export const STAGE_BADGE: Record<string, string> = {
   closed: "bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100",
   lost: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
 };
+
+// ----- Hiring -----
+export const HIRING_STATUSES = [
+  { value: "applied", label: "Applied" },
+  { value: "interviewing", label: "Interviewing" },
+  { value: "hired", label: "Hired" },
+  { value: "rejected", label: "Rejected" },
+] as const;
+
+// emerald/red kept explicitly so "hired"/"rejected" stay green/red under the
+// brand's colour remap (which collapses most families to amber/grey).
+export const HIRING_BADGE: Record<string, string> = {
+  applied: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  interviewing:
+    "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100",
+  hired: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100",
+  rejected: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+};
+
+export function hiringStatusLabel(value: string) {
+  return HIRING_STATUSES.find((s) => s.value === value)?.label ?? value;
+}
+
+export function ratingStars(n: number) {
+  const r = Math.max(0, Math.min(5, n));
+  return "★".repeat(r) + "☆".repeat(5 - r);
+}
