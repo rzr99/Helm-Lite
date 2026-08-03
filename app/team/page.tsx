@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
-import { Card, Avatar, inputClass } from "@/components/ui";
+import { Card, Avatar, inputClass, btnSecondary } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { updateTeammate } from "@/app/team/actions";
 
@@ -29,6 +30,11 @@ export default async function TeamPage() {
       active="team"
       title="Team"
       subtitle="Owner-only. Name your people, assign roles, and deactivate leavers."
+      action={
+        <Link href="/team/reassign" className={btnSecondary}>
+          Reassign leads
+        </Link>
+      }
     >
       <Card
         title="How to add a new login"
@@ -127,8 +133,12 @@ export default async function TeamPage() {
 
       <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
         Deactivating someone locks them out of the app and hides them from
-        dropdowns — reversible any time by ticking Active again. When a person
-        leaves for good, also delete their login on the Supabase users page.
+        dropdowns — reversible any time by ticking Active again. Their leads and
+        sales history stay intact. When a person leaves for good, use{" "}
+        <Link href="/team/reassign" className="font-semibold text-amber-600 hover:underline">
+          Reassign leads
+        </Link>{" "}
+        to hand their clients to other agents first.
       </p>
     </Shell>
   );
