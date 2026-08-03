@@ -65,20 +65,30 @@ export async function reassignLeads(formData: FormData) {
     redirect(`/team/reassign?from=${fromId}&err=1`);
   }
 
-  // Which chosen clients the target already owns or has pending — the overlaps.
   // Fetch every lead with these handle_keys (owner can read all) and decide in
   // code — simpler and more reliable than an .or() + .in() combined filter.
   const { data: toRows } = await supabase
     .from("leads")
     .select("handle_key, agent_id, assigned_to")
     .in("handle_key", keys);
+  const scanned = toRows ?? [];
+  // Clients the target already owns or was already offered — the overlaps.
   const targetHas = new Set(
-    (toRows ?? [])
+    scanned
       .filter((r) => r.agent_id === toId || r.assigned_to === toId)
       .map((r) => r.handle_key as string)
   );
+  // Clients of the FROM agent already offered to SOMEONE — so splitting a book
+  // across several agents never double-offers the same lead.
+  const alreadyPending = new Set(
+    scanned
+      .filter((r) => r.agent_id === fromId && r.assigned_to != null)
+      .map((r) => r.handle_key as string)
+  );
 
-  const moveKeys = skip ? keys.filter((k) => !targetHas.has(k)) : keys;
+  const moveKeys = skip
+    ? keys.filter((k) => !targetHas.has(k) && !alreadyPending.has(k))
+    : keys;
   const skipped = keys.length - moveKeys.length;
 
   let movedLeads = 0;

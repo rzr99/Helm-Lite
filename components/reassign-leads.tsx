@@ -75,11 +75,15 @@ export function ReassignLeads({
     );
   }, [clients, q]);
 
+  const isPending = (k: string) => Boolean(pendingName[k]);
+  const isSkippable = (k: string) => isOverlap(k) || isPending(k);
+
   const selectedArr = [...selected];
   const overlapSelected = selectedArr.filter((k) => isOverlap(k)).length;
-  const willMove = skip
-    ? selectedArr.filter((k) => !isOverlap(k)).length
-    : selectedArr.length;
+  const skippedCount = skip
+    ? selectedArr.filter((k) => isSkippable(k)).length
+    : 0;
+  const willMove = selectedArr.length - skippedCount;
 
   function toggle(k: string) {
     setSelected((prev) => {
@@ -92,7 +96,10 @@ export function ReassignLeads({
   function selectAllVisible() {
     setSelected((prev) => {
       const n = new Set(prev);
-      for (const c of visible) n.add(c.handle_key);
+      for (const c of visible) {
+        if (skip && isSkippable(c.handle_key)) continue;
+        n.add(c.handle_key);
+      }
       return n;
     });
   }
@@ -105,7 +112,7 @@ export function ReassignLeads({
     const pick = new Set<string>();
     for (const c of visible) {
       if (pick.size >= n) break;
-      if (skip && isOverlap(c.handle_key)) continue;
+      if (skip && isSkippable(c.handle_key)) continue;
       pick.add(c.handle_key);
     }
     setSelected(pick);
@@ -186,7 +193,7 @@ export function ReassignLeads({
                   onChange={(e) => setSkip(e.target.checked)}
                   className="h-4 w-4 accent-amber-600"
                 />
-                Skip clients they already work (avoid duplicates)
+                Skip duplicates &amp; leads already offered to someone
               </label>
             </div>
             {toId && overlapSelected > 0 && (
@@ -240,7 +247,7 @@ export function ReassignLeads({
               {visible.map((c) => {
                 const checked = selected.has(c.handle_key);
                 const overlap = isOverlap(c.handle_key);
-                const dimmed = overlap && skip;
+                const dimmed = skip && (overlap || isPending(c.handle_key));
                 return (
                   <label
                     key={c.handle_key}
@@ -295,7 +302,7 @@ export function ReassignLeads({
                 {willMove}
               </span>{" "}
               {willMove === 1 ? "client" : "clients"} will be assigned
-              {skip && overlapSelected > 0 && ` · ${overlapSelected} skipped`}
+              {skippedCount > 0 && ` · ${skippedCount} skipped`}
               {" · "}
               {clients.length} total on this person
             </p>
