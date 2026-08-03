@@ -13,6 +13,66 @@ const ROLES = [
   { value: "owner", label: "Owner" },
 ];
 
+type TeamUser = {
+  id: string;
+  full_name: string;
+  role: string;
+  active: boolean;
+  avatar_url: string | null;
+};
+
+function PersonRow({ u, selfId }: { u: TeamUser; selfId: string }) {
+  const isSelf = u.id === selfId;
+  const save = updateTeammate.bind(null, u.id);
+  return (
+    <li className="px-5 py-4">
+      <form action={save} className="flex flex-wrap items-center gap-3">
+        <Avatar name={u.full_name || "?"} src={u.avatar_url} size={9} />
+        <input
+          name="full_name"
+          required
+          defaultValue={u.full_name}
+          placeholder="Full name"
+          className={inputClass + " max-w-56"}
+        />
+        <select
+          name="role"
+          defaultValue={u.role}
+          disabled={isSelf}
+          className={inputClass + " max-w-36 disabled:opacity-60"}
+        >
+          {ROLES.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+        <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+          <input
+            type="checkbox"
+            name="active"
+            defaultChecked={u.active}
+            disabled={isSelf}
+            className="h-4 w-4 accent-amber-600"
+          />
+          Active
+        </label>
+        {isSelf && (
+          <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-amber-600">
+            you
+          </span>
+        )}
+        <button
+          type="submit"
+          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-[#140d05] transition-colors hover:bg-amber-500"
+        >
+          Save
+        </button>
+      </form>
+    </li>
+  );
+}
+
 export default async function TeamPage() {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/");
@@ -23,6 +83,8 @@ export default async function TeamPage() {
     .order("full_name");
 
   const users = data ?? [];
+  const activeUsers = users.filter((u) => u.active);
+  const formerUsers = users.filter((u) => !u.active);
 
   return (
     <Shell
@@ -69,67 +131,30 @@ export default async function TeamPage() {
       </Card>
 
       <Card
-        title={`People (${users.length})`}
+        title={`Active team (${activeUsers.length})`}
         description="New logins start as Agent. You can't change your own role — that keeps you from locking yourself out."
         padded={false}
       >
-        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {users.map((u) => {
-            const isSelf = u.id === profile.id;
-            const save = updateTeammate.bind(null, u.id);
-            return (
-              <li key={u.id} className="px-5 py-4">
-                <form
-                  action={save}
-                  className="flex flex-wrap items-center gap-3"
-                >
-                  <Avatar name={u.full_name || "?"} src={u.avatar_url} size={9} />
-                  <input
-                    name="full_name"
-                    required
-                    defaultValue={u.full_name}
-                    placeholder="Full name"
-                    className={inputClass + " max-w-56"}
-                  />
-                  <select
-                    name="role"
-                    defaultValue={u.role}
-                    disabled={isSelf}
-                    className={inputClass + " max-w-36 disabled:opacity-60"}
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                  <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                    <input
-                      type="checkbox"
-                      name="active"
-                      defaultChecked={u.active}
-                      disabled={isSelf}
-                      className="h-4 w-4 accent-violet-600"
-                    />
-                    Active
-                  </label>
-                  {isSelf && (
-                    <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
-                      you
-                    </span>
-                  )}
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-                  >
-                    Save
-                  </button>
-                </form>
-              </li>
-            );
-          })}
+        <ul className="divide-y divide-[var(--border-soft)]">
+          {activeUsers.map((u) => (
+            <PersonRow key={u.id} u={u} selfId={profile.id} />
+          ))}
         </ul>
       </Card>
+
+      {formerUsers.length > 0 && (
+        <Card
+          title={`Deactivated (${formerUsers.length})`}
+          description="Locked out of the app and hidden from dropdowns. Their leads and sales history stay intact. Tick Active + Save to bring someone back."
+          padded={false}
+        >
+          <ul className="divide-y divide-[var(--border-soft)] opacity-70">
+            {formerUsers.map((u) => (
+              <PersonRow key={u.id} u={u} selfId={profile.id} />
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
         Deactivating someone locks them out of the app and hides them from
