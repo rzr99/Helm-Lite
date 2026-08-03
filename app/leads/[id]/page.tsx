@@ -27,6 +27,7 @@ type FollowUp = {
   due_date: string;
   done: boolean;
   note: string;
+  agent_id: string;
 };
 
 export default async function LeadDetailPage({
@@ -41,7 +42,7 @@ export default async function LeadDetailPage({
   const { data: lead } = await supabase
     .from("leads")
     .select(
-      "id, agent_id, handle, name, service_interest, source, stage, date_added, persona, notes, agent:users(full_name, avatar_url)"
+      "id, agent_id, assigned_to, handle, name, service_interest, source, stage, date_added, persona, notes"
     )
     .eq("id", id)
     .single();
@@ -57,15 +58,27 @@ export default async function LeadDetailPage({
     ...new Set((personaData ?? []).map((p) => p.persona_name).filter(Boolean)),
   ];
 
-  const agentInfo = lead.agent as unknown as {
-    full_name: string;
-    avatar_url: string | null;
-  } | null;
-  const canEdit = profile.role === "owner" || lead.agent_id === profile.id;
+  // The owning agent's name matters only to the floor. Fetch it separately so
+  // the main lead query never depends on reading another user's row (an agent
+  // can only read their own — an embedded join here 404'd assigned leads).
+  let agentInfo: { full_name: string; avatar_url: string | null } | null = null;
+  if (floor && lead.agent_id) {
+    const { data: ag } = await supabase
+      .from("users")
+      .select("full_name, avatar_url")
+      .eq("id", lead.agent_id)
+      .single();
+    agentInfo = ag;
+  }
+
+  const isLeadOwner = lead.agent_id === profile.id;
+  const isAssignee = lead.assigned_to === profile.id;
+  const canEdit = profile.role === "owner" || isLeadOwner || isAssignee;
+  const canDelete = profile.role === "owner" || isLeadOwner;
 
   const { data: fuData } = await supabase
     .from("follow_ups")
-    .select("id, due_date, done, note")
+    .select("id, due_date, done, note, agent_id")
     .eq("lead_id", id)
     .order("due_date");
 
@@ -75,7 +88,10 @@ export default async function LeadDetailPage({
   const today = todayStr();
 
   const saveLead = updateLead.bind(null, lead.id);
-  const saveFollowUp = addFollowUp.bind(null, lead.id, lead.agent_id);
+  // A follow-up is logged under whoever adds it; an assignee working a lead they
+  // don't own yet logs it under themselves, not the current owner.
+  const followUpAgentId = isAssignee && !isLeadOwner ? profile.id : lead.agent_id;
+  const saveFollowUp = addFollowUp.bind(null, lead.id, followUpAgentId);
 
   return (
     <Shell
@@ -85,6 +101,7 @@ export default async function LeadDetailPage({
       subtitle={
         (lead.name ? lead.name + " · " : "") +
         (floor && agentInfo ? `Agent: ${agentInfo.full_name}` : `Added ${lead.date_added}`) +
+        (isAssignee && !isLeadOwner ? " · assigned to you" : "") +
         (!canEdit ? " · read-only" : "")
       }
       action={
@@ -334,7 +351,7 @@ export default async function LeadDetailPage({
                       )}
                     </div>
                   </div>
-                  {canEdit && (
+                  {(profile.role === "owner" || f.agent_id === profile.id) && (
                     <form action={toggle}>
                       <button type="submit" className={btnGhost}>
                         ✓ Done
@@ -375,7 +392,7 @@ export default async function LeadDetailPage({
                         </p>
                       )}
                     </div>
-                    {canEdit && (
+                    {(profile.role === "owner" || f.agent_id === profile.id) && (
                       <form action={toggle}>
                         <button type="submit" className={btnGhost}>
                           Reopen
@@ -420,7 +437,7 @@ export default async function LeadDetailPage({
         )}
       </Card>
 
-      {canEdit && (
+      {canDelete && (
         <Card
           title="Danger zone"
           description="Deleting removes this lead and its follow-ups. Any logged deals stay, but lose their link to it. There is no undo."
