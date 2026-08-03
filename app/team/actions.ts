@@ -66,12 +66,17 @@ export async function reassignLeads(formData: FormData) {
   }
 
   // Which chosen clients the target already owns or has pending — the overlaps.
+  // Fetch every lead with these handle_keys (owner can read all) and decide in
+  // code — simpler and more reliable than an .or() + .in() combined filter.
   const { data: toRows } = await supabase
     .from("leads")
-    .select("handle_key")
-    .or(`agent_id.eq.${toId},assigned_to.eq.${toId}`)
+    .select("handle_key, agent_id, assigned_to")
     .in("handle_key", keys);
-  const targetHas = new Set((toRows ?? []).map((r) => r.handle_key as string));
+  const targetHas = new Set(
+    (toRows ?? [])
+      .filter((r) => r.agent_id === toId || r.assigned_to === toId)
+      .map((r) => r.handle_key as string)
+  );
 
   const moveKeys = skip ? keys.filter((k) => !targetHas.has(k)) : keys;
   const skipped = keys.length - moveKeys.length;
