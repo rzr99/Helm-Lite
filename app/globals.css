@@ -223,3 +223,11 @@ h2 {
     scroll-behavior: auto;
   }
 }
+
+/* Collapsible desktop sidebar — hide it and let the content go full-width. */
+html.sidebar-collapsed .app-sidebar {
+  display: none;
+}
+html.sidebar-collapsed .app-main {
+  max-width: none;
+}

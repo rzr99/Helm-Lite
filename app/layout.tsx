@@ -34,11 +34,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Default to dark; "light" only when the user has chosen it.
-  const theme = (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("theme")?.value === "light" ? "light" : "dark";
+  const collapsed =
+    cookieStore.get("sidebar")?.value === "collapsed" ? "sidebar-collapsed" : "";
   return (
     <html
       lang="en"
-      className={`${theme === "dark" ? "dark" : ""} ${geistSans.variable} ${geistMono.variable} h-full antialiased`.trim()}
+      className={`${theme === "dark" ? "dark" : ""} ${collapsed} ${geistSans.variable} ${geistMono.variable} h-full antialiased`.trim()}
     >
       <body className="flex min-h-full flex-col">{children}</body>
     </html>

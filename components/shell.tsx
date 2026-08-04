@@ -4,6 +4,7 @@ import type { Profile } from "@/lib/profile";
 import { Avatar } from "@/components/ui";
 import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SidebarToggle } from "@/components/sidebar-toggle";
 
 const roleLabel: Record<string, string> = {
   owner: "Owner",
@@ -325,7 +326,7 @@ export function Shell({
   return (
     <div className="min-h-screen font-sans lg:flex">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-[var(--border)] bg-[var(--surface-2)] px-3 py-6 lg:flex">
+      <aside className="app-sidebar sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-[var(--border)] bg-[var(--surface-2)] px-3 py-6 lg:flex">
         <Brand />
         <NavList active={active} role={profile.role} />
         <div className="mt-auto flex flex-col gap-2 border-t border-[var(--border-soft)] px-1 pt-4">
@@ -374,7 +375,8 @@ export function Shell({
           />
         </div>
 
-        <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-8">
+        <main className="app-main mx-auto w-full max-w-5xl px-4 py-8 sm:px-8">
+          <SidebarToggle />
           <div key={active} className="animate-page-in">
             <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
               <div>
