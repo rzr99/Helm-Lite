@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnSecondary, btnGhost, inputClass } from "@/components/ui";
 import { DashboardSummary } from "@/components/dashboard-summary";
+import { CollapsibleFilters } from "@/components/collapsible-filters";
 import { getDashboardSummary } from "@/lib/dashboard-summary";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
@@ -297,6 +298,7 @@ export default async function Dashboard({
         <DashboardSummary {...summary} />
       ) : (
         <>
+      <CollapsibleFilters defaultOpen={filtered} active={filtered}>
       {/* Lead type switch — All / High intent / Cold outreach */}
       <div className="flex flex-wrap items-center gap-2">
         {[
@@ -387,6 +389,7 @@ export default async function Dashboard({
           </div>
         </form>
       </Card>
+      </CollapsibleFilters>
 
       {filtered && (
         <p className="text-xs text-[var(--text-faint)]">
