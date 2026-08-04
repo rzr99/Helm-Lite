@@ -40,7 +40,7 @@ export const SERVICES: ServiceDef[] = [
       { name: "video_type", label: "Video type", type: "select", required: true,
         options: ["Launch", "Explainer", "Demo / walkthrough", "Teaser / promo", "Logo animation", "Kinetic typography"] },
       { name: "goal", label: "What do they want the video to do?", type: "textarea" },
-      { name: "message", label: "The main thing to get across", type: "text" },
+      { name: "message", label: "Core message (one line)", type: "text", help: "The single thing a viewer must remember — one sentence, not a list of features." },
       { name: "script_or_points", label: "Script or key points (if they have it)", type: "textarea", help: "Or note that we're writing it." },
       { name: "references", label: "Videos they like", type: "textarea" },
       { name: "where_posted", label: "Where it'll go", type: "text", placeholder: "X post, ad, pinned…" },

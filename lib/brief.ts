@@ -15,7 +15,7 @@ const BY_SERVICE: Record<string, BriefField[]> = {
   motion_graphics: [
     { name: "video_type", label: "Video type", type: "select", options: ["Launch", "Explainer", "Demo / walkthrough", "Teaser / promo", "Logo animation", "Kinetic typography"], from: "video_type" },
     { name: "goal", label: "Goal — what should it achieve?", type: "textarea", from: "goal" },
-    { name: "core_message", label: "The one message a viewer must remember", type: "textarea", from: "message" },
+    { name: "core_message", label: "Core message (one line)", type: "textarea", from: "message" },
     { name: "cta", label: "The one call-to-action", type: "text", help: "On X: follow, check the link, or reply." },
     { name: "length", label: "Target length (seconds)", type: "text", from: "length" },
     { name: "aspect_ratio", label: "Aspect ratio", type: "select", options: ["16:9", "9:16", "1:1"] },
