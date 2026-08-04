@@ -64,26 +64,26 @@ export default async function JobPage({
         <Card padded>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-[#f8f7f4]/40">
+              <p className="text-xs uppercase tracking-wide text-[var(--text)]/40">
                 Progress
               </p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-[#f8f7f4]">
+              <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--text)]">
                 {done}
-                <span className="text-[#f8f7f4]/40">/{total}</span>{" "}
-                <span className="text-sm font-normal text-[#f8f7f4]/50">
+                <span className="text-[var(--text)]/40">/{total}</span>{" "}
+                <span className="text-sm font-normal text-[var(--text)]/50">
                   stations
                 </span>
               </p>
             </div>
             {job.deadline && (
               <div className="text-right">
-                <p className="text-xs uppercase tracking-wide text-[#f8f7f4]/40">
+                <p className="text-xs uppercase tracking-wide text-[var(--text)]/40">
                   Deadline
                 </p>
                 <p
                   className={
                     "mt-1 text-sm font-medium " +
-                    (overdue ? "text-red-400" : "text-[#f8f7f4]")
+                    (overdue ? "text-red-400" : "text-[var(--text)]")
                   }
                 >
                   {overdue ? "⚠ " : ""}
@@ -93,7 +93,7 @@ export default async function JobPage({
             )}
           </div>
 
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--hover)]">
             <div
               className="h-full rounded-full bg-amber-600 transition-all"
               style={{ width: `${pct}%` }}
@@ -123,8 +123,8 @@ export default async function JobPage({
                       (isCurrent
                         ? "bg-amber-600 text-[#0e0e0d]"
                         : locked
-                          ? "border border-white/10 text-[#f8f7f4]/25"
-                          : "border border-white/15 text-[#f8f7f4] hover:bg-white/[0.06]")
+                          ? "border border-[var(--border)] text-[var(--text)]/25"
+                          : "border border-[var(--border-strong)] text-[var(--text)] hover:bg-[var(--hover)]")
                     }
                   >
                     {locked ? "🔒 " : ""}
@@ -135,7 +135,7 @@ export default async function JobPage({
             })}
           </div>
           {!allDone && (
-            <p className="mt-2 text-xs text-[#f8f7f4]/40">
+            <p className="mt-2 text-xs text-[var(--text)]/40">
               Delivery unlocks once every station is checked.
             </p>
           )}
@@ -147,7 +147,7 @@ export default async function JobPage({
           description="Tick a station when it passes its gate. Open the full how-to for the detailed SOP."
           padded={false}
         >
-          <ul className="divide-y divide-white/[0.06]">
+          <ul className="divide-y divide-[var(--border)]">
             {steps.map((step) => {
               const station = stationByKey(step.station_key);
               return (
@@ -164,7 +164,7 @@ export default async function JobPage({
                           "grid h-5 w-5 place-items-center rounded border transition-colors " +
                           (step.done
                             ? "border-amber-600 bg-amber-600 text-[#0e0e0d]"
-                            : "border-white/25 hover:border-amber-600/70")
+                            : "border-[var(--border-strong)] hover:border-amber-600/70")
                         }
                       >
                         {step.done && (
@@ -189,8 +189,8 @@ export default async function JobPage({
                           className={
                             "font-medium " +
                             (step.done
-                              ? "text-[#f8f7f4]/45 line-through"
-                              : "text-[#f8f7f4]")
+                              ? "text-[var(--text)]/45 line-through"
+                              : "text-[var(--text)]")
                           }
                         >
                           {step.label}
@@ -209,7 +209,7 @@ export default async function JobPage({
 
                       {station && (
                         <>
-                          <p className="mt-1 text-sm text-[#f8f7f4]/60">
+                          <p className="mt-1 text-sm text-[var(--text)]/60">
                             <span className="font-medium text-amber-500/90">
                               Gate:{" "}
                             </span>
@@ -233,7 +233,7 @@ export default async function JobPage({
 
         {job.notes && (
           <Card title="Notes" padded>
-            <p className="whitespace-pre-wrap text-sm text-[#f8f7f4]/70">
+            <p className="whitespace-pre-wrap text-sm text-[var(--text)]/70">
               {job.notes}
             </p>
           </Card>

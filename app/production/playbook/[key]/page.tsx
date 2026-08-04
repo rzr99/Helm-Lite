@@ -46,8 +46,8 @@ export default async function StationPage({
                   {i + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="font-medium text-[#f8f7f4]">{h.title}</p>
-                  <p className="mt-0.5 text-sm leading-relaxed text-[#f8f7f4]/60">
+                  <p className="font-medium text-[var(--text)]">{h.title}</p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-[var(--text)]/60">
                     {h.detail}
                   </p>
                 </div>
@@ -63,10 +63,10 @@ export default async function StationPage({
               {station.settings.map((s) => (
                 <div
                   key={s.k}
-                  className="flex items-baseline justify-between gap-4 border-b border-white/[0.06] pb-2"
+                  className="flex items-baseline justify-between gap-4 border-b border-[var(--border)] pb-2"
                 >
-                  <dt className="text-sm text-[#f8f7f4]/55">{s.k}</dt>
-                  <dd className="text-right font-mono text-sm text-[#f8f7f4]">
+                  <dt className="text-sm text-[var(--text)]/55">{s.k}</dt>
+                  <dd className="text-right font-mono text-sm text-[var(--text)]">
                     {s.v}
                   </dd>
                 </div>
@@ -81,7 +81,7 @@ export default async function StationPage({
             {station.pass.map((p, i) => (
               <li key={i} className="flex items-start gap-2.5 text-sm">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rotate-45 bg-amber-600" />
-                <span className="text-[#f8f7f4]/75">{p}</span>
+                <span className="text-[var(--text)]/75">{p}</span>
               </li>
             ))}
           </ul>
@@ -93,7 +93,7 @@ export default async function StationPage({
             {station.mistakes.map((m, i) => (
               <li key={i} className="flex items-start gap-2.5 text-sm">
                 <span className="mt-0.5 shrink-0 text-red-400/70">✕</span>
-                <span className="text-[#f8f7f4]/60">{m}</span>
+                <span className="text-[var(--text)]/60">{m}</span>
               </li>
             ))}
           </ul>
@@ -101,7 +101,7 @@ export default async function StationPage({
 
         {/* Your media — to be filled from real work */}
         <Card title="Your reference & templates" padded>
-          <p className="text-sm leading-relaxed text-[#f8f7f4]/55">
+          <p className="text-sm leading-relaxed text-[var(--text)]/55">
             This is where your own walkthrough video, screenshots, and the
             template link for this station will live — captured from your real
             projects so the standard is yours, not generic. Attaching media here

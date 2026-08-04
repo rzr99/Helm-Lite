@@ -59,22 +59,22 @@ export default async function ProjectsPage() {
         </Card>
       ) : (
         <Card padded={false}>
-          <ul className="divide-y divide-white/[0.06]">
+          <ul className="divide-y divide-[var(--border)]">
             {projects.map((p) => {
               const unassigned = !p.designer;
               return (
                 <li key={p.id}>
                   <Link
                     href={`/projects/${p.id}`}
-                    className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5 transition-colors hover:bg-white/[0.03]"
+                    className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5 transition-colors hover:bg-[var(--sunken)]"
                   >
-                    <span className="font-semibold text-[#f8f7f4]">
+                    <span className="font-semibold text-[var(--text)]">
                       {p.client_name}
                     </span>
-                    <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-xs text-[#f8f7f4]/80">
+                    <span className="rounded-full bg-[var(--hover)] px-2.5 py-0.5 text-xs text-[var(--text)]/80">
                       {serviceLabel(p.service)}
                     </span>
-                    <span className="text-xs text-[#f8f7f4]/50">
+                    <span className="text-xs text-[var(--text)]/50">
                       {projectStatusLabel(p.status)}
                     </span>
                     {floor && unassigned && (
@@ -82,7 +82,7 @@ export default async function ProjectsPage() {
                         Needs an editor
                       </span>
                     )}
-                    <span className="ml-auto flex items-center gap-3 text-xs text-[#f8f7f4]/50">
+                    <span className="ml-auto flex items-center gap-3 text-xs text-[var(--text)]/50">
                       {p.designer && <span>🎨 {p.designer}</span>}
                       {p.deadline && <span>{p.deadline}</span>}
                       {floor && p.agent && (

@@ -40,7 +40,7 @@ function Field({ f }: { f: IntakeField }) {
         />
       )}
       {f.help && (
-        <p className="mt-1 text-xs text-[#f8f7f4]/40">{f.help}</p>
+        <p className="mt-1 text-xs text-[var(--text)]/40">{f.help}</p>
       )}
     </div>
   );
@@ -69,13 +69,13 @@ export default async function NewProjectPage({
             <Link
               key={s.value}
               href={`/projects/new?service=${s.value}`}
-              className="rounded-xl border border-white/[0.09] bg-[#161613] p-5 transition-colors hover:border-amber-600/50 hover:bg-white/[0.02]"
+              className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] p-5 transition-colors hover:border-amber-600/50 hover:bg-[var(--sunken)]"
             >
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rotate-45 bg-amber-600" />
-                <p className="font-semibold text-[#f8f7f4]">{s.label}</p>
+                <p className="font-semibold text-[var(--text)]">{s.label}</p>
               </div>
-              <p className="mt-1.5 text-sm text-[#f8f7f4]/55">{s.blurb}</p>
+              <p className="mt-1.5 text-sm text-[var(--text)]/55">{s.blurb}</p>
             </Link>
           ))}
         </div>
@@ -94,7 +94,7 @@ export default async function NewProjectPage({
       <div className="max-w-xl">
         <Link
           href="/projects/new"
-          className="mb-4 inline-block text-sm text-[#f8f7f4]/50 hover:text-[#f8f7f4]"
+          className="mb-4 inline-block text-sm text-[var(--text)]/50 hover:text-[var(--text)]"
         >
           ← Change service
         </Link>

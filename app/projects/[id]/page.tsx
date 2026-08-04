@@ -54,15 +54,15 @@ export default async function ProjectPage({
       padded
     >
       {(def?.fields ?? []).filter((f) => intake[f.name]).length === 0 ? (
-        <p className="text-sm text-[#f8f7f4]/50">Nothing filled in.</p>
+        <p className="text-sm text-[var(--text)]/50">Nothing filled in.</p>
       ) : (
-        <dl className="flex flex-col divide-y divide-white/[0.06]">
+        <dl className="flex flex-col divide-y divide-[var(--border)]">
           {(def?.fields ?? [])
             .filter((f) => intake[f.name])
             .map((f) => (
               <div key={f.name} className="flex flex-col gap-1 py-3 sm:flex-row sm:gap-6">
-                <dt className="shrink-0 text-sm text-[#f8f7f4]/50 sm:w-52">{f.label}</dt>
-                <dd className="whitespace-pre-wrap text-sm text-[#f8f7f4]/90">
+                <dt className="shrink-0 text-sm text-[var(--text)]/50 sm:w-52">{f.label}</dt>
+                <dd className="whitespace-pre-wrap text-sm text-[var(--text)]/90">
                   {intake[f.name]}
                 </dd>
               </div>
@@ -129,7 +129,7 @@ export default async function ProjectPage({
         ) : (
           <input name={f.name} defaultValue={value} className={inputClass} />
         )}
-        {f.help && <p className="mt-1 text-xs text-[#f8f7f4]/40">{f.help}</p>}
+        {f.help && <p className="mt-1 text-xs text-[var(--text)]/40">{f.help}</p>}
       </div>
     );
   };
@@ -154,7 +154,7 @@ export default async function ProjectPage({
                     "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors " +
                     (current
                       ? "bg-amber-600 text-[#0e0e0d]"
-                      : "border border-white/15 text-[#f8f7f4]/80 hover:bg-white/[0.06]")
+                      : "border border-[var(--border-strong)] text-[var(--text)]/80 hover:bg-[var(--hover)]")
                   }
                 >
                   {s.label}
@@ -204,8 +204,8 @@ export default async function ProjectPage({
         description="Formatted for WhatsApp — the *asterisks* turn into bold when you paste. Save the brief first to update it."
         padded
       >
-        <div className="rounded-lg border border-white/[0.07] bg-black/20 p-3">
-          <pre className="whitespace-pre-wrap font-sans text-sm text-[#f8f7f4]/80">
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--sunken)] p-3">
+          <pre className="whitespace-pre-wrap font-sans text-sm text-[var(--text)]/80">
             {finishedBrief}
           </pre>
         </div>

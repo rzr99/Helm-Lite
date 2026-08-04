@@ -21,7 +21,7 @@ function Brand() {
     <div className="flex items-center gap-2.5 px-3">
       <ProdMark />
       <div className="leading-tight">
-        <p className="text-[15px] font-semibold tracking-tight text-[#f8f7f4]">
+        <p className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
           Playbook
         </p>
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber-500/80">
@@ -36,7 +36,7 @@ function BackToHelm() {
   return (
     <Link
       href="/"
-      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[#f8f7f4]/55 transition-colors hover:bg-white/[0.05] hover:text-[#f8f7f4]"
+      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[var(--text)]/55 transition-colors hover:bg-[var(--hover)] hover:text-[var(--text)]"
     >
       <svg
         viewBox="0 0 24 24"
@@ -64,22 +64,22 @@ export function ProductionShell({
   return (
     <div className="min-h-screen font-sans lg:flex">
       {/* Rail (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-amber-600/[0.14] bg-[#0c0b0a] px-3 py-6 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r border-amber-600/[0.14] bg-[var(--canvas)] px-3 py-6 lg:flex">
         <Brand />
         <ProductionNav variant="rail" />
-        <div className="mt-auto flex flex-col gap-2 border-t border-white/[0.06] px-1 pt-4">
+        <div className="mt-auto flex flex-col gap-2 border-t border-[var(--border)] px-1 pt-4">
           <BackToHelm />
           <div className="flex items-center justify-between gap-2 px-2 pt-1">
             <span className="flex min-w-0 items-center gap-2">
               <Avatar name={profile.full_name} src={profile.avatar_url} size={7} />
-              <span className="truncate text-xs text-[#f8f7f4]/60">
+              <span className="truncate text-xs text-[var(--text)]/60">
                 {profile.full_name}
               </span>
             </span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="text-xs text-[#f8f7f4]/45 transition-colors hover:text-[#f8f7f4]"
+                className="text-xs text-[var(--text)]/45 transition-colors hover:text-[var(--text)]"
               >
                 Sign out
               </button>
@@ -91,12 +91,12 @@ export function ProductionShell({
       {/* Content */}
       <div className="flex-1">
         {/* Mobile top bar */}
-        <div className="sticky top-0 z-20 flex flex-col gap-3 border-b border-amber-600/[0.14] bg-[#0c0b0a] px-4 py-3 lg:hidden">
+        <div className="sticky top-0 z-20 flex flex-col gap-3 border-b border-amber-600/[0.14] bg-[var(--canvas)] px-4 py-3 lg:hidden">
           <div className="flex items-center justify-between">
             <Brand />
             <Link
               href="/"
-              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-[#f8f7f4]/70"
+              className="rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-xs font-medium text-[var(--text)]/70"
             >
               ← Helm
             </Link>
@@ -130,7 +130,7 @@ export function ProdHeader({
       {back && (
         <Link
           href={back.href}
-          className="w-fit text-sm text-[#f8f7f4]/50 transition-colors hover:text-[#f8f7f4]"
+          className="w-fit text-sm text-[var(--text)]/50 transition-colors hover:text-[var(--text)]"
         >
           ← {back.label}
         </Link>

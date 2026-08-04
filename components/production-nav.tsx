@@ -28,7 +28,7 @@ export function ProductionNav({ variant = "rail" }: { variant?: "rail" | "bar" }
                 "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors " +
                 (active
                   ? "bg-amber-600 text-[#0e0e0d]"
-                  : "text-[#f8f7f4]/60 hover:bg-white/[0.06] hover:text-[#f8f7f4]")
+                  : "text-[var(--text)]/60 hover:bg-[var(--hover)] hover:text-[var(--text)]")
               }
             >
               {l.label}
@@ -50,8 +50,8 @@ export function ProductionNav({ variant = "rail" }: { variant?: "rail" | "bar" }
             className={
               "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors " +
               (active
-                ? "bg-white/[0.05] font-medium text-[#f8f7f4]"
-                : "text-[#f8f7f4]/50 hover:bg-white/[0.03] hover:text-[#f8f7f4]")
+                ? "bg-[var(--hover)] font-medium text-[var(--text)]"
+                : "text-[var(--text)]/50 hover:bg-[var(--sunken)] hover:text-[var(--text)]")
             }
           >
             <span
@@ -59,7 +59,7 @@ export function ProductionNav({ variant = "rail" }: { variant?: "rail" | "bar" }
                 "h-2 w-2 rotate-45 transition-colors " +
                 (active
                   ? "bg-amber-600"
-                  : "border border-[#f8f7f4]/30 group-hover:border-[#f8f7f4]/60")
+                  : "border border-[var(--text)]/30 group-hover:border-[var(--text)]/60")
               }
             />
             {l.label}

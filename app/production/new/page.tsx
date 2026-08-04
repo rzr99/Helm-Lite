@@ -51,7 +51,7 @@ export default async function NewJobPage() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-[#f8f7f4]/40">
+              <p className="mt-1 text-xs text-[var(--text)]/40">
                 Sets which stations the job runs through.
               </p>
             </div>
