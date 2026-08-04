@@ -111,10 +111,24 @@ export function FreelancerForm({
           <label className={labelClass}>Rate</label>
           <input
             name="rate"
+            list="rate-options"
             defaultValue={defaults.rate ?? ""}
-            placeholder="e.g. $150/video or Rs 2,000/hr"
+            placeholder="Pick a model or type an amount"
             className={inputClass}
           />
+          <datalist id="rate-options">
+            <option value="Per project — varies" />
+            <option value="Negotiated per project" />
+            <option value="Per hour" />
+            <option value="Per video / deliverable" />
+            <option value="Per minute" />
+            <option value="Per day" />
+            <option value="Monthly retainer" />
+          </datalist>
+          <p className="mt-1 text-xs text-[var(--text-faint)]">
+            Varies by project? Pick “Per project — varies”, or note a range like
+            “$150–300”.
+          </p>
         </div>
         <div>
           <label className={labelClass}>Portfolio link</label>
