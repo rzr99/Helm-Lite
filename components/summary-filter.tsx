@@ -11,9 +11,24 @@ const off =
 const dateInput =
   "rounded-lg border border-[var(--border-strong)] bg-[var(--field)] px-2.5 py-1.5 text-[12.5px] text-[var(--text)] outline-none [color-scheme:light] dark:[color-scheme:dark]";
 
+function shiftMonth(m: string, delta: number) {
+  const [y, mo] = m.split("-").map(Number);
+  const d = new Date(Date.UTC(y, mo - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function monthTitle(m: string) {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 // Window (Day/Week/Month) OR a custom From–To range, plus agent — all via URL.
 export function SummaryFilter({
   win,
+  month,
   from,
   to,
   custom,
@@ -22,6 +37,7 @@ export function SummaryFilter({
   floor,
 }: {
   win: string;
+  month: string;
   from: string;
   to: string;
   custom: boolean;
@@ -45,11 +61,12 @@ export function SummaryFilter({
     router.push(`${path}?${p.toString()}`, { scroll: false });
   }
 
-  const windows = [
+  const windows: [string, string][] = [
     ["day", "Day"],
     ["week", "Week"],
     ["month", "Month"],
   ];
+  const monthOn = !custom && win === "month";
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -59,13 +76,48 @@ export function SummaryFilter({
           <button
             key={w}
             type="button"
-            onClick={() => go({ win: w, from: "", to: "" })}
+            onClick={() =>
+              go(
+                w === "month"
+                  ? { win: "month", month, from: "", to: "" }
+                  : { win: w, month: "", from: "", to: "" }
+              )
+            }
             className={pill + " " + (!custom && win === w ? on : off)}
           >
             {label}
           </button>
         ))}
       </div>
+
+      {/* Month stepper — only when Month is the active window */}
+      {monthOn && (
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="Previous month"
+            onClick={() =>
+              go({ win: "month", month: shiftMonth(month, -1), from: "", to: "" })
+            }
+            className={pill + " " + off}
+          >
+            ‹
+          </button>
+          <span className="min-w-32 text-center font-mono text-[11px] tracking-[0.04em] text-[var(--text)]">
+            {monthTitle(month)}
+          </span>
+          <button
+            type="button"
+            aria-label="Next month"
+            onClick={() =>
+              go({ win: "month", month: shiftMonth(month, 1), from: "", to: "" })
+            }
+            className={pill + " " + off}
+          >
+            ›
+          </button>
+        </div>
+      )}
 
       {/* custom range */}
       <div className="flex items-center gap-1.5">

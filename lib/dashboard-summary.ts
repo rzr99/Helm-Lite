@@ -18,6 +18,24 @@ function daysInclusive(a: string, b: string) {
   );
 }
 
+function shiftMonth(m: string, delta: number) {
+  const [y, mo] = m.split("-").map(Number);
+  const d = new Date(Date.UTC(y, mo - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function monthLast(m: string) {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+}
+function monthName(m: string) {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function eachDay(from: string, to: string) {
   const [fy, fm, fd] = from.split("-").map(Number);
   const [ty, tm, td] = to.split("-").map(Number);
@@ -44,16 +62,20 @@ export async function getDashboardSummary(
     win: string;
     from?: string;
     to?: string;
+    month?: string;
     agent?: string;
     floor: boolean;
     owner: boolean;
     today: string;
   }
 ) {
-  const { win, from, to, agent, floor, owner, today } = opts;
+  const { win, from, to, month, agent, floor, owner, today } = opts;
 
-  // Resolve the window: a valid custom From–To wins; otherwise a rolling preset.
+  // Resolve the window: a custom From–To wins; then a calendar Month (with its
+  // prev/next stepper); otherwise a rolling Day/Week preset.
   const custom = Boolean(from && to && from <= to);
+  const currentMonth = today.slice(0, 7);
+  let selMonth = currentMonth;
   let cur0: string;
   let curTo: string;
   let prev0: string;
@@ -66,14 +88,22 @@ export async function getDashboardSummary(
     prev1 = addDaysISO(cur0, -1);
     prev0 = addDaysISO(cur0, -len);
     cmpLabel = `vs prev ${len}d`;
+  } else if (win === "month") {
+    // A whole calendar month, compared to the previous calendar month.
+    selMonth = month && /^\d{4}-\d{2}$/.test(month) ? month : currentMonth;
+    cur0 = `${selMonth}-01`;
+    curTo = monthLast(selMonth);
+    const pm = shiftMonth(selMonth, -1);
+    prev0 = `${pm}-01`;
+    prev1 = monthLast(pm);
+    cmpLabel = `vs ${monthName(pm)}`;
   } else {
-    const n = SPAN[win] ?? 30;
+    const n = SPAN[win] ?? 7;
     cur0 = daysAgoStr(n - 1);
     curTo = today;
     prev0 = daysAgoStr(2 * n - 1);
     prev1 = daysAgoStr(n);
-    cmpLabel =
-      win === "day" ? "vs yesterday" : win === "week" ? "vs last week" : "vs prev 30d";
+    cmpLabel = win === "day" ? "vs yesterday" : "vs last week";
   }
   const sparkStart = daysAgoStr(13);
   const rangeStart = prev0 < sparkStart ? prev0 : sparkStart;
@@ -206,6 +236,7 @@ export async function getDashboardSummary(
 
   return {
     win,
+    month: selMonth,
     from: custom ? cur0 : "",
     to: custom ? curTo : "",
     custom,

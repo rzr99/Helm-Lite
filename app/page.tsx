@@ -26,6 +26,7 @@ export default async function Dashboard({
     win?: string;
     from?: string;
     to?: string;
+    month?: string;
     agent?: string;
     intent?: string;
   }>;
@@ -37,13 +38,23 @@ export default async function Dashboard({
 
   const today = todayStr();
 
-  const { view, win: winRaw, from, to, agent, intent } = await searchParams;
+  const { view, win: winRaw, from, to, month, agent, intent } =
+    await searchParams;
   const isSummary = view === "summary";
   const intentOk = intent === "high_intent" || intent === "cold_outreach";
   const intentHref = (v: string | null) => (v ? `/?intent=${v}` : "/");
   const win = winRaw === "day" || winRaw === "week" ? winRaw : "month";
   const summary = isSummary
-    ? await getDashboardSummary(supabase, { win, from, to, agent, floor, owner, today })
+    ? await getDashboardSummary(supabase, {
+        win,
+        from,
+        to,
+        month,
+        agent,
+        floor,
+        owner,
+        today,
+      })
     : null;
 
   // Counts come pre-aggregated from Postgres (views group by unique client),

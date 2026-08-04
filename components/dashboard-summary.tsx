@@ -49,6 +49,7 @@ const eyebrow =
 
 export function DashboardSummary({
   win,
+  month,
   from,
   to,
   custom,
@@ -63,6 +64,7 @@ export function DashboardSummary({
   health,
 }: {
   win: string;
+  month: string;
   from: string;
   to: string;
   custom: boolean;
@@ -83,6 +85,7 @@ export function DashboardSummary({
     <div className="flex flex-col gap-6">
       <SummaryFilter
         win={win}
+        month={month}
         from={from}
         to={to}
         custom={custom}
