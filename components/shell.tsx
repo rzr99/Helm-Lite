@@ -135,15 +135,19 @@ type NavLink = {
   icon: React.ReactNode;
   floorOnly?: boolean;
   ownerOnly?: boolean;
+  prodChild?: boolean;
 };
+
+// The Production section groups the projects flow with Playbook + Freelancers.
+const PROD_GROUP = ["projects", "production", "freelancers"];
 
 const navLinks: NavLink[] = [
   { key: "dashboard", href: "/", label: "Dashboard", icon: <HomeIcon /> },
   { key: "leads", href: "/leads", label: "Leads", icon: <LeadsIcon /> },
   { key: "sales", href: "/sales", label: "Sales", icon: <SalesIcon /> },
   { key: "projects", href: "/projects", label: "Production", icon: <ProjectsIcon /> },
-  { key: "production", href: "/production", label: "Playbook", icon: <ProductionIcon />, ownerOnly: true },
-  { key: "freelancers", href: "/freelancers", label: "Freelancers", icon: <FreelancersIcon />, ownerOnly: true },
+  { key: "production", href: "/production", label: "Playbook", icon: <ProductionIcon />, ownerOnly: true, prodChild: true },
+  { key: "freelancers", href: "/freelancers", label: "Freelancers", icon: <FreelancersIcon />, ownerOnly: true, prodChild: true },
   {
     key: "activity",
     href: "/activity",
@@ -196,16 +200,21 @@ function visibleLinks(role: string) {
 }
 
 function NavList({ active, role }: { active: string; role: string }) {
+  const prodOpen = PROD_GROUP.includes(active);
   return (
     <nav className="flex flex-col gap-0.5">
       {visibleLinks(role).map((l) => {
+        // Playbook + Freelancers stay tucked away until you're in Production.
+        if (l.prodChild && !prodOpen) return null;
         const isActive = l.key === active;
+        const isProdParent = l.key === "projects";
         return (
           <Link
             key={l.key}
             href={l.href}
             className={
-              "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors " +
+              "group flex items-center gap-3 rounded-lg py-2 text-sm transition-colors " +
+              (l.prodChild ? "pl-9 pr-3 " : "px-3 ") +
               (isActive
                 ? "bg-[var(--hover)] font-medium text-[var(--text)]"
                 : "text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]")
@@ -220,6 +229,23 @@ function NavList({ active, role }: { active: string; role: string }) {
               }
             />
             {l.label}
+            {isProdParent && (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className={
+                  "ml-auto h-3.5 w-3.5 transition-transform " +
+                  (prodOpen ? "rotate-90" : "")
+                }
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            )}
           </Link>
         );
       })}
