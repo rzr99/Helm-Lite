@@ -57,6 +57,26 @@ function ActivityIcon() {
   );
 }
 
+function ProjectsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
+      <path d="M14 4v5h5" />
+      <path d="M8 13h6M8 17h6" />
+    </svg>
+  );
+}
+
+function ProductionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="15" rx="2" />
+      <path d="M3 10h18" />
+      <path d="m6 5-1 5M11 5l-1 5M16 5l-1 5" />
+    </svg>
+  );
+}
+
 function PersonasIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
@@ -79,22 +99,31 @@ function ExpensesIcon() {
   );
 }
 
-function TrainingIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5V6a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2z" />
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M9 8h7" />
-    </svg>
-  );
-}
-
 function HiringIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="8" width="18" height="12" rx="2" />
       <path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
       <path d="M12 12v3" />
+    </svg>
+  );
+}
+
+function FreelancersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8.5 20 6v12.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8.5z" />
+      <path d="m3 8.5 4-.7M9 7.6l4-.7M15 6.7l4-.7" />
+    </svg>
+  );
+}
+
+function TrainingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5V6a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2z" />
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M9 8h7" />
     </svg>
   );
 }
@@ -112,6 +141,9 @@ const navLinks: NavLink[] = [
   { key: "dashboard", href: "/", label: "Dashboard", icon: <HomeIcon /> },
   { key: "leads", href: "/leads", label: "Leads", icon: <LeadsIcon /> },
   { key: "sales", href: "/sales", label: "Sales", icon: <SalesIcon /> },
+  { key: "projects", href: "/projects", label: "Production", icon: <ProjectsIcon /> },
+  { key: "production", href: "/production", label: "Playbook", icon: <ProductionIcon />, ownerOnly: true },
+  { key: "freelancers", href: "/freelancers", label: "Freelancers", icon: <FreelancersIcon />, ownerOnly: true },
   {
     key: "activity",
     href: "/activity",
@@ -222,6 +254,9 @@ const pageEyebrow: Record<string, string> = {
   dashboard: "Overview",
   leads: "Pipeline",
   sales: "Revenue",
+  projects: "Intake · handoff",
+  production: "Owner · playbook",
+  freelancers: "Owner · production people",
   activity: "Derived · not typed",
   personas: "Owner · identities",
   expenses: "Owner · finances",
