@@ -171,6 +171,23 @@ export const STAGE_BADGE: Record<string, string> = {
   lost: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
 };
 
+// ----- Lead type (intent) -----
+export const LEAD_INTENTS = [
+  { value: "high_intent", label: "High intent" },
+  { value: "cold_outreach", label: "Cold outreach" },
+] as const;
+
+export function leadIntentLabel(value: string) {
+  return LEAD_INTENTS.find((i) => i.value === value)?.label ?? value;
+}
+
+export const LEAD_INTENT_BADGE: Record<string, string> = {
+  high_intent:
+    "bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100",
+  cold_outreach:
+    "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+};
+
 // ----- Hiring -----
 export const HIRING_STATUSES = [
   { value: "applied", label: "Applied" },

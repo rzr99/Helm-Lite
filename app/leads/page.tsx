@@ -52,13 +52,16 @@ export default async function LeadsPage({
     from?: string;
     to?: string;
     page?: string;
+    intent?: string;
   }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { q, stage, service, agent, from, to, page } = await searchParams;
+  const { q, stage, service, agent, from, to, page, intent } =
+    await searchParams;
   const search = (q ?? "").trim();
   const serviceOk = service && SERVICES.some((s) => s.value === service);
+  const intentOk = intent === "high_intent" || intent === "cold_outreach";
   const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
   let teammates: {
@@ -100,6 +103,7 @@ export default async function LeadsPage({
   }
   if (from) query = query.gte("rep_date_added", from);
   if (to) query = query.lte("rep_date_added", to);
+  if (intentOk) query = query.eq("rep_intent", intent);
   for (const token of search.toLowerCase().split(/\s+/).filter(Boolean)) {
     query = query.ilike("search_text", `%${token}%`);
   }
@@ -140,7 +144,22 @@ export default async function LeadsPage({
     if (agent) sp.set("agent", agent);
     if (from) sp.set("from", from);
     if (to) sp.set("to", to);
+    if (intentOk) sp.set("intent", intent!);
     if (p > 1) sp.set("page", String(p));
+    const s = sp.toString();
+    return s ? `/leads?${s}` : "/leads";
+  };
+
+  // The All / High intent / Cold outreach switch — keeps the other filters.
+  const intentHref = (v: string | null) => {
+    const sp = new URLSearchParams();
+    if (search) sp.set("q", search);
+    if (stage) sp.set("stage", stage);
+    if (serviceOk) sp.set("service", service!);
+    if (agent) sp.set("agent", agent);
+    if (from) sp.set("from", from);
+    if (to) sp.set("to", to);
+    if (v) sp.set("intent", v);
     const s = sp.toString();
     return s ? `/leads?${s}` : "/leads";
   };
@@ -162,6 +181,7 @@ export default async function LeadsPage({
     if (stage) sp.set("stage", stage);
     if (serviceOk) sp.set("service", service!);
     if (agent) sp.set("agent", agent);
+    if (intentOk) sp.set("intent", intent!);
     sp.set("from", r.from);
     sp.set("to", r.to);
     return `/leads?${sp.toString()}`;
@@ -197,6 +217,31 @@ export default async function LeadsPage({
         </Link>
       )}
 
+      {/* Lead type switch — All / High intent / Cold outreach */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { v: null as string | null, label: "All" },
+          { v: "high_intent", label: "High intent" },
+          { v: "cold_outreach", label: "Cold outreach" },
+        ].map((t) => {
+          const on = (t.v ?? null) === (intentOk ? intent : null);
+          return (
+            <Link
+              key={t.label}
+              href={intentHref(t.v)}
+              className={
+                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
+                (on
+                  ? "bg-amber-600 text-[#140d05]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+      </div>
+
       <Card padded={false}>
         <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
           {datePresets.map((r) => (
@@ -218,8 +263,9 @@ export default async function LeadsPage({
           </span>
         </div>
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
-          {/* Keep any active search when the other filters are submitted. */}
+          {/* Keep the active search + lead-type switch when other filters submit. */}
           {search && <input type="hidden" name="q" value={search} />}
+          {intentOk && <input type="hidden" name="intent" value={intent} />}
           <div>
             <label className={filterLabel}>Stage</label>
             <select name="stage" defaultValue={stage ?? ""} className={inputClass}>
@@ -287,7 +333,10 @@ export default async function LeadsPage({
               Filter
             </button>
             {hasFilters && (
-              <Link href="/leads" className={btnSecondary}>
+              <Link
+                href={intentOk ? `/leads?intent=${intent}` : "/leads"}
+                className={btnSecondary}
+              >
                 Clear
               </Link>
             )}
@@ -300,7 +349,7 @@ export default async function LeadsPage({
           hasFilters ? " found" : ""
         }`}
         description={
-          floor
+          floor && !intentOk
             ? `${uniqueClients} unique — the same client worked by two agents counts once here`
             : undefined
         }

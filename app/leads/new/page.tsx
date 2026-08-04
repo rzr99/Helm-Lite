@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { Card, btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
-import { STAGES, SERVICES } from "@/lib/enums";
+import { STAGES, SERVICES, LEAD_INTENTS } from "@/lib/enums";
 import { createLead } from "@/app/leads/actions";
 
 export const dynamic = "force-dynamic";
@@ -137,6 +137,31 @@ export default async function NewLeadPage() {
                 </select>
               </div>
             )}
+
+            <div>
+              <label className={labelClass}>Lead type</label>
+              <div className="flex gap-2">
+                {LEAD_INTENTS.map((i, idx) => (
+                  <label
+                    key={i.value}
+                    className="flex-1 cursor-pointer rounded-lg border border-[var(--border-strong)] px-4 py-2.5 text-center text-sm font-medium text-[var(--text-muted)] transition-colors has-[:checked]:border-amber-600 has-[:checked]:bg-[var(--accent-soft)] has-[:checked]:text-[var(--text)]"
+                  >
+                    <input
+                      type="radio"
+                      name="intent"
+                      value={i.value}
+                      defaultChecked={idx === 0}
+                      className="sr-only"
+                    />
+                    {i.label}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                High intent = they showed real interest. Cold outreach = you
+                reached out cold.
+              </p>
+            </div>
 
             <div>
               <label className={labelClass}>Notes</label>

@@ -10,7 +10,7 @@ import {
   labelClass,
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { STAGES, SERVICES, serviceLabel } from "@/lib/enums";
+import { STAGES, SERVICES, LEAD_INTENTS, serviceLabel } from "@/lib/enums";
 import {
   updateLead,
   addFollowUp,
@@ -42,7 +42,7 @@ export default async function LeadDetailPage({
   const { data: lead } = await supabase
     .from("leads")
     .select(
-      "id, agent_id, assigned_to, handle, name, service_interest, source, stage, date_added, persona, notes"
+      "id, agent_id, assigned_to, handle, name, service_interest, source, stage, date_added, persona, notes, intent"
     )
     .eq("id", id)
     .single();
@@ -235,6 +235,23 @@ export default async function LeadDetailPage({
                 </datalist>
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
                   The persona / X account you used for this lead.
+                </p>
+              </div>
+              <div>
+                <label className={labelClass}>Lead type</label>
+                <select
+                  name="intent"
+                  defaultValue={lead.intent ?? "high_intent"}
+                  className={inputClass}
+                >
+                  {LEAD_INTENTS.map((i) => (
+                    <option key={i.value} value={i.value}>
+                      {i.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                  Move it to Cold outreach if it wasn&apos;t a warm lead.
                 </p>
               </div>
             </div>

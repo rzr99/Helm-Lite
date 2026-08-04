@@ -9,6 +9,13 @@ function text(formData: FormData, key: string) {
   return ((formData.get(key) as string) || "").trim();
 }
 
+// Lead type — defaults to high intent (the larger pile).
+function intentOf(formData: FormData) {
+  return text(formData, "intent") === "cold_outreach"
+    ? "cold_outreach"
+    : "high_intent";
+}
+
 // Accept leads that were assigned to me: take ownership (agent_id = me) and
 // clear the pending flag. `all=on` accepts everything in my inbox; otherwise
 // only the given client handle_keys. RLS lets an agent do this only for leads
@@ -94,6 +101,7 @@ export async function createLead(formData: FormData) {
     stage: text(formData, "stage") || "new",
     persona: text(formData, "persona") || null,
     notes: text(formData, "notes"),
+    intent: intentOf(formData),
     date_added: todayStr(),
   };
 
@@ -122,6 +130,7 @@ export async function updateLead(leadId: string, formData: FormData) {
     source: text(formData, "source") || null,
     persona: text(formData, "persona") || null,
     notes: text(formData, "notes"),
+    intent: intentOf(formData),
   };
 
   if (!values.handle) throw new Error("The lead needs a handle or name.");
