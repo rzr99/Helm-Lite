@@ -27,6 +27,7 @@ export default async function Dashboard({
     from?: string;
     to?: string;
     agent?: string;
+    intent?: string;
   }>;
 }) {
   const { supabase, profile } = await requireProfile();
@@ -36,8 +37,10 @@ export default async function Dashboard({
 
   const today = todayStr();
 
-  const { view, win: winRaw, from, to, agent } = await searchParams;
+  const { view, win: winRaw, from, to, agent, intent } = await searchParams;
   const isSummary = view === "summary";
+  const intentOk = intent === "high_intent" || intent === "cold_outreach";
+  const intentHref = (v: string | null) => (v ? `/?intent=${v}` : "/");
   const win = winRaw === "day" || winRaw === "week" ? winRaw : "month";
   const summary = isSummary
     ? await getDashboardSummary(supabase, { win, from, to, agent, floor, owner, today })
@@ -86,9 +89,26 @@ export default async function Dashboard({
   const upcoming = rows.filter((f) => f.due_date > today);
 
   const counts: Record<string, number> = {};
-  for (const c of (stageCounts ?? []) as { stage: string; n: number }[]) {
-    counts[c.stage] = c.n;
+  if (intentOk && !isSummary) {
+    // Intent-filtered pipeline: one fast COUNT per stage (bounded, RLS-scoped).
+    const res = await Promise.all(
+      STAGES.map((s) =>
+        supabase
+          .from("lead_clients")
+          .select("*", { count: "exact", head: true })
+          .eq("rep_stage", s.value)
+          .eq("rep_intent", intent)
+      )
+    );
+    STAGES.forEach((s, i) => {
+      counts[s.value] = res[i].count ?? 0;
+    });
+  } else {
+    for (const c of (stageCounts ?? []) as { stage: string; n: number }[]) {
+      counts[c.stage] = c.n;
+    }
   }
+  const intentClients = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const statsByAgent = new Map(
     ((agentStats ?? []) as {
@@ -217,6 +237,36 @@ export default async function Dashboard({
         <DashboardSummary {...summary} />
       ) : (
         <>
+      {/* Lead type switch — All / High intent / Cold outreach */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { v: null as string | null, label: "All" },
+          { v: "high_intent", label: "High intent" },
+          { v: "cold_outreach", label: "Cold outreach" },
+        ].map((t) => {
+          const on = (t.v ?? null) === (intentOk ? intent : null);
+          return (
+            <Link
+              key={t.label}
+              href={intentHref(t.v)}
+              className={
+                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
+                (on
+                  ? "bg-amber-600 text-[#140d05]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+        {intentOk && (
+          <span className="ml-1 text-xs text-[var(--text-faint)]">
+            Pipeline &amp; counts show this type; team &amp; follow-ups count all.
+          </span>
+        )}
+      </div>
+
       {/* Pipeline — a keyframe track, framed like a viewfinder */}
       <div className="relative my-1 px-6 py-9">
         <span className="pointer-events-none absolute left-0 top-0 h-3.5 w-3.5 border-l border-t border-[var(--border-strong)]" />
@@ -228,7 +278,9 @@ export default async function Dashboard({
           {STAGES.map((s) => (
             <Link
               key={s.value}
-              href={`/leads?stage=${s.value}`}
+              href={`/leads?stage=${s.value}${
+                intentOk ? `&intent=${intent}` : ""
+              }`}
               className="font-mono text-[30px] font-medium tabular-nums tracking-tight text-[var(--text)] transition-colors hover:text-amber-600"
             >
               {counts[s.value] ?? 0}
@@ -266,12 +318,20 @@ export default async function Dashboard({
         </div>
       </div>
 
-      <Readouts cols={4}>
-        <Readout label="Clients logged" value={totals.total_clients} />
-        <Readout label="Unique clients" value={totals.unique_clients} amber />
-        <Readout label="Deals closed" value={counts["closed"] ?? 0} />
-        <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
-      </Readouts>
+      {intentOk ? (
+        <Readouts cols={3}>
+          <Readout label="Clients logged" value={intentClients} />
+          <Readout label="Deals closed" value={counts["closed"] ?? 0} />
+          <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
+        </Readouts>
+      ) : (
+        <Readouts cols={4}>
+          <Readout label="Clients logged" value={totals.total_clients} />
+          <Readout label="Unique clients" value={totals.unique_clients} amber />
+          <Readout label="Deals closed" value={counts["closed"] ?? 0} />
+          <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
+        </Readouts>
+      )}
 
       {floor && byAgent.length > 0 && (
         <Card

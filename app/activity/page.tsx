@@ -22,12 +22,18 @@ const filterLabel =
 export default async function ActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ agent?: string; from?: string; to?: string }>;
+  searchParams: Promise<{
+    agent?: string;
+    from?: string;
+    to?: string;
+    intent?: string;
+  }>;
 }) {
   const { supabase, profile } = await requireProfile();
   if (!isFloorRole(profile.role)) redirect("/");
 
-  const { agent, from, to } = await searchParams;
+  const { agent, from, to, intent } = await searchParams;
+  const intentOk = intent === "high_intent" || intent === "cold_outreach";
   // Default view is Today; the Daily/Weekly/Monthly buttons set exact ranges.
   const fromDate = from || todayStr();
   const toDate = to || todayStr();
@@ -45,9 +51,21 @@ export default async function ActivityPage({
   const presetHref = (p: { from: string; to: string }) => {
     const sp = new URLSearchParams();
     if (agent) sp.set("agent", agent);
+    if (intentOk) sp.set("intent", intent!);
     sp.set("from", p.from);
     sp.set("to", p.to);
     return `/activity?${sp.toString()}`;
+  };
+
+  // Lead-type switch — keeps the current agent + date range.
+  const intentHref = (v: string | null) => {
+    const sp = new URLSearchParams();
+    if (agent) sp.set("agent", agent);
+    if (from) sp.set("from", from);
+    if (to) sp.set("to", to);
+    if (v) sp.set("intent", v);
+    const s = sp.toString();
+    return s ? `/activity?${s}` : "/activity";
   };
 
   // Per-day/per-agent counts come pre-aggregated from Postgres, filtered to the
@@ -86,6 +104,42 @@ export default async function ActivityPage({
 
   const nameOf = new Map((users ?? []).map((u) => [u.id, u.full_name]));
 
+  // Leads added: the fast per-day view normally; from lead_clients (bounded by
+  // the date range) when a lead type is selected, so we can split the count.
+  let addedRows = (leadsAdded ?? []) as {
+    agent_id: string;
+    day: string;
+    n: number;
+  }[];
+  let uniqueAddedCount = (uniqueAdded as number | null) ?? 0;
+  if (intentOk) {
+    let lc = supabase
+      .from("lead_clients")
+      .select("agent_id, first_added, handle_key")
+      .gte("first_added", fromDate)
+      .lte("first_added", toDate)
+      .eq("rep_intent", intent)
+      .limit(100000);
+    if (agent) lc = lc.eq("agent_id", agent);
+    const { data: lcData } = await lc;
+    const perDay = new Map<string, number>();
+    const uniq = new Set<string>();
+    for (const r of (lcData ?? []) as {
+      agent_id: string;
+      first_added: string;
+      handle_key: string;
+    }[]) {
+      const k = `${r.first_added}|${r.agent_id}`;
+      perDay.set(k, (perDay.get(k) ?? 0) + 1);
+      uniq.add(r.handle_key);
+    }
+    addedRows = [...perDay].map(([k, n]) => {
+      const [day, agent_id] = k.split("|");
+      return { day, agent_id, n };
+    });
+    uniqueAddedCount = uniq.size;
+  }
+
   type DayRow = { agent_id: string; day: string; n: number };
   const buckets = new Map<
     string,
@@ -100,7 +154,7 @@ export default async function ActivityPage({
     }
     return b;
   }
-  for (const r of (leadsAdded ?? []) as DayRow[]) bucket(r.day, r.agent_id).added += r.n;
+  for (const r of addedRows as DayRow[]) bucket(r.day, r.agent_id).added += r.n;
   for (const r of (followUpDays ?? []) as DayRow[]) bucket(r.day, r.agent_id).followUps += r.n;
   for (const r of (dealDays ?? []) as DayRow[]) bucket(r.day, r.agent_id).closes += r.n;
 
@@ -118,7 +172,6 @@ export default async function ActivityPage({
     }),
     { added: 0, followUps: 0, closes: 0 }
   );
-  const uniqueAddedCount = (uniqueAdded as number | null) ?? 0;
 
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
@@ -153,6 +206,36 @@ export default async function ActivityPage({
       title="Daily activity"
       subtitle="Derived automatically from leads, follow-ups, and deals — nothing here is typed in by hand."
     >
+      {/* Lead type switch — All / High intent / Cold outreach */}
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { v: null as string | null, label: "All" },
+          { v: "high_intent", label: "High intent" },
+          { v: "cold_outreach", label: "Cold outreach" },
+        ].map((t) => {
+          const on = (t.v ?? null) === (intentOk ? intent : null);
+          return (
+            <Link
+              key={t.label}
+              href={intentHref(t.v)}
+              className={
+                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
+                (on
+                  ? "bg-amber-600 text-[#140d05]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+        {intentOk && (
+          <span className="ml-1 text-xs text-[var(--text-faint)]">
+            Filters leads added by type — follow-ups &amp; deals count all.
+          </span>
+        )}
+      </div>
+
       <Card padded={false}>
         <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
           {presets.map((p) => (
@@ -174,6 +257,7 @@ export default async function ActivityPage({
           </span>
         </div>
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
+          {intentOk && <input type="hidden" name="intent" value={intent} />}
           <div>
             <label className={filterLabel}>Agent</label>
             <select name="agent" defaultValue={agent ?? ""} className={inputClass}>
@@ -208,7 +292,10 @@ export default async function ActivityPage({
               Filter
             </button>
             {hasFilters && (
-              <Link href="/activity" className={btnSecondary}>
+              <Link
+                href={intentOk ? `/activity?intent=${intent}` : "/activity"}
+                className={btnSecondary}
+              >
                 Clear
               </Link>
             )}
