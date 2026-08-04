@@ -79,16 +79,43 @@ export function briefFields(service: string): BriefField[] {
   return BY_SERVICE[service] ?? BY_SERVICE.other;
 }
 
-// The finished brief as plain text, to paste to the production team.
+const SERVICE_LABEL: Record<string, string> = {
+  motion_graphics: "Motion Graphics",
+  video_editing: "Video Editing",
+  branding: "Branding",
+  web: "Web",
+  other: "Other",
+};
+
+// Trim the explanatory tail off a label so WhatsApp lines stay tight.
+function shortLabel(label: string): string {
+  return label.split(/ — | \(/)[0].replace(/\?$/, "").trim();
+}
+
+// The finished brief, formatted for WhatsApp: *bold* headers, long answers on
+// their own line, so it pastes in clean and structured instead of a flat dump.
 export function briefText(
   clientName: string,
   service: string,
   brief: Record<string, string>
 ): string {
-  const lines = [`BRIEF — ${clientName}`, ""];
+  const out: string[] = [
+    `*BRIEF · ${clientName}*`,
+    SERVICE_LABEL[service] ?? "Project",
+  ];
+
   for (const f of briefFields(service)) {
-    const v = brief[f.name];
-    if (v) lines.push(`${f.label}: ${v}`);
+    const v = (brief[f.name] ?? "").trim();
+    if (!v) continue;
+    const lbl = shortLabel(f.label);
+    // Long / multi-line answers get their own block; short ones sit inline.
+    if (f.type === "textarea" || v.length > 45 || v.includes("\n")) {
+      if (out[out.length - 1] !== "") out.push("");
+      out.push(`*${lbl}*`, v, "");
+    } else {
+      out.push(`*${lbl}:* ${v}`);
+    }
   }
-  return lines.join("\n");
+
+  return out.join("\n").trim();
 }

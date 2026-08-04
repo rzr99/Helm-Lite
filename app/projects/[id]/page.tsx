@@ -201,7 +201,7 @@ export default async function ProjectPage({
       {/* Send to production */}
       <Card
         title="Send to production"
-        description="Paste this to your production person on WhatsApp. Save the brief first to update it."
+        description="Formatted for WhatsApp — the *asterisks* turn into bold when you paste. Save the brief first to update it."
         padded
       >
         <div className="rounded-lg border border-white/[0.07] bg-black/20 p-3">
