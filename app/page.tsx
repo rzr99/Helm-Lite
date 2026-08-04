@@ -170,6 +170,21 @@ export default async function Dashboard({
   }
   const filteredClients = Object.values(counts).reduce((a, b) => a + b, 0);
 
+  // Unique clients for the filtered view (distinct client across agents). For a
+  // single agent it equals their client count; across all agents we de-dupe the
+  // handle_keys. Unfiltered uses the fast all-time view below.
+  let uniqueFiltered = filteredClients;
+  if (filtered && !agent) {
+    let uq = supabase.from("lead_clients").select("handle_key").limit(100000);
+    if (intentOk) uq = uq.eq("rep_intent", intent);
+    if (from) uq = uq.gte("rep_date_added", from);
+    if (to) uq = uq.lte("rep_date_added", to);
+    const { data: uqData } = await uq;
+    uniqueFiltered = new Set(
+      (uqData ?? []).map((r) => r.handle_key as string)
+    ).size;
+  }
+
   const statsByAgent = new Map(
     ((agentStats ?? []) as {
       agent_id: string;
@@ -453,20 +468,19 @@ export default async function Dashboard({
         </div>
       </div>
 
-      {filtered ? (
-        <Readouts cols={3}>
-          <Readout label="Clients logged" value={filteredClients} />
-          <Readout label="Deals closed" value={counts["closed"] ?? 0} />
-          <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
-        </Readouts>
-      ) : (
-        <Readouts cols={4}>
-          <Readout label="Clients logged" value={totals.total_clients} />
-          <Readout label="Unique clients" value={totals.unique_clients} amber />
-          <Readout label="Deals closed" value={counts["closed"] ?? 0} />
-          <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
-        </Readouts>
-      )}
+      <Readouts cols={4}>
+        <Readout
+          label="Clients logged"
+          value={filtered ? filteredClients : totals.total_clients}
+        />
+        <Readout
+          label="Unique clients"
+          value={filtered ? uniqueFiltered : totals.unique_clients}
+          amber
+        />
+        <Readout label="Deals closed" value={counts["closed"] ?? 0} />
+        <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
+      </Readouts>
 
       {floor && byAgent.length > 0 && !agent && (
         <Card
