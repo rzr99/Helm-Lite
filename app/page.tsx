@@ -138,6 +138,19 @@ export default async function Dashboard({
     teammates = data ?? [];
   }
 
+  // How many of each agent's clients are also worked by another agent — one row
+  // per (client, agent) in the duplicate view, so counting per agent gives it.
+  const sharedByAgent = new Map<string, number>();
+  if (floor && !agent && !isSummary) {
+    const { data: dupRows } = await supabase
+      .from("lead_duplicate_entries")
+      .select("agent_id")
+      .limit(100000);
+    for (const r of (dupRows ?? []) as { agent_id: string }[]) {
+      sharedByAgent.set(r.agent_id, (sharedByAgent.get(r.agent_id) ?? 0) + 1);
+    }
+  }
+
   const rows = (followUps ?? []) as unknown as FollowUpRow[];
   const overdue = rows.filter((f) => f.due_date < today);
   const dueToday = rows.filter((f) => f.due_date === today);
@@ -195,11 +208,15 @@ export default async function Dashboard({
   );
   const byAgent = teammates.map((t) => {
     const s = statsByAgent.get(t.id);
+    const total = s?.total_clients ?? 0;
+    const shared = sharedByAgent.get(t.id) ?? 0;
     return {
       ...t,
-      total: s?.total_clients ?? 0,
+      total,
       addedToday: s?.added_today ?? 0,
       closed: s?.closed ?? 0,
+      shared,
+      exclusive: Math.max(0, total - shared),
     };
   });
 
@@ -496,9 +513,17 @@ export default async function Dashboard({
               >
                 <div className="flex items-center gap-3">
                   <Avatar name={a.full_name} src={a.avatar_url} />
-                  <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {a.full_name}
-                  </span>
+                  <div>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                      {a.full_name}
+                    </span>
+                    {a.shared > 0 && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {a.exclusive} only theirs · {a.shared} also worked by
+                        another agent
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <span className="text-zinc-500 dark:text-zinc-400">
