@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
-import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnGhost } from "@/components/ui";
+import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnSecondary, btnGhost, inputClass } from "@/components/ui";
 import { DashboardSummary } from "@/components/dashboard-summary";
 import { getDashboardSummary } from "@/lib/dashboard-summary";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
 import { setFollowUpDone } from "@/app/leads/actions";
-import { todayStr } from "@/lib/dates";
+import { todayStr, weekRange, monthRange } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +42,48 @@ export default async function Dashboard({
     await searchParams;
   const isSummary = view === "summary";
   const intentOk = intent === "high_intent" || intent === "cold_outreach";
-  const intentHref = (v: string | null) => (v ? `/?intent=${v}` : "/");
+  // Overview filters — agent, date range, and lead type all narrow the pipeline.
+  const filtered = !isSummary && Boolean(intentOk || agent || from || to);
+
+  const week = weekRange();
+  const monthR = monthRange();
+  const datePresets = [
+    { key: "today", label: "Today", from: today, to: today },
+    { key: "week", label: "This week", from: week.from, to: week.to },
+    { key: "month", label: "This month", from: monthR.from, to: monthR.to },
+  ];
+  const activePreset = datePresets.find(
+    (r) => r.from === from && r.to === to
+  )?.key;
+
+  const ovHref = (over: {
+    agent?: string | null;
+    from?: string | null;
+    to?: string | null;
+    intent?: string | null;
+  }) => {
+    const sp = new URLSearchParams();
+    const a = "agent" in over ? over.agent : agent;
+    const f = "from" in over ? over.from : from;
+    const tt = "to" in over ? over.to : to;
+    const i = "intent" in over ? over.intent : intentOk ? intent : null;
+    if (a) sp.set("agent", a);
+    if (f) sp.set("from", f);
+    if (tt) sp.set("to", tt);
+    if (i) sp.set("intent", i);
+    const s = sp.toString();
+    return s ? `/?${s}` : "/";
+  };
+  const leadsStageHref = (stage: string) => {
+    const sp = new URLSearchParams();
+    sp.set("stage", stage);
+    if (intentOk) sp.set("intent", intent!);
+    if (agent) sp.set("agent", agent);
+    if (from) sp.set("from", from);
+    if (to) sp.set("to", to);
+    return `/leads?${sp.toString()}`;
+  };
+
   const win = winRaw === "day" || winRaw === "week" ? winRaw : "month";
   const summary = isSummary
     ? await getDashboardSummary(supabase, {
@@ -59,20 +100,23 @@ export default async function Dashboard({
 
   // Counts come pre-aggregated from Postgres (views group by unique client),
   // so the dashboard never loads the whole leads table to add it up.
+  let fuQuery = supabase
+    .from("follow_ups")
+    .select(
+      "id, due_date, note, lead:leads(id, handle, persona), agent:users(full_name)"
+    )
+    .eq("done", false)
+    .order("due_date")
+    .limit(200);
+  if (agent) fuQuery = fuQuery.eq("agent_id", agent);
+
   const [
     { data: followUps },
     { data: stageCounts },
     { data: agentStats },
     { data: clientTotals },
   ] = await Promise.all([
-    supabase
-      .from("follow_ups")
-      .select(
-        "id, due_date, note, lead:leads(id, handle, persona), agent:users(full_name)"
-      )
-      .eq("done", false)
-      .order("due_date")
-      .limit(200),
+    fuQuery,
     supabase.from("pipeline_counts").select("stage, n"),
     supabase.from("agent_lead_stats").select("agent_id, total_clients, added_today, closed"),
     supabase.from("client_totals").select("total_clients, unique_clients").single(),
@@ -100,16 +144,21 @@ export default async function Dashboard({
   const upcoming = rows.filter((f) => f.due_date > today);
 
   const counts: Record<string, number> = {};
-  if (intentOk && !isSummary) {
-    // Intent-filtered pipeline: one fast COUNT per stage (bounded, RLS-scoped).
+  if (filtered) {
+    // Filtered pipeline: one fast COUNT per stage (bounded, RLS-scoped),
+    // narrowed by lead type / agent / date as selected.
     const res = await Promise.all(
-      STAGES.map((s) =>
-        supabase
+      STAGES.map((s) => {
+        let q = supabase
           .from("lead_clients")
           .select("*", { count: "exact", head: true })
-          .eq("rep_stage", s.value)
-          .eq("rep_intent", intent)
-      )
+          .eq("rep_stage", s.value);
+        if (intentOk) q = q.eq("rep_intent", intent);
+        if (agent) q = q.eq("agent_id", agent);
+        if (from) q = q.gte("rep_date_added", from);
+        if (to) q = q.lte("rep_date_added", to);
+        return q;
+      })
     );
     STAGES.forEach((s, i) => {
       counts[s.value] = res[i].count ?? 0;
@@ -119,7 +168,7 @@ export default async function Dashboard({
       counts[c.stage] = c.n;
     }
   }
-  const intentClients = Object.values(counts).reduce((a, b) => a + b, 0);
+  const filteredClients = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const statsByAgent = new Map(
     ((agentStats ?? []) as {
@@ -259,7 +308,7 @@ export default async function Dashboard({
           return (
             <Link
               key={t.label}
-              href={intentHref(t.v)}
+              href={ovHref({ intent: t.v })}
               className={
                 "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
                 (on
@@ -271,12 +320,80 @@ export default async function Dashboard({
             </Link>
           );
         })}
-        {intentOk && (
-          <span className="ml-1 text-xs text-[var(--text-faint)]">
-            Pipeline &amp; counts show this type; team &amp; follow-ups count all.
-          </span>
-        )}
       </div>
+
+      {/* Agent + date filter — narrows the pipeline and counts below */}
+      <Card padded={false}>
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-5 py-4">
+          {datePresets.map((r) => (
+            <Link
+              key={r.key}
+              href={ovHref({ from: r.from, to: r.to })}
+              className={
+                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
+                (activePreset === r.key
+                  ? "bg-amber-600 text-[#140d05]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              {r.label}
+            </Link>
+          ))}
+          <span className="ml-1 text-xs text-[var(--text-faint)]">
+            quick ranges — or a custom one below
+          </span>
+        </div>
+        <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
+          {intentOk && <input type="hidden" name="intent" value={intent} />}
+          {floor && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Agent
+              </label>
+              <select name="agent" defaultValue={agent ?? ""} className={inputClass}>
+                <option value="">All agents</option>
+                {teammates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              From
+            </label>
+            <input type="date" name="from" defaultValue={from ?? ""} className={inputClass} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              To
+            </label>
+            <input type="date" name="to" defaultValue={to ?? ""} className={inputClass} />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" className={btnPrimary}>
+              Filter
+            </button>
+            {(agent || from || to) && (
+              <Link
+                href={ovHref({ agent: null, from: null, to: null })}
+                className={btnSecondary}
+              >
+                Clear
+              </Link>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      {filtered && (
+        <p className="text-xs text-[var(--text-faint)]">
+          Pipeline &amp; the counts below reflect these filters. The team table
+          and follow-ups aren&apos;t date-filtered.
+        </p>
+      )}
 
       {/* Pipeline — a keyframe track, framed like a viewfinder */}
       <div className="relative my-1 px-6 py-9">
@@ -289,9 +406,7 @@ export default async function Dashboard({
           {STAGES.map((s) => (
             <Link
               key={s.value}
-              href={`/leads?stage=${s.value}${
-                intentOk ? `&intent=${intent}` : ""
-              }`}
+              href={leadsStageHref(s.value)}
               className="font-mono text-[30px] font-medium tabular-nums tracking-tight text-[var(--text)] transition-colors hover:text-amber-600"
             >
               {counts[s.value] ?? 0}
@@ -329,9 +444,9 @@ export default async function Dashboard({
         </div>
       </div>
 
-      {intentOk ? (
+      {filtered ? (
         <Readouts cols={3}>
-          <Readout label="Clients logged" value={intentClients} />
+          <Readout label="Clients logged" value={filteredClients} />
           <Readout label="Deals closed" value={counts["closed"] ?? 0} />
           <Readout label="Due now" value={dueNow} negative={dueNow > 0} />
         </Readouts>
@@ -344,7 +459,7 @@ export default async function Dashboard({
         </Readouts>
       )}
 
-      {floor && byAgent.length > 0 && (
+      {floor && byAgent.length > 0 && !agent && (
         <Card
           title="Team"
           description="Each agent's numbers — click through to see their leads."
