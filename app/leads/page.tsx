@@ -136,6 +136,45 @@ export default async function LeadsPage({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = Boolean(search || stage || serviceOk || agent || from || to);
 
+  // Filtered to one agent (floor view): split their clients into ones only they
+  // work vs ones another agent also works.
+  let agentExclusive: number | null = null;
+  let agentShared = 0;
+  if (floor && agent) {
+    let akq = supabase
+      .from("lead_clients")
+      .select("handle_key")
+      .eq("agent_id", agent)
+      .limit(100000);
+    if (stage && STAGES.some((s) => s.value === stage))
+      akq = akq.eq("rep_stage", stage);
+    if (serviceOk) akq = akq.eq("rep_service", service);
+    if (from) akq = akq.gte("rep_date_added", from);
+    if (to) akq = akq.lte("rep_date_added", to);
+    if (intentOk) akq = akq.eq("rep_intent", intent);
+    for (const token of search.toLowerCase().split(/\s+/).filter(Boolean)) {
+      akq = akq.ilike("search_text", `%${token}%`);
+    }
+    const { data: akData } = await akq;
+    const agentKeys = [
+      ...new Set((akData ?? []).map((r) => r.handle_key as string)),
+    ];
+    if (agentKeys.length > 0) {
+      const { data: otherData } = await supabase
+        .from("lead_clients")
+        .select("handle_key")
+        .in("handle_key", agentKeys)
+        .neq("agent_id", agent)
+        .limit(100000);
+      agentShared = new Set(
+        (otherData ?? []).map((r) => r.handle_key as string)
+      ).size;
+      agentExclusive = agentKeys.length - agentShared;
+    } else {
+      agentExclusive = 0;
+    }
+  }
+
   const pageHref = (p: number) => {
     const sp = new URLSearchParams();
     if (search) sp.set("q", search);
@@ -349,9 +388,11 @@ export default async function LeadsPage({
           hasFilters ? " found" : ""
         }`}
         description={
-          floor && !intentOk
-            ? `${uniqueClients} unique — the same client worked by two agents counts once here`
-            : undefined
+          floor && agent && agentExclusive !== null
+            ? `${agentExclusive} only theirs · ${agentShared} also worked by another agent`
+            : floor && !intentOk
+              ? `${uniqueClients} unique — the same client worked by two agents counts once here`
+              : undefined
         }
         padded={false}
       >
