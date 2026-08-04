@@ -6,7 +6,7 @@ import { serviceDef, serviceLabel } from "@/lib/intake";
 import { briefFields, briefText, type BriefField } from "@/lib/brief";
 import { PROJECT_STATUSES, projectStatusLabel } from "@/lib/production";
 import { CopyButton } from "@/components/copy-button";
-import { setProjectStatus, saveBrief } from "@/app/projects/actions";
+import { setProjectStatus, saveBrief, deleteProject } from "@/app/projects/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -216,6 +216,22 @@ export default async function ProjectPage({
             className={btnPrimary}
           />
         </div>
+      </Card>
+
+      {/* Danger zone */}
+      <Card
+        title="Danger zone"
+        description="Deletes this project and its brief. There is no undo."
+        padded
+      >
+        <form action={deleteProject.bind(null, project.id)}>
+          <button
+            type="submit"
+            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+          >
+            Delete this project
+          </button>
+        </form>
       </Card>
     </Shell>
   );

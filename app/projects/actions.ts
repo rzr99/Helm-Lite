@@ -78,6 +78,18 @@ export async function saveBrief(jobId: string, formData: FormData) {
   revalidatePath("/projects");
 }
 
+// Delete a project (owner-only, enforced by RLS). Its SOP steps cascade away.
+export async function deleteProject(jobId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("production_jobs")
+    .delete()
+    .eq("id", jobId);
+  if (error) throw new Error("Could not delete the project: " + error.message);
+  revalidatePath("/projects");
+  redirect("/projects");
+}
+
 // The simple status walk (New → Briefed & sent → In production → Delivered).
 export async function setProjectStatus(jobId: string, status: string) {
   const supabase = await createClient();
