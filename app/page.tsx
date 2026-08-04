@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnSecondary, btnGhost, inputClass } from "@/components/ui";
 import { DashboardSummary } from "@/components/dashboard-summary";
-import { CollapsibleFilters } from "@/components/collapsible-filters";
 import { getDashboardSummary } from "@/lib/dashboard-summary";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
@@ -269,127 +268,134 @@ export default async function Dashboard({
         </Link>
       }
     >
-      <div className="mb-3 flex gap-1">
-        <Link
-          href="/"
-          className={
-            "rounded-lg px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors " +
-            (!isSummary
-              ? "bg-amber-600 text-[#140d05]"
-              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
-          }
-        >
-          Overview
-        </Link>
-        <Link
-          href="/?view=summary"
-          className={
-            "rounded-lg px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors " +
-            (isSummary
-              ? "bg-amber-600 text-[#140d05]"
-              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
-          }
-        >
-          Summary
-        </Link>
+      {/* Controls — two structured lines */}
+      <div className="flex flex-col gap-2.5">
+        {/* Line 1: view toggle + lead type */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex gap-1">
+            <Link
+              href="/"
+              className={
+                "rounded-lg px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors " +
+                (!isSummary
+                  ? "bg-amber-600 text-[#140d05]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              Overview
+            </Link>
+            <Link
+              href="/?view=summary"
+              className={
+                "rounded-lg px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors " +
+                (isSummary
+                  ? "bg-amber-600 text-[#140d05]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              Summary
+            </Link>
+          </div>
+          {!isSummary && (
+            <>
+              <span className="hidden h-6 w-px bg-[var(--border-strong)] sm:block" />
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { v: null as string | null, label: "All" },
+                  { v: "high_intent", label: "High intent" },
+                  { v: "cold_outreach", label: "Cold outreach" },
+                ].map((t) => {
+                  const on = (t.v ?? null) === (intentOk ? intent : null);
+                  return (
+                    <Link
+                      key={t.label}
+                      href={ovHref({ intent: t.v })}
+                      className={
+                        "rounded-lg px-3.5 py-2 text-sm font-medium transition-colors " +
+                        (on
+                          ? "bg-amber-600 text-[#140d05]"
+                          : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+                      }
+                    >
+                      {t.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Line 2: date range + agent — one line (Overview only) */}
+        {!isSummary && (
+          <div className="flex flex-wrap items-center gap-2">
+            {datePresets.map((r) => (
+              <Link
+                key={r.key}
+                href={ovHref({ from: r.from, to: r.to })}
+                className={
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors " +
+                  (activePreset === r.key
+                    ? "bg-amber-600 text-[#140d05]"
+                    : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+                }
+              >
+                {r.label}
+              </Link>
+            ))}
+            <span className="mx-0.5 hidden h-6 w-px bg-[var(--border-strong)] sm:block" />
+            <form method="get" className="flex flex-wrap items-center gap-2">
+              {intentOk && <input type="hidden" name="intent" value={intent} />}
+              {floor && (
+                <select
+                  name="agent"
+                  defaultValue={agent ?? ""}
+                  className="rounded-lg border border-[var(--border-strong)] bg-[var(--field)] px-3 py-1.5 text-sm text-[var(--text)] outline-none"
+                >
+                  <option value="">All agents</option>
+                  {teammates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.full_name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="date"
+                name="from"
+                defaultValue={from ?? ""}
+                className="rounded-lg border border-[var(--border-strong)] bg-[var(--field)] px-2.5 py-1.5 text-sm text-[var(--text)] outline-none [color-scheme:light] dark:[color-scheme:dark]"
+              />
+              <span className="text-[var(--text-faint)]">→</span>
+              <input
+                type="date"
+                name="to"
+                defaultValue={to ?? ""}
+                className="rounded-lg border border-[var(--border-strong)] bg-[var(--field)] px-2.5 py-1.5 text-sm text-[var(--text)] outline-none [color-scheme:light] dark:[color-scheme:dark]"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-amber-600 px-3.5 py-1.5 text-sm font-medium text-[#140d05] transition-colors hover:bg-amber-500"
+              >
+                Filter
+              </button>
+              {(agent || from || to) && (
+                <Link
+                  href={ovHref({ agent: null, from: null, to: null })}
+                  className="rounded-lg border border-[var(--border-strong)] px-3.5 py-1.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+                >
+                  Clear
+                </Link>
+              )}
+            </form>
+          </div>
+        )}
       </div>
 
       {isSummary && summary ? (
         <DashboardSummary {...summary} />
       ) : (
         <>
-      <CollapsibleFilters defaultOpen={filtered} active={filtered}>
-      {/* Lead type switch — All / High intent / Cold outreach */}
-      <div className="flex flex-wrap items-center gap-2">
-        {[
-          { v: null as string | null, label: "All" },
-          { v: "high_intent", label: "High intent" },
-          { v: "cold_outreach", label: "Cold outreach" },
-        ].map((t) => {
-          const on = (t.v ?? null) === (intentOk ? intent : null);
-          return (
-            <Link
-              key={t.label}
-              href={ovHref({ intent: t.v })}
-              className={
-                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
-                (on
-                  ? "bg-amber-600 text-[#140d05]"
-                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
-              }
-            >
-              {t.label}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Agent + date filter — narrows the pipeline and counts below */}
-      <Card padded={false}>
-        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] px-5 py-4">
-          {datePresets.map((r) => (
-            <Link
-              key={r.key}
-              href={ovHref({ from: r.from, to: r.to })}
-              className={
-                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
-                (activePreset === r.key
-                  ? "bg-amber-600 text-[#140d05]"
-                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
-              }
-            >
-              {r.label}
-            </Link>
-          ))}
-          <span className="ml-1 text-xs text-[var(--text-faint)]">
-            quick ranges — or a custom one below
-          </span>
-        </div>
-        <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
-          {intentOk && <input type="hidden" name="intent" value={intent} />}
-          {floor && (
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                Agent
-              </label>
-              <select name="agent" defaultValue={agent ?? ""} className={inputClass}>
-                <option value="">All agents</option>
-                {teammates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              From
-            </label>
-            <input type="date" name="from" defaultValue={from ?? ""} className={inputClass} />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              To
-            </label>
-            <input type="date" name="to" defaultValue={to ?? ""} className={inputClass} />
-          </div>
-          <div className="flex gap-2">
-            <button type="submit" className={btnPrimary}>
-              Filter
-            </button>
-            {(agent || from || to) && (
-              <Link
-                href={ovHref({ agent: null, from: null, to: null })}
-                className={btnSecondary}
-              >
-                Clear
-              </Link>
-            )}
-          </div>
-        </form>
-      </Card>
-      </CollapsibleFilters>
 
       {filtered && (
         <p className="text-xs text-[var(--text-faint)]">
