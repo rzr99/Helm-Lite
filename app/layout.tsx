@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ryze",
+  title: "Helm Lite",
   description: "Linear Solutions internal operations",
-  applicationName: "Ryze",
+  applicationName: "Helm Lite",
   appleWebApp: {
     capable: true,
-    title: "Ryze",
+    title: "Helm Lite",
     statusBarStyle: "black-translucent",
   },
 };

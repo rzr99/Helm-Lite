@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
-// Web app manifest — drives the icon and name when someone installs Ryze
+// Web app manifest — drives the icon and name when someone installs Helm Lite
 // to their home screen (Add to Home Screen / Install app).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Ryze",
-    short_name: "Ryze",
+    name: "Helm Lite",
+    short_name: "Helm Lite",
     description: "Linear Solutions internal operations",
     start_url: "/",
     display: "standalone",

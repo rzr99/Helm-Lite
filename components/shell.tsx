@@ -262,10 +262,17 @@ function BrandMark({ className = "h-9 w-9" }: { className?: string }) {
       aria-hidden
     >
       <rect width="400" height="400" fill="#0E0E0D" />
-      <g transform="scale(5.55556)">
-        <path d="M27 58 C 40 54 50 43 56 30 C 49 44 37 52 31 59 Z" fill="#8A4206" />
-        <path d="M15 54 C 30 52 52 32 58 13 C 51 34 33 48 25 57 Z" fill="#E87000" />
+      <g fill="#F8F7F4">
+        <rect x="96" y="96" width="62" height="13" />
+        <rect x="96" y="96" width="13" height="62" />
+        <rect x="242" y="96" width="62" height="13" />
+        <rect x="291" y="96" width="13" height="62" />
+        <rect x="96" y="291" width="62" height="13" />
+        <rect x="96" y="242" width="13" height="62" />
+        <rect x="242" y="291" width="62" height="13" />
+        <rect x="291" y="242" width="13" height="62" />
       </g>
+      <polygon points="200,146 254,200 200,254 146,200" fill="#E87000" />
     </svg>
   );
 }
@@ -291,7 +298,7 @@ function Brand() {
       <BrandMark className="h-8 w-8" />
       <span className="leading-tight">
         <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
-          Ryze
+          Helm Lite
         </span>
         <span className="block font-mono text-[8.5px] uppercase tracking-[0.22em] text-[var(--text-faint)]">
           Linear Solutions
