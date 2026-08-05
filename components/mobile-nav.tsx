@@ -16,8 +16,11 @@ const roleLabel: Record<string, string> = {
 
 function Logo() {
   return (
-    <span className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--border-strong)] bg-[#0b0b0a]">
-      <span className="h-[9px] w-[9px] rotate-45 bg-amber-600" />
+    <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg border border-[var(--border-strong)] bg-[#0b0b0a]">
+      <svg viewBox="0 0 72 72" className="h-full w-full" aria-hidden>
+        <path d="M27 58 C 40 54 50 43 56 30 C 49 44 37 52 31 59 Z" fill="#8A4206" />
+        <path d="M15 54 C 30 52 52 32 58 13 C 51 34 33 48 25 57 Z" fill="#E87000" />
+      </svg>
     </span>
   );
 }
@@ -62,7 +65,7 @@ export function MobileNav({
                 <Logo />
                 <span className="leading-tight">
                   <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
-                    Helm Lite
+                    Ryze
                   </span>
                   <span className="block font-mono text-[8.5px] uppercase tracking-[0.22em] text-[var(--text-faint)]">
                     Linear Solutions
