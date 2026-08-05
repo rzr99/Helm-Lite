@@ -1,8 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { daysAgoStr } from "@/lib/dates";
+import { daysAgoStr, weekRange } from "@/lib/dates";
 import { fmtMoney, fmtPKR, STATUS_DOT, statusLabel } from "@/lib/enums";
-
-const SPAN: Record<string, number> = { day: 1, week: 7, month: 30 };
 
 function addDaysISO(iso: string, delta: number) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -97,13 +95,21 @@ export async function getDashboardSummary(
     prev0 = `${pm}-01`;
     prev1 = monthLast(pm);
     cmpLabel = `vs ${monthName(pm)}`;
-  } else {
-    const n = SPAN[win] ?? 7;
-    cur0 = daysAgoStr(n - 1);
+  } else if (win === "day") {
+    cur0 = today;
     curTo = today;
-    prev0 = daysAgoStr(2 * n - 1);
-    prev1 = daysAgoStr(n);
-    cmpLabel = win === "day" ? "vs yesterday" : "vs last week";
+    prev0 = addDaysISO(today, -1);
+    prev1 = addDaysISO(today, -1);
+    cmpLabel = "vs yesterday";
+  } else {
+    // Week = the current Monday–Sunday calendar week (same as the Overview's
+    // "This week"), compared against the previous Monday–Sunday week.
+    const wk = weekRange();
+    cur0 = wk.from;
+    curTo = wk.to;
+    prev0 = addDaysISO(wk.from, -7);
+    prev1 = addDaysISO(wk.to, -7);
+    cmpLabel = "vs last week";
   }
   const sparkStart = daysAgoStr(13);
   const rangeStart = prev0 < sparkStart ? prev0 : sparkStart;
