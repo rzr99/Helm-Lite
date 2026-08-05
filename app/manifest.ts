@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 
-// Web app manifest — drives the icon and name when someone installs Helm Lite
+// Web app manifest — drives the icon and name when someone installs Helm
 // to their home screen (Add to Home Screen / Install app).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Helm Lite",
-    short_name: "Helm Lite",
+    name: "Helm",
+    short_name: "Helm",
     description: "Linear Solutions internal operations",
     start_url: "/",
     display: "standalone",

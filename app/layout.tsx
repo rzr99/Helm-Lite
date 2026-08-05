@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Helm Lite",
+  title: "Helm",
   description: "Linear Solutions internal operations",
-  applicationName: "Helm Lite",
+  applicationName: "Helm",
   appleWebApp: {
     capable: true,
-    title: "Helm Lite",
+    title: "Helm",
     statusBarStyle: "black-translucent",
   },
 };

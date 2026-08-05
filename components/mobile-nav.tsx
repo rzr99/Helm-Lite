@@ -62,7 +62,7 @@ export function MobileNav({
                 <Logo />
                 <span className="leading-tight">
                   <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
-                    Helm Lite
+                    Helm
                   </span>
                   <span className="block font-mono text-[8.5px] uppercase tracking-[0.22em] text-[var(--text-faint)]">
                     Linear Solutions

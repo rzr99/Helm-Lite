@@ -78,7 +78,7 @@ export default function LoginPage() {
               <polygon points="200,146 254,200 200,254 146,200" fill="#E87000" />
             </svg>
             <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
-              Helm Lite
+              Helm
             </span>
           </div>
 
