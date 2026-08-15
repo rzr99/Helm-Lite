@@ -75,8 +75,19 @@ const BY_SERVICE: Record<string, BriefField[]> = {
   ],
 };
 
+// Shared context the agent already collected — carried into every brief so the
+// owner never re-types it and production always gets the deadline + who/what.
+// `from` pulls each from the agent's intake; deadline leads so it's up top in
+// the WhatsApp brief.
+const BRIEF_BASICS: BriefField[] = [
+  { name: "deadline", label: "Deadline", type: "text", from: "deadline" },
+  { name: "what_they_do", label: "What the client does", type: "text", from: "what_they_do" },
+  { name: "what_sold", label: "Package sold", type: "text", from: "what_sold" },
+  { name: "client_link", label: "Client X / website", type: "text", from: "x_handle" },
+];
+
 export function briefFields(service: string): BriefField[] {
-  return BY_SERVICE[service] ?? BY_SERVICE.other;
+  return [...BRIEF_BASICS, ...(BY_SERVICE[service] ?? BY_SERVICE.other)];
 }
 
 const SERVICE_LABEL: Record<string, string> = {
