@@ -86,8 +86,27 @@ const BRIEF_BASICS: BriefField[] = [
   { name: "client_link", label: "Client X / website", type: "text", from: "x_handle" },
 ];
 
+// Scope + delivery, appended to the end of every brief (owner-filled, not from
+// intake). Branding already asks for deliverables + file formats, so it only
+// gets the revisions line; everyone else also gets an explicit delivery field.
+const DELIVERY: BriefField = {
+  name: "delivery",
+  label: "Delivery — final files to hand back",
+  type: "textarea",
+  help: "The exact files production returns, e.g. MP4 1080p + editable project file.",
+};
+const REVISIONS: BriefField = {
+  name: "revisions",
+  label: "Revisions included",
+  type: "select",
+  options: ["1 round", "2 rounds", "3 rounds", "Unlimited (agreed)"],
+  help: "How many rounds of changes are covered — keeps scope clear.",
+};
+
 export function briefFields(service: string): BriefField[] {
-  return [...BRIEF_BASICS, ...(BY_SERVICE[service] ?? BY_SERVICE.other)];
+  const core = BY_SERVICE[service] ?? BY_SERVICE.other;
+  const tail = service === "branding" ? [REVISIONS] : [DELIVERY, REVISIONS];
+  return [...BRIEF_BASICS, ...core, ...tail];
 }
 
 const SERVICE_LABEL: Record<string, string> = {
