@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Shell } from "@/components/shell";
 import { Card, btnPrimary, inputClass, labelClass } from "@/components/ui";
@@ -6,7 +7,8 @@ import { serviceDef, serviceLabel } from "@/lib/intake";
 import { briefFields, briefText, type BriefField } from "@/lib/brief";
 import { PROJECT_STATUSES, projectStatusLabel } from "@/lib/production";
 import { CopyButton } from "@/components/copy-button";
-import { setProjectStatus, saveBrief, deleteProject } from "@/app/projects/actions";
+import { setProjectStatus, saveBrief } from "@/app/projects/actions";
+import { DeleteProjectButton } from "@/components/delete-project";
 
 export const dynamic = "force-dynamic";
 
@@ -45,13 +47,24 @@ export default async function ProjectPage({
   const brief = project.brief ?? {};
   const isOwner = profile.role === "owner";
   const status = project.status || "new";
+  const canEdit = isOwner || project.agent_id === profile.id;
 
-  // Form 1 — what the agent sent (read-only).
+  // Form 1 — what the agent sent.
   const intakeCard = (
     <Card
       title="What the agent sent"
       description="Collected from the client. Your brief below turns this into something production-ready."
       padded
+      action={
+        canEdit ? (
+          <Link
+            href={`/projects/${project.id}/edit`}
+            className="text-sm font-medium text-amber-600 hover:underline"
+          >
+            Edit
+          </Link>
+        ) : undefined
+      }
     >
       {(def?.fields ?? []).filter((f) => intake[f.name]).length === 0 ? (
         <p className="text-sm text-[var(--text)]/50">Nothing filled in.</p>
@@ -72,8 +85,9 @@ export default async function ProjectPage({
     </Card>
   );
 
-  // Agents: read-only view of their handoff + status.
+  // Agents: their handoff + status, with edit/delete of their own.
   if (!isOwner) {
+    const isCreator = project.agent_id === profile.id;
     return (
       <Shell
         profile={profile}
@@ -82,6 +96,15 @@ export default async function ProjectPage({
         subtitle={`${serviceLabel(project.service)} · ${projectStatusLabel(status)}`}
       >
         {intakeCard}
+        {isCreator && (
+          <Card
+            title="Danger zone"
+            description="Deletes this handoff. There is no undo."
+            padded
+          >
+            <DeleteProjectButton id={project.id} />
+          </Card>
+        )}
       </Shell>
     );
   }
@@ -224,14 +247,7 @@ export default async function ProjectPage({
         description="Deletes this project and its brief. There is no undo."
         padded
       >
-        <form action={deleteProject.bind(null, project.id)}>
-          <button
-            type="submit"
-            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
-          >
-            Delete this project
-          </button>
-        </form>
+        <DeleteProjectButton id={project.id} />
       </Card>
     </Shell>
   );

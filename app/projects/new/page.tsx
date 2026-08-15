@@ -1,50 +1,12 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
-import { Card, btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
-import { SERVICES, serviceDef, type IntakeField } from "@/lib/intake";
+import { SERVICES, serviceDef } from "@/lib/intake";
 import { createProject } from "@/app/projects/actions";
+import { IntakeForm, Field } from "@/components/intake-form";
 
 export const dynamic = "force-dynamic";
-
-function Field({ f }: { f: IntakeField }) {
-  return (
-    <div>
-      <label className={labelClass}>
-        {f.label}
-        {f.required && <span className="text-red-500"> *</span>}
-      </label>
-      {f.type === "textarea" ? (
-        <textarea
-          name={f.name}
-          required={f.required}
-          rows={3}
-          placeholder={f.placeholder}
-          className={inputClass}
-        />
-      ) : f.type === "select" ? (
-        <select name={f.name} defaultValue="" className={inputClass}>
-          <option value="">Select…</option>
-          {f.options?.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          name={f.name}
-          required={f.required}
-          placeholder={f.placeholder}
-          className={inputClass}
-        />
-      )}
-      {f.help && (
-        <p className="mt-1 text-xs text-[var(--text)]/40">{f.help}</p>
-      )}
-    </div>
-  );
-}
 
 export default async function NewProjectPage({
   searchParams,
@@ -99,20 +61,17 @@ export default async function NewProjectPage({
           ← Change service
         </Link>
         <Card padded>
-          <form action={createProject} className="flex flex-col gap-5">
-            <input type="hidden" name="service" value={def.value} />
+          <IntakeForm
+            action={createProject}
+            service={def.value}
+            submitLabel="Hand off to production"
+            pendingLabel="Handing off…"
+            cancelHref="/projects"
+          >
             {def.fields.map((f) => (
               <Field key={f.name} f={f} />
             ))}
-            <div className="flex gap-3 pt-1">
-              <button type="submit" className={btnPrimary}>
-                Hand off to production
-              </button>
-              <Link href="/projects" className={btnSecondary}>
-                Cancel
-              </Link>
-            </div>
-          </form>
+          </IntakeForm>
         </Card>
       </div>
     </Shell>

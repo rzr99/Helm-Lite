@@ -31,6 +31,20 @@ export async function createProject(formData: FormData) {
   const client_name = intake["brand_name"];
   if (!client_name) throw new Error("The client's brand / business name is required.");
 
+  // Guard against a double-submit (double-click / retry) creating two identical
+  // handoffs: if this agent just filed the same client + service, reuse it.
+  const { data: dupe } = await supabase
+    .from("production_jobs")
+    .select("id")
+    .eq("agent_id", user.id)
+    .eq("client_name", client_name)
+    .eq("service", service)
+    .gte("handed_off_at", new Date(Date.now() - 60_000).toISOString())
+    .order("handed_off_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (dupe) redirect(`/projects/${dupe.id}`);
+
   const { data, error } = await supabase
     .from("production_jobs")
     .insert({
@@ -48,6 +62,44 @@ export async function createProject(formData: FormData) {
 
   revalidatePath("/projects");
   redirect(`/projects/${data.id}`);
+}
+
+// Edit an existing intake (the agent who filed it, or the owner — enforced by
+// the "proj update own or owner" RLS policy).
+export async function updateProjectIntake(jobId: string, formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: job } = await supabase
+    .from("production_jobs")
+    .select("service")
+    .eq("id", jobId)
+    .single();
+  if (!job) throw new Error("Project not found.");
+  const def = serviceDef(job.service);
+  if (!def) throw new Error("Unknown service.");
+
+  const intake: Record<string, string> = {};
+  for (const f of def.fields) {
+    const v = text(formData, f.name);
+    if (v) intake[f.name] = v;
+  }
+  const client_name = intake["brand_name"];
+  if (!client_name)
+    throw new Error("The client's brand / business name is required.");
+
+  const { error } = await supabase
+    .from("production_jobs")
+    .update({ client_name, intake })
+    .eq("id", jobId);
+  if (error) throw new Error("Could not update the project: " + error.message);
+
+  revalidatePath(`/projects/${jobId}`);
+  revalidatePath("/projects");
+  redirect(`/projects/${jobId}`);
 }
 
 // Form 2 — the owner completes the production-ready brief and assigns a producer.
