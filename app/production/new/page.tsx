@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Card, btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/ui";
 import { ProdHeader } from "@/components/production-shell";
 import { requireProfile } from "@/lib/profile";
@@ -8,7 +9,8 @@ import { createJob } from "@/app/production/actions";
 export const dynamic = "force-dynamic";
 
 export default async function NewJobPage() {
-  const { supabase } = await requireProfile();
+  const { supabase, profile } = await requireProfile();
+  if (profile.role !== "owner") redirect("/");
 
   // Designer name suggestions from past deals.
   const { data: designerData } = await supabase

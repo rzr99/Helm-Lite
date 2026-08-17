@@ -190,7 +190,7 @@ export default async function ProjectsPage({
                       </span>
                     )}
                     <span className="ml-auto flex items-center gap-3 text-xs text-[var(--text)]/50">
-                      {p.designer && <span>🎨 {p.designer}</span>}
+                      {floor && p.designer && <span>🎨 {p.designer}</span>}
                       {p.deadline && <span>{p.deadline}</span>}
                       {floor && p.agent && (
                         <Avatar

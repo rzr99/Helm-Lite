@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, btnGhost } from "@/components/ui";
 import { ProdHeader } from "@/components/production-shell";
 import { requireProfile } from "@/lib/profile";
@@ -24,7 +24,8 @@ export default async function JobPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { supabase } = await requireProfile();
+  const { supabase, profile } = await requireProfile();
+  if (profile.role !== "owner") redirect("/");
 
   const { data: job } = await supabase
     .from("production_jobs")

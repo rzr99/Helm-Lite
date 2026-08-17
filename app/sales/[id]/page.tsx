@@ -290,12 +290,14 @@ export default async function DealDetailPage({
                 {deal.conversation ?? "—"}
               </dd>
             </div>
-            <div>
-              <dt className="text-zinc-500 dark:text-zinc-400">Designer / Editor</dt>
-              <dd className="font-medium text-zinc-900 dark:text-zinc-50">
-                {deal.designer ?? "—"}
-              </dd>
-            </div>
+            {floor && (
+              <div>
+                <dt className="text-zinc-500 dark:text-zinc-400">Designer / Editor</dt>
+                <dd className="font-medium text-zinc-900 dark:text-zinc-50">
+                  {deal.designer ?? "—"}
+                </dd>
+              </div>
+            )}
           </dl>
         )}
       </Card>
