@@ -126,8 +126,9 @@ export async function saveBrief(jobId: string, formData: FormData) {
     })
     .eq("id", jobId);
   if (error) throw new Error("Could not save the brief: " + error.message);
-  revalidatePath(`/projects/${jobId}`);
   revalidatePath("/projects");
+  // Redirect so the saved brief + WhatsApp text re-render immediately.
+  redirect(`/projects/${jobId}`);
 }
 
 // Delete a project (owner-only, enforced by RLS). Its SOP steps cascade away.
@@ -145,11 +146,18 @@ export async function deleteProject(jobId: string) {
 // The simple status walk (New → Briefed & sent → In production → Delivered).
 export async function setProjectStatus(jobId: string, status: string) {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("production_jobs")
     .update({ status })
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .select("id");
   if (error) throw new Error(error.message);
-  revalidatePath(`/projects/${jobId}`);
+  if (!data || data.length === 0) {
+    // RLS matched no row — the change silently didn't save.
+    throw new Error("Couldn't update the status — the change wasn't saved.");
+  }
   revalidatePath("/projects");
+  // Redirect back so the page re-renders with the new status (revalidatePath
+  // alone doesn't reliably refresh a dynamic route after a void action).
+  redirect(`/projects/${jobId}`);
 }
