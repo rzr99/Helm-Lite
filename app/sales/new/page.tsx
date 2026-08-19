@@ -210,14 +210,16 @@ export default async function NewDealPage({
                   className={inputClass}
                 />
               </div>
-              <div>
-                <label className={labelClass}>Designer / Editor</label>
-                <input
-                  name="designer"
-                  placeholder="Who did the work (optional)"
-                  className={inputClass}
-                />
-              </div>
+              {profile.role === "owner" && (
+                <div>
+                  <label className={labelClass}>Designer / Editor</label>
+                  <input
+                    name="designer"
+                    placeholder="Who did the work (optional)"
+                    className={inputClass}
+                  />
+                </div>
+              )}
             </div>
 
             {profile.role === "owner" && teammates.length > 0 && (

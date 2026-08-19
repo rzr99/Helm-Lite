@@ -207,14 +207,16 @@ export default async function DealDetailPage({
                   className={inputClass}
                 />
               </div>
-              <div>
-                <label className={labelClass}>Designer / Editor</label>
-                <input
-                  name="designer"
-                  defaultValue={deal.designer ?? ""}
-                  className={inputClass}
-                />
-              </div>
+              {profile.role === "owner" && (
+                <div>
+                  <label className={labelClass}>Designer / Editor</label>
+                  <input
+                    name="designer"
+                    defaultValue={deal.designer ?? ""}
+                    className={inputClass}
+                  />
+                </div>
+              )}
             </div>
 
             <p className="text-sm text-[var(--text-muted)]">

@@ -59,7 +59,7 @@ export async function createDeal(formData: FormData) {
 export async function updateDeal(dealId: string, formData: FormData) {
   const supabase = await createClient();
 
-  const values = {
+  const values: Record<string, unknown> = {
     client_name: text(formData, "client_name"),
     service: text(formData, "service") || null,
     service_category: text(formData, "service_category") || null,
@@ -70,8 +70,13 @@ export async function updateDeal(dealId: string, formData: FormData) {
     merchant_name: text(formData, "merchant_name") || null,
     social_platform: text(formData, "social_platform") || null,
     conversation: text(formData, "conversation") || null,
-    designer: text(formData, "designer") || null,
   };
+
+  // Only the owner's edit form carries the designer field. When a non-owner
+  // saves (field absent), leave the assigned production person untouched.
+  if (formData.has("designer")) {
+    values.designer = text(formData, "designer") || null;
+  }
 
   if (!values.client_name) throw new Error("The deal needs a client name.");
 
