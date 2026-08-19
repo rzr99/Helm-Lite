@@ -365,6 +365,16 @@ export function projectStatusLabel(value: string) {
   return PROJECT_STATUSES.find((s) => s.value === value)?.label ?? value;
 }
 
+// A colour per stage so the Production list is scannable at a glance. Explicit
+// hex (not theme classes) because the brand palette flattens greens to amber —
+// grey = not started, amber = handed off, blue = being worked, green = done.
+export const PROJECT_STATUS_COLOR: Record<string, string> = {
+  new: "#8b8f96",
+  briefed: "#e0932e",
+  production: "#3b82f6",
+  delivered: "#22c55e",
+};
+
 // Run this before anything goes to the client. A helper checklist, not a gate.
 export const FINAL_CHECK = [
   "Watched on a phone — every bit of text is readable",

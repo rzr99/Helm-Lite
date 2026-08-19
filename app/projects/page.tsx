@@ -3,7 +3,11 @@ import { Shell } from "@/components/shell";
 import { Card, EmptyState, Avatar, btnPrimary } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { SERVICES, serviceLabel } from "@/lib/intake";
-import { PROJECT_STATUSES, projectStatusLabel } from "@/lib/production";
+import {
+  PROJECT_STATUSES,
+  PROJECT_STATUS_COLOR,
+  projectStatusLabel,
+} from "@/lib/production";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +101,10 @@ export default async function ProjectsPage({
               href={hrefWith({ status: s.value })}
               className={pill(statusOk && status === s.value)}
             >
+              <span
+                className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                style={{ backgroundColor: PROJECT_STATUS_COLOR[s.value] }}
+              />
               {s.label}
             </Link>
           ))}
@@ -169,6 +177,7 @@ export default async function ProjectsPage({
           <ul className="divide-y divide-[var(--border)]">
             {projects.map((p) => {
               const unassigned = !p.designer;
+              const stColor = PROJECT_STATUS_COLOR[p.status] ?? "#8b8f96";
               return (
                 <li key={p.id}>
                   <Link
@@ -181,8 +190,14 @@ export default async function ProjectsPage({
                     <span className="rounded-full bg-[var(--hover)] px-2.5 py-0.5 text-xs text-[var(--text)]/80">
                       {serviceLabel(p.service)}
                     </span>
-                    <span className="text-xs text-[var(--text)]/50">
-                      {projectStatusLabel(p.status)}
+                    <span className="flex items-center gap-1.5 text-xs font-medium">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: stColor }}
+                      />
+                      <span style={{ color: stColor }}>
+                        {projectStatusLabel(p.status)}
+                      </span>
                     </span>
                     {floor && unassigned && (
                       <span className="rounded-full bg-amber-600/15 px-2 py-0.5 text-xs font-medium text-amber-400">
