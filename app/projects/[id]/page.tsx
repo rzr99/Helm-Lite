@@ -97,13 +97,6 @@ export default async function ProjectPage({
         subtitle={`${serviceLabel(project.service)} · ${projectStatusLabel(status)}`}
       >
         {intakeCard}
-        {status === "lost" && project.lost_reason && (
-          <Card title="Why it was lost" padded>
-            <p className="whitespace-pre-wrap text-sm text-[var(--text)]/90">
-              {project.lost_reason}
-            </p>
-          </Card>
-        )}
         {isCreator && (
           <Card
             title="Danger zone"
