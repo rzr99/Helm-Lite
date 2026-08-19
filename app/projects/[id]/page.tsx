@@ -7,7 +7,7 @@ import { serviceDef, serviceLabel } from "@/lib/intake";
 import { briefFields, briefText, type BriefField } from "@/lib/brief";
 import { PROJECT_STATUSES, projectStatusLabel } from "@/lib/production";
 import { CopyButton } from "@/components/copy-button";
-import { setProjectStatus, saveBrief } from "@/app/projects/actions";
+import { setProjectStatus, saveBrief, saveLostReason } from "@/app/projects/actions";
 import { DeleteProjectButton } from "@/components/delete-project";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ type Project = {
   designer: string | null;
   intake: Record<string, string>;
   brief: Record<string, string>;
+  lost_reason: string | null;
   agent: { full_name: string } | null;
 };
 
@@ -35,7 +36,7 @@ export default async function ProjectPage({
   const { data } = await supabase
     .from("production_jobs")
     .select(
-      "id, agent_id, client_name, service, status, designer, intake, brief, agent:users(full_name)"
+      "id, agent_id, client_name, service, status, designer, intake, brief, lost_reason, agent:users(full_name)"
     )
     .eq("id", id)
     .single();
@@ -96,6 +97,13 @@ export default async function ProjectPage({
         subtitle={`${serviceLabel(project.service)} · ${projectStatusLabel(status)}`}
       >
         {intakeCard}
+        {status === "lost" && project.lost_reason && (
+          <Card title="Why it was lost" padded>
+            <p className="whitespace-pre-wrap text-sm text-[var(--text)]/90">
+              {project.lost_reason}
+            </p>
+          </Card>
+        )}
         {isCreator && (
           <Card
             title="Danger zone"
@@ -187,6 +195,30 @@ export default async function ProjectPage({
           })}
         </div>
       </Card>
+
+      {status === "lost" && (
+        <Card
+          title="Why it was lost"
+          description="Note the reason so the floor can learn from it."
+          padded
+        >
+          <form
+            action={saveLostReason.bind(null, project.id)}
+            className="flex flex-col gap-3"
+          >
+            <textarea
+              name="lost_reason"
+              defaultValue={project.lost_reason ?? ""}
+              rows={3}
+              placeholder="e.g. Went with a cheaper option · ghosted after the quote · budget fell through"
+              className={inputClass}
+            />
+            <button type="submit" className={btnPrimary + " self-start"}>
+              Save reason
+            </button>
+          </form>
+        </Card>
+      )}
 
       {intakeCard}
 

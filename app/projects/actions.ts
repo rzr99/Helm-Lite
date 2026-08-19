@@ -131,6 +131,18 @@ export async function saveBrief(jobId: string, formData: FormData) {
   redirect(`/projects/${jobId}`);
 }
 
+// Record why a project was lost.
+export async function saveLostReason(jobId: string, formData: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("production_jobs")
+    .update({ lost_reason: text(formData, "lost_reason") || null })
+    .eq("id", jobId);
+  if (error) throw new Error("Could not save the reason: " + error.message);
+  revalidatePath("/projects");
+  redirect(`/projects/${jobId}`);
+}
+
 // Delete a project (owner-only, enforced by RLS). Its SOP steps cascade away.
 export async function deleteProject(jobId: string) {
   const supabase = await createClient();

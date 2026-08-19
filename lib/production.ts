@@ -359,6 +359,7 @@ export const PROJECT_STATUSES = [
   { value: "briefed", label: "Briefed & sent" },
   { value: "production", label: "In production" },
   { value: "delivered", label: "Delivered" },
+  { value: "lost", label: "Lost" },
 ] as const;
 
 export function projectStatusLabel(value: string) {
@@ -373,6 +374,7 @@ export const PROJECT_STATUS_COLOR: Record<string, string> = {
   briefed: "#e0932e",
   production: "#3b82f6",
   delivered: "#22c55e",
+  lost: "#e2483d",
 };
 
 // Run this before anything goes to the client. A helper checklist, not a gate.
