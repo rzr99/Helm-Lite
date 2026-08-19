@@ -290,7 +290,7 @@ export default async function DealDetailPage({
                 {deal.conversation ?? "—"}
               </dd>
             </div>
-            {floor && (
+            {profile.role === "owner" && (
               <div>
                 <dt className="text-zinc-500 dark:text-zinc-400">Designer / Editor</dt>
                 <dd className="font-medium text-zinc-900 dark:text-zinc-50">

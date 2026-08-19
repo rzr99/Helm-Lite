@@ -29,6 +29,7 @@ export default async function ProjectsPage({
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
+  const isOwner = profile.role === "owner";
   const { status, service, editor } = await searchParams;
 
   const statusOk = PROJECT_STATUSES.some((s) => s.value === status);
@@ -205,7 +206,7 @@ export default async function ProjectsPage({
                       </span>
                     )}
                     <span className="ml-auto flex items-center gap-3 text-xs text-[var(--text)]/50">
-                      {floor && p.designer && <span>🎨 {p.designer}</span>}
+                      {isOwner && p.designer && <span>🎨 {p.designer}</span>}
                       {p.deadline && <span>{p.deadline}</span>}
                       {floor && p.agent && (
                         <Avatar
