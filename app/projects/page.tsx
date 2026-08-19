@@ -34,7 +34,7 @@ export default async function ProjectsPage({
 
   const statusOk = PROJECT_STATUSES.some((s) => s.value === status);
   const serviceOk = SERVICES.some((s) => s.value === service);
-  const needsEditor = floor && editor === "1";
+  const needsEditor = isOwner && editor === "1";
   const hasFilters = statusOk || serviceOk || needsEditor;
 
   let query = supabase
@@ -109,7 +109,7 @@ export default async function ProjectsPage({
               {s.label}
             </Link>
           ))}
-          {floor && (
+          {isOwner && (
             <>
               <span className="mx-1 h-5 w-px bg-[var(--border-strong)]" />
               <Link
@@ -200,7 +200,7 @@ export default async function ProjectsPage({
                         {projectStatusLabel(p.status)}
                       </span>
                     </span>
-                    {floor && unassigned && (
+                    {isOwner && unassigned && (
                       <span className="rounded-full bg-amber-600/15 px-2 py-0.5 text-xs font-medium text-amber-400">
                         Needs an editor
                       </span>
