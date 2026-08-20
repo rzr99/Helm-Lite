@@ -43,7 +43,13 @@ export default async function ProjectsPage({
       "id, client_name, service, status, designer, deadline, created_at, agent:users(full_name, avatar_url)"
     )
     .order("created_at", { ascending: false });
-  if (statusOk) query = query.eq("status", status);
+  if (statusOk) {
+    query = query.eq("status", status);
+  } else {
+    // Default "Active" view: hide the finished/dead ones so the list is just
+    // what needs attention. Delivered & Lost are reachable via their pills.
+    query = query.not("status", "in", "(delivered,lost)");
+  }
   if (serviceOk) query = query.eq("service", service);
   if (needsEditor) query = query.is("designer", null);
 
@@ -94,7 +100,7 @@ export default async function ProjectsPage({
       <Card padded={false}>
         <div className="flex flex-wrap items-center gap-2 px-5 py-3.5">
           <Link href={hrefWith({ status: null })} className={pill(!statusOk)}>
-            All
+            Active
           </Link>
           {PROJECT_STATUSES.map((s) => (
             <Link
@@ -161,9 +167,16 @@ export default async function ProjectsPage({
       ) : (
         <Card
           padded={false}
-          title={`${projects.length} project${projects.length === 1 ? "" : "s"}${
-            hasFilters ? " shown" : ""
-          }`}
+          title={
+            statusOk
+              ? `${projects.length} ${projectStatusLabel(status!).toLowerCase()}`
+              : `${projects.length} active`
+          }
+          description={
+            !statusOk
+              ? "Active work only — Delivered and Lost are under their own filters above."
+              : undefined
+          }
           action={
             hasFilters ? (
               <Link
