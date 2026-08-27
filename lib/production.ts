@@ -358,6 +358,7 @@ export const PROJECT_STATUSES = [
   { value: "new", label: "New" },
   { value: "briefed", label: "Briefed & sent" },
   { value: "production", label: "In production" },
+  { value: "feedback", label: "Waiting for feedback" },
   { value: "delivered", label: "Delivered" },
   { value: "lost", label: "Lost" },
 ] as const;
@@ -373,6 +374,7 @@ export const PROJECT_STATUS_COLOR: Record<string, string> = {
   new: "#8b8f96",
   briefed: "#e0932e",
   production: "#3b82f6",
+  feedback: "#a855f7",
   delivered: "#22c55e",
   lost: "#e2483d",
 };
