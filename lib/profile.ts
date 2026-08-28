@@ -23,20 +23,41 @@ export const requireProfile = cache(async () => {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("id, full_name, role, active, avatar_url")
-    .eq("id", user.id)
-    .single();
+  // Load the profile, retrying once on a transient error. A FAILED lookup (a
+  // Supabase blip) must NOT sign the user out — doing so was logging agents out
+  // repeatedly during slow spells. Only a genuinely missing/deactivated account
+  // signs out; a transient failure surfaces a retryable error and keeps the
+  // session intact so a refresh recovers.
+  let profile: Profile | null = null;
+  let genuinelyMissing = false;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, full_name, role, active, avatar_url")
+      .eq("id", user.id)
+      .single();
+    if (!error) {
+      profile = data as Profile;
+      break;
+    }
+    if (error.code === "PGRST116") {
+      genuinelyMissing = true; // query worked, there is no such row
+      break;
+    }
+    if (attempt === 1) {
+      throw new Error("Couldn't load your account just now — please refresh.");
+    }
+    await new Promise((r) => setTimeout(r, 150));
+  }
 
   // No profile, or a deactivated account, means no access to the app.
   // (The owner can never be deactivated — the Team page blocks self-deactivation.)
-  if (!profile || !profile.active) {
+  if (genuinelyMissing || !profile || !profile.active) {
     await supabase.auth.signOut();
     redirect("/login?deactivated=1");
   }
 
-  return { supabase, profile: profile as Profile };
+  return { supabase, profile };
 });
 
 // Owner and team lead can see the whole sales floor.
