@@ -28,9 +28,18 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Touching getUser() refreshes the token cookie when it's close to expiry.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // But cap it: a slow or unreachable Supabase must never hang edge middleware,
+  // because that surfaces as a site-wide MIDDLEWARE_INVOCATION_TIMEOUT (504) on
+  // EVERY page. If auth doesn't answer in time, skip the refresh + daily-login
+  // check for this request — each page's own requireProfile guard still enforces
+  // auth, so nothing becomes less secure; the app just stays up.
+  const authTimeout = new Promise<null>((resolve) =>
+    setTimeout(() => resolve(null), 3000)
+  );
+  const user = await Promise.race([
+    supabase.auth.getUser().then((r) => r.data.user),
+    authTimeout,
+  ]).catch(() => null);
 
   // Daily fresh login: everyone must sign in again once their session marker
   // is more than 24h old. The marker (helm_login_at) is stamped at login;
