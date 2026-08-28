@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
+import { TopProgress } from "@/components/top-progress";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -43,7 +45,12 @@ export default async function RootLayout({
       lang="en"
       className={`${theme === "dark" ? "dark" : ""} ${collapsed} ${geistSans.variable} ${geistMono.variable} h-full antialiased`.trim()}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <Suspense fallback={null}>
+          <TopProgress />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }
