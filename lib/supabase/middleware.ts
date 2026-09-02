@@ -6,6 +6,14 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // No Supabase session cookie → this is an anonymous request (a public page,
+  // logged-out visitor, or a health ping). There's nothing to refresh or check,
+  // so skip the auth round-trip entirely and let it through.
+  const hasSession = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-"));
+  if (!hasSession) return response;
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
