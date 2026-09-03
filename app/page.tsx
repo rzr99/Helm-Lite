@@ -141,13 +141,18 @@ export default async function Dashboard({
   // How many of each agent's clients are also worked by another agent — one row
   // per (client, agent) in the duplicate view, so counting per agent gives it.
   const sharedByAgent = new Map<string, number>();
-  if (floor && !agent && !isSummary && !filtered) {
+  const sharedKeys = new Set<string>();
+  if (floor && !agent && !isSummary) {
     const { data: dupRows } = await supabase
       .from("lead_duplicate_entries")
-      .select("agent_id")
+      .select("agent_id, handle_key")
       .limit(100000);
-    for (const r of (dupRows ?? []) as { agent_id: string }[]) {
+    for (const r of (dupRows ?? []) as {
+      agent_id: string;
+      handle_key: string;
+    }[]) {
       sharedByAgent.set(r.agent_id, (sharedByAgent.get(r.agent_id) ?? 0) + 1);
+      sharedKeys.add(r.handle_key);
     }
   }
 
@@ -167,6 +172,7 @@ export default async function Dashboard({
   // Per-agent breakdown so the Team table can show each agent's numbers FOR THE
   // SELECTED PERIOD (not all-time) whenever a filter is active.
   const perAgentFiltered = new Map<string, { leads: number; closed: number }>();
+  const perAgentKeys = new Map<string, Set<string>>();
   if (filtered) {
     // Fetch WITHOUT the agent restriction so the Team table can show every
     // agent; the pipeline tiles apply the agent filter in memory below.
@@ -194,6 +200,12 @@ export default async function Dashboard({
       pa.leads += 1;
       if (r.rep_stage === "closed") pa.closed += 1;
       perAgentFiltered.set(r.agent_id, pa);
+      let ks = perAgentKeys.get(r.agent_id);
+      if (!ks) {
+        ks = new Set();
+        perAgentKeys.set(r.agent_id, ks);
+      }
+      ks.add(r.handle_key);
     }
     uniqueFiltered = uniq.size;
   } else {
@@ -214,15 +226,20 @@ export default async function Dashboard({
   const byAgent = teammates.map((t) => {
     const s = statsByAgent.get(t.id);
     if (filtered) {
-      // Filtered view: each agent's clients + closes for the selected period.
+      // Filtered view: each agent's clients + closes for the selected period,
+      // plus how many of those clients are also worked by another agent.
       const pa = perAgentFiltered.get(t.id) ?? { leads: 0, closed: 0 };
+      const keys = perAgentKeys.get(t.id) ?? new Set<string>();
+      let shared = 0;
+      for (const k of keys) if (sharedKeys.has(k)) shared += 1;
+      const total = keys.size;
       return {
         ...t,
-        total: pa.leads,
+        total,
         addedToday: 0,
         closed: pa.closed,
-        shared: 0,
-        exclusive: 0,
+        shared,
+        exclusive: total - shared,
         periodFiltered: true,
       };
     }
