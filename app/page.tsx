@@ -141,7 +141,7 @@ export default async function Dashboard({
   // How many of each agent's clients are also worked by another agent — one row
   // per (client, agent) in the duplicate view, so counting per agent gives it.
   const sharedByAgent = new Map<string, number>();
-  if (floor && !agent && !isSummary) {
+  if (floor && !agent && !isSummary && !filtered) {
     const { data: dupRows } = await supabase
       .from("lead_duplicate_entries")
       .select("agent_id")
@@ -164,20 +164,36 @@ export default async function Dashboard({
   const counts: Record<string, number> = {};
   for (const s of STAGES) counts[s.value] = 0;
   let uniqueFiltered = 0;
+  // Per-agent breakdown so the Team table can show each agent's numbers FOR THE
+  // SELECTED PERIOD (not all-time) whenever a filter is active.
+  const perAgentFiltered = new Map<string, { leads: number; closed: number }>();
   if (filtered) {
+    // Fetch WITHOUT the agent restriction so the Team table can show every
+    // agent; the pipeline tiles apply the agent filter in memory below.
     let fq = supabase
       .from("lead_clients")
-      .select("rep_stage, handle_key")
+      .select("agent_id, rep_stage, handle_key")
       .limit(100000);
     if (intentOk) fq = fq.eq("rep_intent", intent);
-    if (agent) fq = fq.eq("agent_id", agent);
     if (from) fq = fq.gte("rep_date_added", from);
     if (to) fq = fq.lte("rep_date_added", to);
     const { data: fdata } = await fq;
     const uniq = new Set<string>();
-    for (const r of (fdata ?? []) as { rep_stage: string; handle_key: string }[]) {
-      counts[r.rep_stage] = (counts[r.rep_stage] ?? 0) + 1;
-      uniq.add(r.handle_key);
+    for (const r of (fdata ?? []) as {
+      agent_id: string;
+      rep_stage: string;
+      handle_key: string;
+    }[]) {
+      // Pipeline tiles + the unique count respect the agent filter.
+      if (!agent || r.agent_id === agent) {
+        counts[r.rep_stage] = (counts[r.rep_stage] ?? 0) + 1;
+        uniq.add(r.handle_key);
+      }
+      // Team table gets every agent's period numbers.
+      const pa = perAgentFiltered.get(r.agent_id) ?? { leads: 0, closed: 0 };
+      pa.leads += 1;
+      if (r.rep_stage === "closed") pa.closed += 1;
+      perAgentFiltered.set(r.agent_id, pa);
     }
     uniqueFiltered = uniq.size;
   } else {
@@ -197,6 +213,19 @@ export default async function Dashboard({
   );
   const byAgent = teammates.map((t) => {
     const s = statsByAgent.get(t.id);
+    if (filtered) {
+      // Filtered view: each agent's clients + closes for the selected period.
+      const pa = perAgentFiltered.get(t.id) ?? { leads: 0, closed: 0 };
+      return {
+        ...t,
+        total: pa.leads,
+        addedToday: 0,
+        closed: pa.closed,
+        shared: 0,
+        exclusive: 0,
+        periodFiltered: true,
+      };
+    }
     const total = s?.total_clients ?? 0;
     const shared = sharedByAgent.get(t.id) ?? 0;
     return {
@@ -206,6 +235,7 @@ export default async function Dashboard({
       closed: s?.closed ?? 0,
       shared,
       exclusive: Math.max(0, total - shared),
+      periodFiltered: false,
     };
   });
 
@@ -420,8 +450,8 @@ export default async function Dashboard({
 
       {filtered && (
         <p className="text-xs text-[var(--text-faint)]">
-          Pipeline &amp; the counts below reflect these filters. The team table
-          and follow-ups aren&apos;t date-filtered.
+          Pipeline, the counts, and the team table all reflect these filters.
+          Follow-ups always show what&apos;s currently open.
         </p>
       )}
 
@@ -491,7 +521,11 @@ export default async function Dashboard({
       {floor && byAgent.length > 0 && !agent && (
         <Card
           title="Team"
-          description="Each agent's numbers — click through to see their leads."
+          description={
+            filtered
+              ? "Each agent's numbers for the current filters — click through to see their leads."
+              : "Each agent's numbers — click through to see their leads."
+          }
           padded={false}
         >
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -521,12 +555,14 @@ export default async function Dashboard({
                     </span>{" "}
                     {a.total === 1 ? "lead" : "leads"}
                   </span>
-                  <span className="text-zinc-500 dark:text-zinc-400">
-                    <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-                      {a.addedToday}
-                    </span>{" "}
-                    today
-                  </span>
+                  {!a.periodFiltered && (
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+                        {a.addedToday}
+                      </span>{" "}
+                      today
+                    </span>
+                  )}
                   <span className="text-zinc-500 dark:text-zinc-400">
                     <span className="font-semibold text-[var(--text)]">
                       {a.closed}
