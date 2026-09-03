@@ -479,7 +479,12 @@ export default async function Dashboard({
         <span className="pointer-events-none absolute bottom-0 left-0 h-3.5 w-3.5 border-b border-l border-[var(--border-strong)]" />
         <span className="pointer-events-none absolute bottom-0 right-0 h-3.5 w-3.5 border-b border-r border-[var(--border-strong)]" />
 
-        <div className="grid grid-cols-5 text-center">
+        <div
+          className="grid text-center"
+          style={{
+            gridTemplateColumns: `repeat(${STAGES.length}, minmax(0, 1fr))`,
+          }}
+        >
           {STAGES.map((s) => (
             <Link
               key={s.value}
@@ -490,8 +495,19 @@ export default async function Dashboard({
             </Link>
           ))}
         </div>
-        <div className="relative my-3.5 grid grid-cols-5">
-          <span className="pointer-events-none absolute inset-x-[9%] top-1/2 h-px -translate-y-1/2 bg-[var(--border)]" />
+        <div
+          className="relative my-3.5 grid"
+          style={{
+            gridTemplateColumns: `repeat(${STAGES.length}, minmax(0, 1fr))`,
+          }}
+        >
+          <span
+            className="pointer-events-none absolute top-1/2 h-px -translate-y-1/2 bg-[var(--border)]"
+            style={{
+              left: `${(100 / (STAGES.length * 2)).toFixed(2)}%`,
+              right: `${(100 / (STAGES.length * 2)).toFixed(2)}%`,
+            }}
+          />
           {STAGES.map((s) => {
             const lit = s.value === keyStage && (counts[keyStage] ?? 0) > 0;
             return (
@@ -509,7 +525,12 @@ export default async function Dashboard({
             );
           })}
         </div>
-        <div className="grid grid-cols-5 text-center">
+        <div
+          className="grid text-center"
+          style={{
+            gridTemplateColumns: `repeat(${STAGES.length}, minmax(0, 1fr))`,
+          }}
+        >
           {STAGES.map((s) => (
             <span
               key={s.value}
