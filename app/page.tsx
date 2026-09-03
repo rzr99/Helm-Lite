@@ -479,6 +479,9 @@ export default async function Dashboard({
         <span className="pointer-events-none absolute bottom-0 left-0 h-3.5 w-3.5 border-b border-l border-[var(--border-strong)]" />
         <span className="pointer-events-none absolute bottom-0 right-0 h-3.5 w-3.5 border-b border-r border-[var(--border-strong)]" />
 
+        {/* Scrolls horizontally on narrow screens instead of cramming. */}
+        <div className="overflow-x-auto">
+        <div className="min-w-[560px]">
         <div
           className="grid text-center"
           style={{
@@ -539,6 +542,8 @@ export default async function Dashboard({
               {stageLabel(s.value)}
             </span>
           ))}
+        </div>
+        </div>
         </div>
       </div>
 
