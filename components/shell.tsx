@@ -363,7 +363,7 @@ export function Shell({
       </aside>
 
       {/* Mobile header */}
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 lg:hidden">
           <Brand />
           <MobileNav

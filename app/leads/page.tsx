@@ -420,11 +420,15 @@ export default async function LeadsPage({
               <thead className="border-b border-[var(--border)] font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Client</th>
-                  <th className="px-5 py-3 font-semibold">Service</th>
-                  <th className="px-5 py-3 font-semibold">Source</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Service</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Source</th>
                   <th className="px-5 py-3 font-semibold">Stage</th>
-                  <th className="px-5 py-3 font-semibold">Added</th>
-                  {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Added</th>
+                  {floor && (
+                    <th className="hidden px-5 py-3 font-semibold sm:table-cell">
+                      Agent
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -467,10 +471,10 @@ export default async function LeadsPage({
                           </div>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 align-top text-zinc-600 dark:text-zinc-400">
+                      <td className="hidden px-5 py-3.5 align-top text-zinc-600 sm:table-cell dark:text-zinc-400">
                         {serviceLabel(c.rep_service)}
                       </td>
-                      <td className="px-5 py-3.5 align-top text-zinc-600 dark:text-zinc-400">
+                      <td className="hidden px-5 py-3.5 align-top text-zinc-600 sm:table-cell dark:text-zinc-400">
                         {c.rep_source ?? "—"}
                       </td>
                       <td className="px-5 py-3.5 align-top">
@@ -483,11 +487,11 @@ export default async function LeadsPage({
                           {stageLabel(c.rep_stage)}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 align-top text-zinc-600 dark:text-zinc-400">
+                      <td className="hidden px-5 py-3.5 align-top text-zinc-600 sm:table-cell dark:text-zinc-400">
                         {c.rep_date_added}
                       </td>
                       {floor && (
-                        <td className="px-5 py-3.5 align-top">
+                        <td className="hidden px-5 py-3.5 align-top sm:table-cell">
                           {ag ? (
                             <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
                               <Avatar
