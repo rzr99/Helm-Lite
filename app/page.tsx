@@ -156,47 +156,36 @@ export default async function Dashboard({
   const dueToday = rows.filter((f) => f.due_date === today);
   const upcoming = rows.filter((f) => f.due_date > today);
 
+  // Pipeline counts. Unfiltered uses the pre-aggregated view (one cheap read).
+  // Filtered: ONE lightweight fetch (rep_stage + handle_key) tallied in memory,
+  // instead of five separate exact-count scans over the aggregated view — those
+  // were timing out on the free tier at scale and returning blank numbers the
+  // moment a filter was applied.
   const counts: Record<string, number> = {};
+  for (const s of STAGES) counts[s.value] = 0;
+  let uniqueFiltered = 0;
   if (filtered) {
-    // Filtered pipeline: one fast COUNT per stage (bounded, RLS-scoped),
-    // narrowed by lead type / agent / date as selected.
-    const res = await Promise.all(
-      STAGES.map((s) => {
-        let q = supabase
-          .from("lead_clients")
-          .select("*", { count: "exact", head: true })
-          .eq("rep_stage", s.value);
-        if (intentOk) q = q.eq("rep_intent", intent);
-        if (agent) q = q.eq("agent_id", agent);
-        if (from) q = q.gte("rep_date_added", from);
-        if (to) q = q.lte("rep_date_added", to);
-        return q;
-      })
-    );
-    STAGES.forEach((s, i) => {
-      counts[s.value] = res[i].count ?? 0;
-    });
+    let fq = supabase
+      .from("lead_clients")
+      .select("rep_stage, handle_key")
+      .limit(100000);
+    if (intentOk) fq = fq.eq("rep_intent", intent);
+    if (agent) fq = fq.eq("agent_id", agent);
+    if (from) fq = fq.gte("rep_date_added", from);
+    if (to) fq = fq.lte("rep_date_added", to);
+    const { data: fdata } = await fq;
+    const uniq = new Set<string>();
+    for (const r of (fdata ?? []) as { rep_stage: string; handle_key: string }[]) {
+      counts[r.rep_stage] = (counts[r.rep_stage] ?? 0) + 1;
+      uniq.add(r.handle_key);
+    }
+    uniqueFiltered = uniq.size;
   } else {
     for (const c of (stageCounts ?? []) as { stage: string; n: number }[]) {
       counts[c.stage] = c.n;
     }
   }
   const filteredClients = Object.values(counts).reduce((a, b) => a + b, 0);
-
-  // Unique clients for the filtered view (distinct client across agents). For a
-  // single agent it equals their client count; across all agents we de-dupe the
-  // handle_keys. Unfiltered uses the fast all-time view below.
-  let uniqueFiltered = filteredClients;
-  if (filtered && !agent) {
-    let uq = supabase.from("lead_clients").select("handle_key").limit(100000);
-    if (intentOk) uq = uq.eq("rep_intent", intent);
-    if (from) uq = uq.gte("rep_date_added", from);
-    if (to) uq = uq.lte("rep_date_added", to);
-    const { data: uqData } = await uq;
-    uniqueFiltered = new Set(
-      (uqData ?? []).map((r) => r.handle_key as string)
-    ).size;
-  }
 
   const statsByAgent = new Map(
     ((agentStats ?? []) as {
