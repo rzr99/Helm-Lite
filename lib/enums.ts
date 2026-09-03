@@ -3,6 +3,7 @@ export const STAGES = [
   { value: "in_conversation", label: "In conversation" },
   { value: "qualified", label: "Qualified" },
   { value: "closed", label: "Closed" },
+  { value: "ghosted", label: "Ghosted" },
   { value: "lost", label: "Lost" },
 ] as const;
 
@@ -168,6 +169,7 @@ export const STAGE_BADGE: Record<string, string> = {
   qualified:
     "bg-purple-100 text-purple-900 dark:bg-purple-900 dark:text-purple-100",
   closed: "bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100",
+  ghosted: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
   lost: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
 };
 
