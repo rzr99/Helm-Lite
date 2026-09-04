@@ -20,7 +20,7 @@ export default async function FreelancerDetailPage({
   const { data: f } = await supabase
     .from("freelancers")
     .select(
-      "id, name, kind, services, email, phone, rate, portfolio_url, active, notes"
+      "id, name, kind, services, email, phone, rate, portfolio_url, active, notes, rating_quality, rating_price, rating_speed, rating_communication"
     )
     .eq("id", id)
     .single();

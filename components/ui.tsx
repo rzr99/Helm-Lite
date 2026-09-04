@@ -157,6 +157,20 @@ export function Card({
   );
 }
 
+// A 0-5 star display: filled stars in amber, the rest faint.
+export function Stars({ value, size = 13 }: { value: number; size?: number }) {
+  const v = Math.max(0, Math.min(5, Math.round(value)));
+  return (
+    <span
+      style={{ fontSize: size, letterSpacing: "1px" }}
+      aria-label={`${value} out of 5`}
+    >
+      <span className="text-amber-500">{"★".repeat(v)}</span>
+      <span className="text-[var(--text-faint)]">{"★".repeat(5 - v)}</span>
+    </span>
+  );
+}
+
 export function EmptyState({
   emoji,
   title,

@@ -7,6 +7,23 @@ export const STAGES = [
   { value: "lost", label: "Lost" },
 ] as const;
 
+// Freelancer rating criteria (each 0-5, 0 = not rated). Adjust anytime.
+export const FREELANCER_RATINGS = [
+  { key: "rating_quality", label: "Quality" },
+  { key: "rating_price", label: "Value (price)" },
+  { key: "rating_speed", label: "Speed" },
+  { key: "rating_communication", label: "Communication" },
+] as const;
+
+// Average of the rated (non-zero) criteria, to one decimal; 0 if none rated.
+export function freelancerAvg(f: Record<string, unknown>) {
+  const vals = FREELANCER_RATINGS.map((r) => Number(f[r.key] ?? 0)).filter(
+    (n) => n > 0
+  );
+  if (vals.length === 0) return 0;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+}
+
 export const SERVICES = [
   { value: "motion_graphics", label: "Motion graphics" },
   { value: "video_editing", label: "Video editing" },

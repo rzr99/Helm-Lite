@@ -11,6 +11,11 @@ function text(fd: FormData, key: string) {
   return ((fd.get(key) as string) || "").trim();
 }
 
+function rating(fd: FormData, key: string) {
+  const n = parseInt(text(fd, key), 10);
+  return Number.isNaN(n) ? 0 : Math.max(0, Math.min(5, n));
+}
+
 function values(fd: FormData) {
   const kind = text(fd, "kind");
   const services = fd
@@ -27,6 +32,10 @@ function values(fd: FormData) {
     portfolio_url: text(fd, "portfolio_url") || null,
     active: fd.get("active") === "on",
     notes: text(fd, "notes"),
+    rating_quality: rating(fd, "rating_quality"),
+    rating_price: rating(fd, "rating_price"),
+    rating_speed: rating(fd, "rating_speed"),
+    rating_communication: rating(fd, "rating_communication"),
   };
 }
 

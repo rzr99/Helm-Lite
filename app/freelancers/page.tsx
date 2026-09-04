@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
-import { Card, EmptyState, btnPrimary } from "@/components/ui";
+import { Card, EmptyState, Stars, btnPrimary } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { serviceLabel } from "@/lib/intake";
+import { freelancerAvg } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,10 @@ type Freelancer = {
   phone: string | null;
   rate: string | null;
   active: boolean;
+  rating_quality: number;
+  rating_price: number;
+  rating_speed: number;
+  rating_communication: number;
 };
 
 export default async function FreelancersPage() {
@@ -24,7 +29,9 @@ export default async function FreelancersPage() {
 
   const { data } = await supabase
     .from("freelancers")
-    .select("id, name, kind, services, email, phone, rate, active")
+    .select(
+      "id, name, kind, services, email, phone, rate, active, rating_quality, rating_price, rating_speed, rating_communication"
+    )
     .order("active", { ascending: false })
     .order("name");
 
@@ -57,10 +64,11 @@ export default async function FreelancersPage() {
               <thead className="border-b border-[var(--border)] font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Name</th>
-                  <th className="px-5 py-3 font-semibold">Type</th>
-                  <th className="px-5 py-3 font-semibold">Services</th>
-                  <th className="px-5 py-3 font-semibold">Contact</th>
-                  <th className="px-5 py-3 font-semibold">Rate</th>
+                  <th className="px-5 py-3 font-semibold">Rating</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Type</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Services</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Contact</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Rate</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -85,16 +93,28 @@ export default async function FreelancersPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)]">
+                    <td className="px-5 py-3.5">
+                      {freelancerAvg(f) > 0 ? (
+                        <span className="flex items-center gap-1.5">
+                          <Stars value={freelancerAvg(f)} />
+                          <span className="text-xs text-[var(--text-muted)]">
+                            {freelancerAvg(f)}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-[var(--text-faint)]">—</span>
+                      )}
+                    </td>
+                    <td className="hidden px-5 py-3.5 text-[var(--text-muted)] sm:table-cell">
                       {f.kind === "production_house" ? "Production house" : "Freelancer"}
                     </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)]">
+                    <td className="hidden px-5 py-3.5 text-[var(--text-muted)] sm:table-cell">
                       {(f.services ?? []).map((s) => serviceLabel(s)).join(", ") || "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)]">
+                    <td className="hidden px-5 py-3.5 text-[var(--text-muted)] sm:table-cell">
                       {f.email || f.phone || "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)]">
+                    <td className="hidden px-5 py-3.5 text-[var(--text-muted)] sm:table-cell">
                       {f.rate || "—"}
                     </td>
                   </tr>

@@ -1,4 +1,5 @@
 import { SERVICES, serviceLabel } from "@/lib/intake";
+import { FREELANCER_RATINGS } from "@/lib/enums";
 import { btnPrimary, inputClass, labelClass } from "@/components/ui";
 
 type Defaults = {
@@ -11,6 +12,10 @@ type Defaults = {
   portfolio_url?: string | null;
   active?: boolean;
   notes?: string;
+  rating_quality?: number;
+  rating_price?: number;
+  rating_speed?: number;
+  rating_communication?: number;
 };
 
 const KINDS = [
@@ -150,6 +155,41 @@ export function FreelancerForm({
         />
         Active (available for work)
       </label>
+
+      <div>
+        <label className={labelClass}>Ratings — out of 5, adjust anytime</label>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {FREELANCER_RATINGS.map((r) => {
+            const current = Number(
+              (defaults as Record<string, unknown>)[r.key] ?? 0
+            );
+            return (
+              <div
+                key={r.key}
+                className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+              >
+                <span className="text-sm text-[var(--text)]">{r.label}</span>
+                <select
+                  name={r.key}
+                  defaultValue={String(current)}
+                  className="rounded-lg border border-[var(--border-strong)] bg-[var(--field)] px-2.5 py-1.5 text-sm text-[var(--text)] outline-none focus:border-amber-600"
+                >
+                  <option value="0">— not rated</option>
+                  <option value="1">★ 1</option>
+                  <option value="2">★ 2</option>
+                  <option value="3">★ 3</option>
+                  <option value="4">★ 4</option>
+                  <option value="5">★ 5</option>
+                </select>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-1 text-xs text-[var(--text-faint)]">
+          Rate them once you&apos;ve worked together — bump it up later as they
+          improve.
+        </p>
+      </div>
 
       <div>
         <label className={labelClass}>Notes</label>
