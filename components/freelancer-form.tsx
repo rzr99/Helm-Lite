@@ -16,6 +16,7 @@ type Defaults = {
   rating_price?: number;
   rating_speed?: number;
   rating_communication?: number;
+  manual_projects?: number;
 };
 
 const KINDS = [
@@ -144,6 +145,21 @@ export function FreelancerForm({
             className={inputClass}
           />
         </div>
+      </div>
+
+      <div className="sm:max-w-xs">
+        <label className={labelClass}>Projects done before Helm</label>
+        <input
+          type="number"
+          name="manual_projects"
+          min="0"
+          defaultValue={String(defaults.manual_projects ?? 0)}
+          className={inputClass}
+        />
+        <p className="mt-1 text-xs text-[var(--text-faint)]">
+          A starting count for past work. Delivered projects assigned to them
+          in Helm are added on top automatically.
+        </p>
       </div>
 
       <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">

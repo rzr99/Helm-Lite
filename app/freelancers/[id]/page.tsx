@@ -20,18 +20,29 @@ export default async function FreelancerDetailPage({
   const { data: f } = await supabase
     .from("freelancers")
     .select(
-      "id, name, kind, services, email, phone, rate, portfolio_url, active, notes, rating_quality, rating_price, rating_speed, rating_communication"
+      "id, name, kind, services, email, phone, rate, portfolio_url, active, notes, manual_projects, rating_quality, rating_price, rating_speed, rating_communication"
     )
     .eq("id", id)
     .single();
   if (!f) notFound();
+
+  // Auto-count delivered projects assigned to this freelancer, plus their
+  // manual starting count.
+  const { count: autoDone } = await supabase
+    .from("production_jobs")
+    .select("*", { count: "exact", head: true })
+    .eq("designer", f.name)
+    .eq("status", "delivered");
+  const projectsDone = (autoDone ?? 0) + (f.manual_projects ?? 0);
 
   return (
     <Shell
       profile={profile}
       active="freelancers"
       title={f.name}
-      subtitle={f.kind === "production_house" ? "Production house" : "Freelancer"}
+      subtitle={`${
+        f.kind === "production_house" ? "Production house" : "Freelancer"
+      } · ${projectsDone} project${projectsDone === 1 ? "" : "s"} done`}
       action={
         <Link
           href="/freelancers"

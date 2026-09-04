@@ -16,6 +16,11 @@ function rating(fd: FormData, key: string) {
   return Number.isNaN(n) ? 0 : Math.max(0, Math.min(5, n));
 }
 
+function count(fd: FormData, key: string) {
+  const n = parseInt(text(fd, key), 10);
+  return Number.isNaN(n) ? 0 : Math.max(0, n);
+}
+
 function values(fd: FormData) {
   const kind = text(fd, "kind");
   const services = fd
@@ -36,6 +41,7 @@ function values(fd: FormData) {
     rating_price: rating(fd, "rating_price"),
     rating_speed: rating(fd, "rating_speed"),
     rating_communication: rating(fd, "rating_communication"),
+    manual_projects: count(fd, "manual_projects"),
   };
 }
 

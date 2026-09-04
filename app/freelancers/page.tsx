@@ -17,6 +17,7 @@ type Freelancer = {
   phone: string | null;
   rate: string | null;
   active: boolean;
+  manual_projects: number;
   rating_quality: number;
   rating_price: number;
   rating_speed: number;
@@ -27,15 +28,28 @@ export default async function FreelancersPage() {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/");
 
-  const { data } = await supabase
-    .from("freelancers")
-    .select(
-      "id, name, kind, services, email, phone, rate, active, rating_quality, rating_price, rating_speed, rating_communication"
-    )
-    .order("active", { ascending: false })
-    .order("name");
+  const [{ data }, { data: jobsData }] = await Promise.all([
+    supabase
+      .from("freelancers")
+      .select(
+        "id, name, kind, services, email, phone, rate, active, manual_projects, rating_quality, rating_price, rating_speed, rating_communication"
+      )
+      .order("active", { ascending: false })
+      .order("name"),
+    // Delivered projects, to auto-count how many each freelancer has completed.
+    supabase.from("production_jobs").select("designer").eq("status", "delivered"),
+  ]);
 
   const rows = (data ?? []) as Freelancer[];
+
+  // Completed (delivered) projects per assigned name.
+  const doneByName = new Map<string, number>();
+  for (const j of (jobsData ?? []) as { designer: string | null }[]) {
+    if (j.designer)
+      doneByName.set(j.designer, (doneByName.get(j.designer) ?? 0) + 1);
+  }
+  const projectsDone = (f: Freelancer) =>
+    (doneByName.get(f.name) ?? 0) + (f.manual_projects ?? 0);
 
   return (
     <Shell
@@ -65,6 +79,7 @@ export default async function FreelancersPage() {
                 <tr>
                   <th className="px-5 py-3 font-semibold">Name</th>
                   <th className="px-5 py-3 font-semibold">Rating</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">Projects</th>
                   <th className="hidden px-5 py-3 font-semibold sm:table-cell">Type</th>
                   <th className="hidden px-5 py-3 font-semibold sm:table-cell">Services</th>
                   <th className="hidden px-5 py-3 font-semibold sm:table-cell">Contact</th>
@@ -104,6 +119,9 @@ export default async function FreelancersPage() {
                       ) : (
                         <span className="text-[var(--text-faint)]">—</span>
                       )}
+                    </td>
+                    <td className="hidden px-5 py-3.5 text-[var(--text-muted)] sm:table-cell">
+                      {projectsDone(f)}
                     </td>
                     <td className="hidden px-5 py-3.5 text-[var(--text-muted)] sm:table-cell">
                       {f.kind === "production_house" ? "Production house" : "Freelancer"}
