@@ -256,6 +256,23 @@ export default async function Dashboard({
     };
   });
 
+  // Team averages for the current filter, over agents who did anything (so the
+  // owner's 0 and idle agents don't drag it down). Lets each agent be read
+  // against the group. Per-day pace divides by elapsed days in the range.
+  const contributors = byAgent.filter((a) => a.total > 0 || a.closed > 0);
+  const avgN = contributors.length || 1;
+  const avgLeads =
+    Math.round((contributors.reduce((s, a) => s + a.total, 0) / avgN) * 10) / 10;
+  const avgClosed =
+    Math.round((contributors.reduce((s, a) => s + a.closed, 0) / avgN) * 10) / 10;
+  const endForDays = to && to > today ? today : to;
+  const periodDays =
+    from && endForDays && endForDays >= from
+      ? Math.round((Date.parse(endForDays) - Date.parse(from)) / 86400000) + 1
+      : 0;
+  const avgLeadsPerDay =
+    periodDays > 0 ? Math.round((avgLeads / periodDays) * 10) / 10 : 0;
+
   function FollowUpItem({
     f,
     tone,
@@ -622,6 +639,32 @@ export default async function Dashboard({
               </li>
             ))}
           </ul>
+          {filtered && contributors.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--sunken)] px-5 py-3">
+              <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                Average per agent
+              </span>
+              <span className="flex items-center gap-5 text-sm text-[var(--text-muted)]">
+                <span>
+                  <span className="font-semibold text-[var(--text)]">
+                    {avgLeads}
+                  </span>{" "}
+                  leads
+                </span>
+                <span>
+                  <span className="font-semibold text-[var(--text)]">
+                    {avgClosed}
+                  </span>{" "}
+                  closed
+                </span>
+                {periodDays > 1 && (
+                  <span className="text-[var(--text-faint)]">
+                    ≈ {avgLeadsPerDay}/day
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
         </Card>
       )}
 
