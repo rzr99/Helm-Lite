@@ -173,6 +173,33 @@ export default async function ActivityPage({
     { added: 0, followUps: 0, closes: 0 }
   );
 
+  // Days in the selected range (capped at today, so a mid-month "monthly" view
+  // averages over days elapsed so far, not the whole future month).
+  const todayD = todayStr();
+  const endForAvg = toDate > todayD ? todayD : toDate;
+  const daysInRange =
+    endForAvg >= fromDate
+      ? Math.round((Date.parse(endForAvg) - Date.parse(fromDate)) / 86400000) + 1
+      : 1;
+  const perDayAvg = (n: number) => (Math.round((n / daysInRange) * 10) / 10);
+
+  // Per-agent totals for the range (the daily table is per day; this rolls it
+  // up per agent so we can show each agent's total + daily average).
+  const perAgent = new Map<
+    string,
+    { added: number; followUps: number; closes: number }
+  >();
+  for (const r of rows) {
+    const a = perAgent.get(r.agentId) ?? { added: 0, followUps: 0, closes: 0 };
+    a.added += r.added;
+    a.followUps += r.followUps;
+    a.closes += r.closes;
+    perAgent.set(r.agentId, a);
+  }
+  const perAgentList = [...perAgent.entries()]
+    .map(([agentId, v]) => ({ agentId, ...v }))
+    .sort((a, b) => b.added - a.added);
+
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
   type DupRow = {
@@ -317,6 +344,77 @@ export default async function ActivityPage({
         <Readout label="Follow-ups logged" value={totals.followUps} />
         <Readout label="Deals closed" value={totals.closes} />
       </Readouts>
+
+      {perAgentList.length > 0 && (
+        <Card
+          title="Per agent — total & daily average"
+          description={`Average = leads ÷ ${daysInRange} day${
+            daysInRange === 1 ? "" : "s"
+          } in this range.`}
+          padded={false}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-[var(--border)] font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Agent</th>
+                  <th className="px-5 py-3 font-semibold">Leads</th>
+                  <th className="px-5 py-3 font-semibold">Avg / day</th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">
+                    Follow-ups
+                  </th>
+                  <th className="hidden px-5 py-3 font-semibold sm:table-cell">
+                    Closed
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {perAgentList.map((a) => (
+                  <tr key={a.agentId}>
+                    <td className="px-5 py-3.5">
+                      <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                        <Avatar name={nameOf.get(a.agentId) ?? "?"} size={7} />
+                        {nameOf.get(a.agentId) ?? "Unknown"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
+                      {a.added}
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-amber-600">
+                      {perDayAvg(a.added)}
+                    </td>
+                    <td className="hidden px-5 py-3.5 text-zinc-600 sm:table-cell dark:text-zinc-400">
+                      {a.followUps}
+                    </td>
+                    <td className="hidden px-5 py-3.5 text-zinc-600 sm:table-cell dark:text-zinc-400">
+                      {a.closes}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t border-[var(--border)] bg-[var(--sunken)] font-mono text-[11px] uppercase tracking-[0.12em]">
+                <tr>
+                  <td className="px-5 py-3 font-semibold text-[var(--text-muted)]">
+                    Whole team
+                  </td>
+                  <td className="px-5 py-3 font-semibold text-[var(--text)]">
+                    {totals.added}
+                  </td>
+                  <td className="px-5 py-3 font-semibold text-amber-600">
+                    {perDayAvg(totals.added)}
+                  </td>
+                  <td className="hidden px-5 py-3 font-semibold text-[var(--text)] sm:table-cell">
+                    {totals.followUps}
+                  </td>
+                  <td className="hidden px-5 py-3 font-semibold text-[var(--text)] sm:table-cell">
+                    {totals.closes}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <Card
         title={`Per agent, per day (${fromDate} → ${toDate})`}
