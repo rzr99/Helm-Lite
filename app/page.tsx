@@ -639,10 +639,10 @@ export default async function Dashboard({
               </li>
             ))}
           </ul>
-          {filtered && contributors.length > 0 && (
+          {contributors.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--sunken)] px-5 py-3">
               <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Average per agent
+                Average per agent{filtered ? "" : " (all time)"}
               </span>
               <span className="flex items-center gap-5 text-sm text-[var(--text-muted)]">
                 <span>
