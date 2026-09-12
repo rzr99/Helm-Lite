@@ -181,8 +181,8 @@ export default async function Dashboard({
       .select("agent_id, rep_stage, handle_key")
       .limit(100000);
     if (intentOk) fq = fq.eq("rep_intent", intent);
-    if (from) fq = fq.gte("rep_date_added", from);
-    if (to) fq = fq.lte("rep_date_added", to);
+    if (from) fq = fq.gte("first_added", from);
+    if (to) fq = fq.lte("first_added", to);
     const { data: fdata } = await fq;
     const uniq = new Set<string>();
     for (const r of (fdata ?? []) as {

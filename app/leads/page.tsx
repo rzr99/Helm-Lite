@@ -38,6 +38,7 @@ type ClientRow = {
   rep_stage: string;
   rep_persona: string | null;
   rep_date_added: string;
+  first_added: string;
   entries: Entry[];
 };
 
@@ -87,10 +88,10 @@ export default async function LeadsPage({
   let query = supabase
     .from("lead_clients")
     .select(
-      "agent_id, outreach_count, rep_id, rep_handle, rep_name, rep_service, rep_source, rep_stage, rep_persona, rep_date_added, entries",
+      "agent_id, outreach_count, rep_id, rep_handle, rep_name, rep_service, rep_source, rep_stage, rep_persona, rep_date_added, first_added, entries",
       { count: "exact" }
     )
-    .order("rep_date_added", { ascending: false });
+    .order("first_added", { ascending: false });
 
   if (stage && STAGES.some((s) => s.value === stage)) {
     query = query.eq("rep_stage", stage);
@@ -101,8 +102,8 @@ export default async function LeadsPage({
   if (floor && agent) {
     query = query.eq("agent_id", agent);
   }
-  if (from) query = query.gte("rep_date_added", from);
-  if (to) query = query.lte("rep_date_added", to);
+  if (from) query = query.gte("first_added", from);
+  if (to) query = query.lte("first_added", to);
   if (intentOk) query = query.eq("rep_intent", intent);
   for (const token of search.toLowerCase().split(/\s+/).filter(Boolean)) {
     query = query.ilike("search_text", `%${token}%`);
@@ -149,8 +150,8 @@ export default async function LeadsPage({
     if (stage && STAGES.some((s) => s.value === stage))
       akq = akq.eq("rep_stage", stage);
     if (serviceOk) akq = akq.eq("rep_service", service);
-    if (from) akq = akq.gte("rep_date_added", from);
-    if (to) akq = akq.lte("rep_date_added", to);
+    if (from) akq = akq.gte("first_added", from);
+    if (to) akq = akq.lte("first_added", to);
     if (intentOk) akq = akq.eq("rep_intent", intent);
     for (const token of search.toLowerCase().split(/\s+/).filter(Boolean)) {
       akq = akq.ilike("search_text", `%${token}%`);
@@ -488,7 +489,7 @@ export default async function LeadsPage({
                         </span>
                       </td>
                       <td className="hidden px-5 py-3.5 align-top text-zinc-600 sm:table-cell dark:text-zinc-400">
-                        {c.rep_date_added}
+                        {c.first_added}
                       </td>
                       {floor && (
                         <td className="hidden px-5 py-3.5 align-top sm:table-cell">
