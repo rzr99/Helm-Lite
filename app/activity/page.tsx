@@ -173,6 +173,13 @@ export default async function ActivityPage({
     { added: 0, followUps: 0, closes: 0 }
   );
 
+  // Average per agent for the selected range, over agents who had any activity.
+  const activeAgentIds = new Set(rows.map((r) => r.agentId));
+  const nAgents = activeAgentIds.size || 1;
+  const avgAdded = Math.round((totals.added / nAgents) * 10) / 10;
+  const avgFollowUps = Math.round((totals.followUps / nAgents) * 10) / 10;
+  const avgCloses = Math.round((totals.closes / nAgents) * 10) / 10;
+
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
   type DupRow = {
@@ -317,6 +324,34 @@ export default async function ActivityPage({
         <Readout label="Follow-ups logged" value={totals.followUps} />
         <Readout label="Deals closed" value={totals.closes} />
       </Readouts>
+
+      {rows.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--sunken)] px-5 py-3">
+          <span className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            Average per agent · {activeAgentIds.size} active
+          </span>
+          <span className="flex flex-wrap items-center gap-5 text-sm text-[var(--text-muted)]">
+            <span>
+              <span className="font-semibold text-[var(--text)]">
+                {avgAdded}
+              </span>{" "}
+              leads
+            </span>
+            <span>
+              <span className="font-semibold text-[var(--text)]">
+                {avgFollowUps}
+              </span>{" "}
+              follow-ups
+            </span>
+            <span>
+              <span className="font-semibold text-[var(--text)]">
+                {avgCloses}
+              </span>{" "}
+              closed
+            </span>
+          </span>
+        </div>
+      )}
 
       <Card
         title={`Per agent, per day (${fromDate} → ${toDate})`}
