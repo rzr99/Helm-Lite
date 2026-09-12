@@ -173,13 +173,10 @@ export default async function ActivityPage({
     { added: 0, followUps: 0, closes: 0 }
   );
 
-  // Days in the selected range (capped at today, so a mid-month "monthly" view
-  // averages over days elapsed so far, not the whole future month).
-  const todayD = todayStr();
-  const endForAvg = toDate > todayD ? todayD : toDate;
+  // Days in the selected range — the full calendar span (from → to inclusive).
   const daysInRange =
-    endForAvg >= fromDate
-      ? Math.round((Date.parse(endForAvg) - Date.parse(fromDate)) / 86400000) + 1
+    toDate >= fromDate
+      ? Math.round((Date.parse(toDate) - Date.parse(fromDate)) / 86400000) + 1
       : 1;
   const perDayAvg = (n: number) => (Math.round((n / daysInRange) * 10) / 10);
 
