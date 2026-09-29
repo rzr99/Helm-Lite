@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
 import { Card, btnPrimary, inputClass, labelClass } from "@/components/ui";
 import { StatusPicker } from "@/components/status-picker";
+import { AccountCredentials } from "@/components/account-credentials";
 import { requireProfile } from "@/lib/profile";
 import { updateAccount, deleteAccount } from "@/app/personas/actions";
 
@@ -21,7 +22,7 @@ export default async function AccountDetailPage({
     supabase
       .from("accounts")
       .select(
-        "id, persona_id, platform, handle, subscription_date, renewal_date, assigned_card, assigned_proxy, statuses, status, persona:personas(persona_name)"
+        "id, persona_id, platform, handle, login_email, login_password, subscription_date, renewal_date, assigned_card, assigned_proxy, statuses, status, persona:personas(persona_name)"
       )
       .eq("id", id)
       .single(),
@@ -57,32 +58,16 @@ export default async function AccountDetailPage({
         description="Card and proxy are reference labels only — never a real card number."
       >
         <form action={saveAccount} className="flex flex-col gap-5">
+          <AccountCredentials
+            platforms={(platforms ?? []).map((p) => p.name)}
+            defaults={{
+              platform: account.platform,
+              handle: account.handle,
+              login_email: account.login_email,
+              login_password: account.login_password,
+            }}
+          />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>Platform</label>
-              <select
-                name="platform"
-                defaultValue={account.platform}
-                className={inputClass}
-              >
-                {(platforms ?? []).map((p) => (
-                  <option key={p.name} value={p.name}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>
-                Handle <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="handle"
-                required
-                defaultValue={account.handle}
-                className={inputClass}
-              />
-            </div>
             <div className="sm:col-span-2">
               <label className={labelClass}>
                 Status{" "}

@@ -19,6 +19,8 @@ type AccountRow = {
   id: string;
   platform: string;
   handle: string;
+  login_email: string | null;
+  login_password: string | null;
   subscription_date: string | null;
   renewal_date: string | null;
   assigned_card: string | null;
@@ -60,7 +62,7 @@ export default async function PersonaDetailPage({
   const { data: accountsData } = await supabase
     .from("accounts")
     .select(
-      "id, platform, handle, subscription_date, renewal_date, assigned_card, assigned_proxy, statuses"
+      "id, platform, handle, login_email, login_password, subscription_date, renewal_date, assigned_card, assigned_proxy, statuses"
     )
     .eq("persona_id", id)
     .order("platform")
@@ -246,6 +248,13 @@ export default async function PersonaDetailPage({
                   </p>
 
                   <dl className="flex flex-col gap-1 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-zinc-500 dark:text-zinc-400">Login</dt>
+                      <dd className="truncate text-zinc-700 dark:text-zinc-300">
+                        {a.login_email ?? "—"}
+                        {a.login_password ? " · 🔒" : ""}
+                      </dd>
+                    </div>
                     <div className="flex justify-between">
                       <dt className="text-zinc-500 dark:text-zinc-400">Renews</dt>
                       <dd

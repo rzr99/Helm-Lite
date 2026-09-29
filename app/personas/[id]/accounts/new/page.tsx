@@ -9,6 +9,7 @@ import {
   labelClass,
 } from "@/components/ui";
 import { StatusPicker } from "@/components/status-picker";
+import { AccountCredentials } from "@/components/account-credentials";
 import { requireProfile } from "@/lib/profile";
 import { createAccount } from "@/app/personas/actions";
 
@@ -50,34 +51,9 @@ export default async function NewAccountPage({
       <div className="max-w-xl">
         <Card padded>
           <form action={saveAccount} className="flex flex-col gap-5">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>
-                  Platform <span className="text-red-500">*</span>
-                </label>
-                <select name="platform" defaultValue="x" className={inputClass}>
-                  {(platforms ?? []).map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  Missing a platform? Add it on the Personas page first.
-                </p>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Handle <span className="text-red-500">*</span>
-                </label>
-                <input
-                  name="handle"
-                  required
-                  placeholder="@persona_handle"
-                  className={inputClass}
-                />
-              </div>
-            </div>
+            <AccountCredentials
+              platforms={(platforms ?? []).map((p) => p.name)}
+            />
 
             <div>
               <label className={labelClass}>

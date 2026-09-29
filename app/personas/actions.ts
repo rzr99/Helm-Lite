@@ -95,10 +95,16 @@ export async function createAccount(personaId: string, formData: FormData) {
   const supabase = await createClient();
 
   const sts = statusList(formData);
+  const platform = text(formData, "platform");
+  // X's password is never stored here — it's kept separate. Force it to null
+  // for X regardless of what was submitted.
+  const isX = platform.toLowerCase() === "x";
   const values = {
     persona_id: personaId,
-    platform: text(formData, "platform"),
+    platform,
     handle: text(formData, "handle"),
+    login_email: text(formData, "login_email") || null,
+    login_password: isX ? null : text(formData, "login_password") || null,
     subscription_date: text(formData, "subscription_date") || null,
     renewal_date: text(formData, "renewal_date") || null,
     assigned_card: cardLabel(formData, "assigned_card"),
@@ -126,9 +132,13 @@ export async function updateAccount(
   const supabase = await createClient();
 
   const sts = statusList(formData);
+  const platform = text(formData, "platform");
+  const isX = platform.toLowerCase() === "x";
   const values = {
-    platform: text(formData, "platform"),
+    platform,
     handle: text(formData, "handle"),
+    login_email: text(formData, "login_email") || null,
+    login_password: isX ? null : text(formData, "login_password") || null,
     subscription_date: text(formData, "subscription_date") || null,
     renewal_date: text(formData, "renewal_date") || null,
     assigned_card: cardLabel(formData, "assigned_card"),
