@@ -47,17 +47,34 @@ function worstStatus(accounts: Account[]): string | null {
   return all[0];
 }
 
+type AssignFilter = "assigned" | "unassigned" | "all";
+
+// Build a /personas URL that keeps the OTHER axis intact, so the two filter
+// rows stack instead of resetting each other. "assigned" is the default view,
+// so it's left out of the URL to keep /personas clean.
+function personasHref(assign: AssignFilter, status: string | null): string {
+  const params = new URLSearchParams();
+  if (assign !== "assigned") params.set("assign", assign);
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  return "/personas" + (qs ? `?${qs}` : "");
+}
+
 export default async function PersonasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; assign?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/");
 
-  const { status } = await searchParams;
+  const { status, assign } = await searchParams;
   const activeStatus =
     status && ACCOUNT_STATUSES.some((s) => s.value === status) ? status : null;
+  // Assignment is a persona-level axis (who runs it), independent of account
+  // health. Default to "assigned" so the page opens on the working roster.
+  const activeAssign: AssignFilter =
+    assign === "unassigned" ? "unassigned" : assign === "all" ? "all" : "assigned";
 
   const [{ data: personasData }, { data: platforms }] = await Promise.all([
     supabase
@@ -71,17 +88,43 @@ export default async function PersonasPage({
 
   const personas = (personasData ?? []) as unknown as PersonaRow[];
 
-  // Count accounts per status across everything (drives the filter chips).
-  // An account with several states counts toward each one.
+  const isAssigned = (p: PersonaRow) => p.manager != null;
+  const matchesAssign = (p: PersonaRow) =>
+    activeAssign === "all"
+      ? true
+      : activeAssign === "assigned"
+        ? isAssigned(p)
+        : !isAssigned(p);
+  // Does this persona have an account in the currently-picked health state?
+  // (Used so the assignment counts reflect the active health filter.)
+  const inHealth = (p: PersonaRow) =>
+    !activeStatus ||
+    (p.accounts ?? []).some((a) => (a.statuses ?? []).includes(activeStatus));
+
+  // Assignment chips count PERSONAS, narrowed by the active health filter.
+  let assignedCount = 0;
+  let unassignedCount = 0;
+  for (const p of personas) {
+    if (!inHealth(p)) continue;
+    if (isAssigned(p)) assignedCount++;
+    else unassignedCount++;
+  }
+
+  // Health chips count ACCOUNTS, narrowed by the active assignment filter, so
+  // the numbers always describe what you're currently looking at. An account
+  // with several states counts toward each one.
   const counts: Record<string, number> = {};
-  for (const p of personas)
+  for (const p of personas) {
+    if (!matchesAssign(p)) continue;
     for (const a of p.accounts ?? [])
       for (const s of a.statuses ?? [])
         counts[s] = (counts[s] ?? 0) + 1;
+  }
 
-  // When a status is picked, keep only personas with an account in that state,
+  // Apply assignment first, then health: keep personas with a matching account
   // and colour those rows by it; otherwise colour by the worst account.
   const rows = personas
+    .filter(matchesAssign)
     .map((p) => {
       const accounts = p.accounts ?? [];
       const matching = activeStatus
@@ -93,6 +136,12 @@ export default async function PersonasPage({
     .filter((p) => !activeStatus || p.matchingCount > 0);
 
   const presentStatuses = ACCOUNT_STATUSES.filter((s) => counts[s.value] > 0);
+
+  const assignFilters: { value: AssignFilter; label: string; count: number }[] = [
+    { value: "assigned", label: "Assigned", count: assignedCount },
+    { value: "unassigned", label: "Unassigned", count: unassignedCount },
+    { value: "all", label: "All", count: assignedCount + unassignedCount },
+  ];
 
   return (
     <Shell
@@ -107,10 +156,35 @@ export default async function PersonasPage({
       }
     >
       <Card padded={false}>
-        {/* Health filter */}
+        {/* Assignment (who runs it) — the primary "where do I look" split. */}
         <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
+          <span className="mr-1 w-14 shrink-0 font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
+            Team
+          </span>
+          {assignFilters.map((f) => (
+            <Link
+              key={f.value}
+              href={personasHref(f.value, activeStatus)}
+              className={
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
+                (activeAssign === f.value
+                  ? "bg-amber-600 text-[#0e0e0d]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              {f.label}
+              <span className="opacity-60">{f.count}</span>
+            </Link>
+          ))}
+        </div>
+
+        {/* Health (what's wrong) — a second lens stacked on the assignment view. */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 px-5 py-4 dark:border-white/[0.06]">
+          <span className="mr-1 w-14 shrink-0 font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
+            Health
+          </span>
           <Link
-            href="/personas"
+            href={personasHref(activeAssign, null)}
             className={
               "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
               (!activeStatus
@@ -123,7 +197,7 @@ export default async function PersonasPage({
           {presentStatuses.map((s) => (
             <Link
               key={s.value}
-              href={`/personas?status=${s.value}`}
+              href={personasHref(activeAssign, s.value)}
               className={
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
                 (activeStatus === s.value
@@ -143,19 +217,25 @@ export default async function PersonasPage({
 
         {rows.length === 0 ? (
           <EmptyState
-            emoji={activeStatus ? "🔍" : "🎭"}
+            emoji={personas.length === 0 ? "🎭" : "🔍"}
             title={
-              activeStatus
-                ? `No ${statusLabel(activeStatus).toLowerCase()} accounts`
-                : "No personas yet"
+              personas.length === 0
+                ? "No personas yet"
+                : activeStatus
+                  ? `No ${statusLabel(activeStatus).toLowerCase()} accounts here`
+                  : activeAssign === "unassigned"
+                    ? "No unassigned personas"
+                    : activeAssign === "assigned"
+                      ? "No assigned personas"
+                      : "Nothing matches this filter"
             }
             hint={
-              activeStatus
-                ? "Nothing in this state right now — try another filter."
-                : "A persona is an operating identity — create one and add its accounts."
+              personas.length === 0
+                ? "A persona is an operating identity — create one and add its accounts."
+                : "Nothing in this view right now — try another filter."
             }
-            actionHref={activeStatus ? undefined : "/personas/new"}
-            actionLabel={activeStatus ? undefined : "+ New persona"}
+            actionHref={personas.length === 0 ? "/personas/new" : undefined}
+            actionLabel={personas.length === 0 ? "+ New persona" : undefined}
           />
         ) : (
           <div className="overflow-x-auto">
