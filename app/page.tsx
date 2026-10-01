@@ -323,10 +323,11 @@ export default async function Dashboard({
         </Link>
       }
     >
-      {/* Owner sees every agent's month progress; agents see their own. */}
-      {owner && <TeamQuotaBoard month={qmonth} />}
-      {!owner && <QuotaProgress userId={profile.id} month={qmonth} />}
-      {!owner && <AttendanceDashboardCard userId={profile.id} />}
+      {/* The floor (owner + team lead) sees every agent's month progress;
+          agents see their own targets + attendance. */}
+      {floor && <TeamQuotaBoard month={qmonth} />}
+      {!floor && <QuotaProgress userId={profile.id} month={qmonth} />}
+      {!floor && <AttendanceDashboardCard userId={profile.id} />}
 
       {/* Controls — two structured lines */}
       <div className="flex flex-col gap-2.5">
