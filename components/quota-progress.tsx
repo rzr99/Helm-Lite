@@ -1,22 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
 import { QuotaBar } from "@/components/quota-bar";
-import { monthRange } from "@/lib/dates";
+import { monthRange, workingDaysInMonth, isSunday } from "@/lib/dates";
 import { DAILY_LEAD_QUOTA, MONTHLY_SALES_TARGET } from "@/lib/enums";
 
 // Each person's own whole-month progress: a leads quota bar (30 x the month's
-// days, minus their absences) and a sales target bar ($2000, filled only from
-// revenue received).
+// working days — Mon–Sat, minus their absences) and a sales target bar ($2000,
+// filled only from revenue received).
 export async function QuotaProgress({ userId }: { userId: string }) {
   const supabase = await createClient();
   const { from, to } = monthRange();
-  const daysInMonth = Number(to.slice(8, 10));
+  const workingDays = workingDaysInMonth(from, to);
 
   const [{ data: att }, { data: leadDays }, { data: deals }] = await Promise.all(
     [
       supabase
         .from("attendance")
-        .select("status")
+        .select("status, date")
         .eq("user_id", userId)
         .gte("date", from)
         .lte("date", to)
@@ -38,11 +38,12 @@ export async function QuotaProgress({ userId }: { userId: string }) {
     ]
   );
 
-  // Whole-month quota: every day counts except days marked Absent.
-  const absentDays = ((att ?? []) as { status: string }[]).filter(
-    (r) => r.status === "absent"
+  // Whole-month quota: every working day (Mon–Sat) counts except days marked
+  // Absent. A Sunday absence is ignored — Sundays never count anyway.
+  const absentDays = ((att ?? []) as { status: string; date: string }[]).filter(
+    (r) => r.status === "absent" && !isSunday(r.date)
   ).length;
-  const quotaDays = Math.max(0, daysInMonth - absentDays);
+  const quotaDays = Math.max(0, workingDays - absentDays);
   const leadsTarget = DAILY_LEAD_QUOTA * quotaDays;
   const leadsDone = ((leadDays ?? []) as { n: number }[]).reduce(
     (s, r) => s + (r.n ?? 0),
@@ -57,14 +58,21 @@ export async function QuotaProgress({ userId }: { userId: string }) {
     month: "long",
   });
 
+  const leadsHit = leadsTarget > 0 && leadsDone >= leadsTarget;
+  const salesHit = salesDone >= MONTHLY_SALES_TARGET;
+
   return (
     <Card title={`Your targets · ${monthLabel}`}>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3.5">
         <QuotaBar
           label="Leads quota"
-          hint={`${DAILY_LEAD_QUOTA}/day × ${quotaDays} days this month${
-            absentDays ? ` (${absentDays} absent excluded)` : ""
-          }`}
+          hint={
+            leadsHit
+              ? "🔥 Quota smashed — keep stacking!"
+              : `${DAILY_LEAD_QUOTA}/day × ${quotaDays} working days (excl. Sundays)${
+                  absentDays ? ` − ${absentDays} absent` : ""
+                }`
+          }
           current={leadsDone}
           target={leadsTarget}
           display={(n) => n.toLocaleString()}
@@ -72,7 +80,11 @@ export async function QuotaProgress({ userId }: { userId: string }) {
         />
         <QuotaBar
           label="Sales target"
-          hint="Fills from revenue received — not deal size."
+          hint={
+            salesHit
+              ? "💰 Target hit — nice work!"
+              : "Fills from revenue received — not deal size."
+          }
           current={salesDone}
           target={MONTHLY_SALES_TARGET}
           display={(n) => "$" + n.toLocaleString()}

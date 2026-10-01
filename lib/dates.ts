@@ -35,6 +35,24 @@ export function weekRange() {
   return { from: iso(monday), to: iso(sunday) };
 }
 
+// Is this YYYY-MM-DD a Sunday? (Sundays are the team's day off.)
+export function isSunday(dateStr: string) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 0;
+}
+
+// Count the working days (Mon–Sat, excluding Sundays) in the month that the
+// `from` (YYYY-MM-01) → `to` (YYYY-MM-last) range spans.
+export function workingDaysInMonth(from: string, to: string) {
+  const [y, m] = from.split("-").map(Number);
+  const last = Number(to.slice(8, 10));
+  let count = 0;
+  for (let d = 1; d <= last; d++) {
+    if (new Date(Date.UTC(y, m - 1, d)).getUTCDay() !== 0) count++;
+  }
+  return count;
+}
+
 // This month, 1st → last day, based on the Karachi calendar date.
 export function monthRange() {
   const [y, m] = todayStr().split("-").map(Number);

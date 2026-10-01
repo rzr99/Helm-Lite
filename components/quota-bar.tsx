@@ -24,21 +24,22 @@ export function QuotaBar({
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
         <span
           className={
-            (big ? "text-sm" : "text-[13px]") + " font-semibold text-[var(--text)]"
+            (big ? "text-sm" : "text-[11px]") +
+            " font-semibold text-[var(--text)]"
           }
         >
           {label}
         </span>
-        <span className="text-[13px] text-[var(--text-muted)]">
+        <span className={(big ? "text-[13px]" : "text-[11px]") + " text-[var(--text-muted)] tabular-nums"}>
           <span className="font-semibold text-[var(--text)]">
             {display(current)}
-          </span>{" "}
-          / {target > 0 ? display(target) : "—"}
+          </span>
+          <span className="text-[var(--text-faint)]"> / {target > 0 ? display(target) : "—"}</span>
           {target > 0 && (
-            <span className="ml-1.5 font-semibold" style={{ color: fill }}>
+            <span className="ml-1.5 font-bold" style={{ color: fill }}>
               {pct}%
             </span>
           )}
@@ -46,13 +47,16 @@ export function QuotaBar({
       </div>
       <div
         className={
-          (big ? "h-4" : "h-2.5") +
-          " mt-1.5 overflow-hidden rounded-full bg-[var(--sunken)] ring-1 ring-inset ring-[var(--border-soft)]"
+          (big ? "h-3.5" : "h-1.5") +
+          " mt-1 overflow-hidden rounded-full bg-[var(--sunken)] ring-1 ring-inset ring-[var(--border-soft)]"
         }
       >
         <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${width}%`, backgroundColor: fill }}
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${width}%`,
+            backgroundImage: `linear-gradient(90deg, ${fill}, ${fill}cc)`,
+          }}
         />
       </div>
       {hint && <p className="mt-1 text-[11px] text-[var(--text-faint)]">{hint}</p>}
