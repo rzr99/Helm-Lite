@@ -146,7 +146,7 @@ export default async function Dashboard({
   // per (client, agent) in the duplicate view, so counting per agent gives it.
   const sharedByAgent = new Map<string, number>();
   const sharedKeys = new Set<string>();
-  if (floor && !agent && !isSummary) {
+  if (floor && !agent && !isSummary && !filtered) {
     const { data: dupRows } = await supabase
       .from("lead_duplicate_entries")
       .select("agent_id, handle_key")
@@ -176,42 +176,32 @@ export default async function Dashboard({
   // Per-agent breakdown so the Team table can show each agent's numbers FOR THE
   // SELECTED PERIOD (not all-time) whenever a filter is active.
   const perAgentFiltered = new Map<string, { leads: number; closed: number }>();
-  const perAgentKeys = new Map<string, Set<string>>();
+  const sharedByAgentFiltered = new Map<string, number>();
   if (filtered) {
-    // Fetch WITHOUT the agent restriction so the Team table can show every
-    // agent; the pipeline tiles apply the agent filter in memory below.
-    let fq = supabase
-      .from("lead_clients")
-      .select("agent_id, rep_stage, handle_key")
-      .limit(100000);
-    if (intentOk) fq = fq.eq("rep_intent", intent);
-    if (from) fq = fq.gte("first_added", from);
-    if (to) fq = fq.lte("first_added", to);
-    const { data: fdata } = await fq;
-    const uniq = new Set<string>();
-    for (const r of (fdata ?? []) as {
-      agent_id: string;
-      rep_stage: string;
-      handle_key: string;
-    }[]) {
-      // Pipeline tiles + the unique count respect the agent filter.
-      if (!agent || r.agent_id === agent) {
-        counts[r.rep_stage] = (counts[r.rep_stage] ?? 0) + 1;
-        uniq.add(r.handle_key);
-      }
-      // Team table gets every agent's period numbers.
-      const pa = perAgentFiltered.get(r.agent_id) ?? { leads: 0, closed: 0 };
-      pa.leads += 1;
-      if (r.rep_stage === "closed") pa.closed += 1;
-      perAgentFiltered.set(r.agent_id, pa);
-      let ks = perAgentKeys.get(r.agent_id);
-      if (!ks) {
-        ks = new Set();
-        perAgentKeys.set(r.agent_id, ks);
-      }
-      ks.add(r.handle_key);
+    // Aggregate in Postgres (counts are correct regardless of size — the old
+    // in-app row fetch hit the API's 1000-row cap and undercounted big sets).
+    const { data: pdata } = await supabase.rpc("dashboard_pipeline", {
+      p_intent: intentOk ? intent : null,
+      p_from: from || null,
+      p_to: to || null,
+      p_agent: agent || null,
+    });
+    const res = (pdata ?? {}) as {
+      by_stage?: { stage: string; n: number }[];
+      unique?: number;
+      by_agent?: {
+        agent_id: string;
+        leads: number;
+        closed: number;
+        shared: number;
+      }[];
+    };
+    for (const s of res.by_stage ?? []) counts[s.stage] = s.n;
+    uniqueFiltered = res.unique ?? 0;
+    for (const a of res.by_agent ?? []) {
+      perAgentFiltered.set(a.agent_id, { leads: a.leads, closed: a.closed });
+      sharedByAgentFiltered.set(a.agent_id, a.shared);
     }
-    uniqueFiltered = uniq.size;
   } else {
     for (const c of (stageCounts ?? []) as { stage: string; n: number }[]) {
       counts[c.stage] = c.n;
@@ -233,17 +223,15 @@ export default async function Dashboard({
       // Filtered view: each agent's clients + closes for the selected period,
       // plus how many of those clients are also worked by another agent.
       const pa = perAgentFiltered.get(t.id) ?? { leads: 0, closed: 0 };
-      const keys = perAgentKeys.get(t.id) ?? new Set<string>();
-      let shared = 0;
-      for (const k of keys) if (sharedKeys.has(k)) shared += 1;
-      const total = keys.size;
+      const shared = sharedByAgentFiltered.get(t.id) ?? 0;
+      const total = pa.leads;
       return {
         ...t,
         total,
         addedToday: 0,
         closed: pa.closed,
         shared,
-        exclusive: total - shared,
+        exclusive: Math.max(0, total - shared),
         periodFiltered: true,
       };
     }
