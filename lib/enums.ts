@@ -1,3 +1,6 @@
+// Each agent's daily target for leads added. Used by the Activity quota view.
+export const DAILY_LEAD_QUOTA = 30;
+
 export const STAGES = [
   { value: "new", label: "New" },
   { value: "in_conversation", label: "In conversation" },

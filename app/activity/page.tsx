@@ -13,11 +13,19 @@ import {
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { todayStr, weekRange, monthRange } from "@/lib/dates";
+import { DAILY_LEAD_QUOTA } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
 const filterLabel =
   "mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+
+// Colour an attainment %: green at/over target, amber close, red well under.
+function quotaColor(pct: number) {
+  if (pct >= 100) return "#16a34a";
+  if (pct >= 70) return "#d97706";
+  return "#dc2626";
+}
 
 export default async function ActivityPage({
   searchParams,
@@ -184,18 +192,30 @@ export default async function ActivityPage({
   // up per agent so we can show each agent's total + daily average).
   const perAgent = new Map<
     string,
-    { added: number; followUps: number; closes: number }
+    { added: number; followUps: number; closes: number; daysMet: number }
   >();
   for (const r of rows) {
-    const a = perAgent.get(r.agentId) ?? { added: 0, followUps: 0, closes: 0 };
+    const a =
+      perAgent.get(r.agentId) ??
+      { added: 0, followUps: 0, closes: 0, daysMet: 0 };
     a.added += r.added;
     a.followUps += r.followUps;
     a.closes += r.closes;
+    // Each row is one agent-day, so this counts the days quota was hit.
+    if (r.added >= DAILY_LEAD_QUOTA) a.daysMet += 1;
     perAgent.set(r.agentId, a);
   }
   const perAgentList = [...perAgent.entries()]
     .map(([agentId, v]) => ({ agentId, ...v }))
     .sort((a, b) => b.added - a.added);
+
+  // Quota target for one agent over the range, and attainment helpers.
+  const agentTarget = DAILY_LEAD_QUOTA * daysInRange;
+  const quotaPct = (added: number, target: number) =>
+    target > 0 ? Math.round((added / target) * 100) : 0;
+  const teamTarget = agentTarget * perAgentList.length;
+  const teamDaysMet = perAgentList.reduce((s, a) => s + a.daysMet, 0);
+  const teamDays = daysInRange * perAgentList.length;
 
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
@@ -344,10 +364,10 @@ export default async function ActivityPage({
 
       {perAgentList.length > 0 && (
         <Card
-          title="Per agent — total & daily average"
+          title="Per agent — total, daily average & quota"
           description={`Average = leads ÷ ${daysInRange} day${
             daysInRange === 1 ? "" : "s"
-          } in this range.`}
+          }. Quota = ${DAILY_LEAD_QUOTA}/day, so target is ${agentTarget} for this range.`}
           padded={false}
         >
           <div className="overflow-x-auto">
@@ -357,6 +377,7 @@ export default async function ActivityPage({
                   <th className="px-5 py-3 font-semibold">Agent</th>
                   <th className="px-5 py-3 font-semibold">Leads</th>
                   <th className="px-5 py-3 font-semibold">Avg / day</th>
+                  <th className="px-5 py-3 font-semibold">Quota</th>
                   <th className="hidden px-5 py-3 font-semibold sm:table-cell">
                     Follow-ups
                   </th>
@@ -380,6 +401,17 @@ export default async function ActivityPage({
                     <td className="px-5 py-3.5 font-semibold text-amber-600">
                       {perDayAvg(a.added)}
                     </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className="font-semibold"
+                        style={{ color: quotaColor(quotaPct(a.added, agentTarget)) }}
+                      >
+                        {quotaPct(a.added, agentTarget)}%
+                      </span>
+                      <span className="block text-[11px] text-[var(--text-faint)]">
+                        {a.daysMet}/{daysInRange} day{daysInRange === 1 ? "" : "s"} hit {DAILY_LEAD_QUOTA}+
+                      </span>
+                    </td>
                     <td className="hidden px-5 py-3.5 text-zinc-600 sm:table-cell dark:text-zinc-400">
                       {a.followUps}
                     </td>
@@ -399,6 +431,17 @@ export default async function ActivityPage({
                   </td>
                   <td className="px-5 py-3 font-semibold text-amber-600">
                     {perDayAvg(totals.added)}
+                  </td>
+                  <td className="px-5 py-3">
+                    <span
+                      className="font-semibold"
+                      style={{ color: quotaColor(quotaPct(totals.added, teamTarget)) }}
+                    >
+                      {quotaPct(totals.added, teamTarget)}%
+                    </span>
+                    <span className="block text-[10px] normal-case tracking-normal text-[var(--text-faint)]">
+                      {teamDaysMet}/{teamDays} agent-days
+                    </span>
                   </td>
                   <td className="hidden px-5 py-3 font-semibold text-[var(--text)] sm:table-cell">
                     {totals.followUps}
@@ -432,6 +475,7 @@ export default async function ActivityPage({
                   <th className="px-5 py-3 font-semibold">Date</th>
                   <th className="px-5 py-3 font-semibold">Agent</th>
                   <th className="px-5 py-3 font-semibold">Leads added</th>
+                  <th className="px-5 py-3 font-semibold">Quota</th>
                   <th className="px-5 py-3 font-semibold">Follow-ups logged</th>
                   <th className="px-5 py-3 font-semibold">Deals closed</th>
                 </tr>
@@ -453,6 +497,17 @@ export default async function ActivityPage({
                     </td>
                     <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {r.added}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {r.added >= DAILY_LEAD_QUOTA ? (
+                        <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-950 dark:text-green-300">
+                          met
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
+                          −{DAILY_LEAD_QUOTA - r.added}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {r.followUps}
