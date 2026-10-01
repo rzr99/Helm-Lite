@@ -1,15 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, Avatar } from "@/components/ui";
 import { QuotaBar } from "@/components/quota-bar";
-import { monthRange, workingDaysInMonth, isSunday } from "@/lib/dates";
+import { MonthNav } from "@/components/month-nav";
+import { workingDaysInMonth, isSunday } from "@/lib/dates";
+import { monthMeta } from "@/lib/attendance";
 import { DAILY_LEAD_QUOTA, MONTHLY_SALES_TARGET } from "@/lib/enums";
 
 // Owner view: every agent's whole-month progress, with a long team bar on top.
 // Leads quota = 30 x the month's working days (Mon–Sat) minus that agent's
 // absences; the sales bar fills only from revenue received.
-export async function TeamQuotaBoard() {
+export async function TeamQuotaBoard({ month }: { month?: string }) {
   const supabase = await createClient();
-  const { from, to } = monthRange();
+  const M = monthMeta(month);
+  const from = M.first;
+  const to = M.last;
   const workingDays = workingDaysInMonth(from, to);
 
   const [{ data: users }, { data: att }, { data: leadDays }, { data: deals }] =
@@ -94,18 +98,14 @@ export async function TeamQuotaBoard() {
   const medal = (i: number) =>
     i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
 
-  const monthLabel = new Date(from + "T00:00:00").toLocaleString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-
   const num = (n: number) => n.toLocaleString();
   const money = (n: number) => "$" + n.toLocaleString();
 
   return (
     <Card
-      title={`Team targets · ${monthLabel}`}
+      title={`Team targets · ${M.label}`}
       description={`Whole-month quota: ${DAILY_LEAD_QUOTA}/day × ${workingDays} working days (Mon–Sat), minus absences. Sales bar fills from revenue received.`}
+      action={<MonthNav prev={M.prev} next={M.next} />}
     >
       {/* The long team bars. */}
       <div className="flex flex-col gap-4">

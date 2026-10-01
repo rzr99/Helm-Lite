@@ -30,6 +30,7 @@ export default async function Dashboard({
     from?: string;
     to?: string;
     month?: string;
+    qmonth?: string;
     agent?: string;
     intent?: string;
   }>;
@@ -41,7 +42,7 @@ export default async function Dashboard({
 
   const today = todayStr();
 
-  const { view, win: winRaw, from, to, month, agent, intent } =
+  const { view, win: winRaw, from, to, month, qmonth, agent, intent } =
     await searchParams;
   const isSummary = view === "summary";
   const intentOk = intent === "high_intent" || intent === "cold_outreach";
@@ -340,7 +341,7 @@ export default async function Dashboard({
       }
     >
       {/* Owner sees every agent's month progress; agents see their own. */}
-      {owner && <TeamQuotaBoard />}
+      {owner && <TeamQuotaBoard month={qmonth} />}
       {!owner && <QuotaProgress userId={profile.id} />}
       {!owner && <AttendanceDashboardCard userId={profile.id} />}
 
