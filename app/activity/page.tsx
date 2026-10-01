@@ -122,21 +122,15 @@ export default async function ActivityPage({
     attendanceQuery,
   ]);
 
-  // Present days per agent: present & late count as a full day, half-day as 0.5,
-  // absent / unmarked as 0. This is the quota denominator.
+  // Attended days per agent: every day expects the full quota except Absent —
+  // present, late and half-day all count as one. Absent / unmarked count as 0.
   const attendedByAgent = new Map<string, number>();
   for (const r of (attendanceRows ?? []) as {
     user_id: string;
     status: string;
   }[]) {
-    const weight =
-      r.status === "present" || r.status === "late"
-        ? 1
-        : r.status === "half_day"
-          ? 0.5
-          : 0;
-    if (weight === 0) continue;
-    attendedByAgent.set(r.user_id, (attendedByAgent.get(r.user_id) ?? 0) + weight);
+    if (r.status === "absent") continue;
+    attendedByAgent.set(r.user_id, (attendedByAgent.get(r.user_id) ?? 0) + 1);
   }
 
   const nameOf = new Map((users ?? []).map((u) => [u.id, u.full_name]));
@@ -393,7 +387,7 @@ export default async function ActivityPage({
           title="Per agent — total, daily average & quota"
           description={`Average = leads ÷ ${daysInRange} day${
             daysInRange === 1 ? "" : "s"
-          }. Quota = ${DAILY_LEAD_QUOTA} per present day (late counts full, half-day counts half).`}
+          }. Quota = ${DAILY_LEAD_QUOTA} per attended day (every day counts except Absent).`}
           padded={false}
         >
           <div className="overflow-x-auto">
@@ -437,7 +431,7 @@ export default async function ActivityPage({
                             {quotaPct(a.added, targetFor(a.agentId))}%
                           </span>
                           <span className="block text-[11px] text-[var(--text-faint)]">
-                            {fmtDays(attendedByAgent.get(a.agentId) ?? 0)} present day
+                            {fmtDays(attendedByAgent.get(a.agentId) ?? 0)} attended day
                             {(attendedByAgent.get(a.agentId) ?? 0) === 1 ? "" : "s"} · target {targetFor(a.agentId)}
                           </span>
                         </>
@@ -445,7 +439,7 @@ export default async function ActivityPage({
                         <>
                           <span className="text-[var(--text-faint)]">—</span>
                           <span className="block text-[11px] text-[var(--text-faint)]">
-                            no present days
+                            no attended days
                           </span>
                         </>
                       )}
@@ -480,7 +474,7 @@ export default async function ActivityPage({
                           {quotaPct(totals.added, teamTarget)}%
                         </span>
                         <span className="block text-[10px] normal-case tracking-normal text-[var(--text-faint)]">
-                          {fmtDays(teamAttended)} present days · target {teamTarget}
+                          {fmtDays(teamAttended)} attended days · target {teamTarget}
                         </span>
                       </>
                     ) : (

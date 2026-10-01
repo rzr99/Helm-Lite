@@ -1,5 +1,9 @@
-// Each agent's daily target for leads added. Used by the Activity quota view.
+// Each agent's daily target for leads added. Every attended day expects this —
+// present, late, and half-day all count; only Absent (or unmarked) expects none.
 export const DAILY_LEAD_QUOTA = 30;
+
+// Each agent's monthly sales target, measured by revenue RECEIVED (not deal size).
+export const MONTHLY_SALES_TARGET = 2000;
 
 export const STAGES = [
   { value: "new", label: "New" },
