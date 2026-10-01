@@ -4,6 +4,7 @@ import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnSecondary, 
 import { DashboardSummary } from "@/components/dashboard-summary";
 import { AttendanceDashboardCard } from "@/components/attendance-card";
 import { QuotaProgress } from "@/components/quota-progress";
+import { TeamQuotaBoard } from "@/components/team-quota-board";
 import { getDashboardSummary } from "@/lib/dashboard-summary";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
@@ -338,7 +339,8 @@ export default async function Dashboard({
         </Link>
       }
     >
-      {/* Agents see their own targets + attendance at the top of the dashboard. */}
+      {/* Owner sees every agent's month progress; agents see their own. */}
+      {owner && <TeamQuotaBoard />}
       {!owner && <QuotaProgress userId={profile.id} />}
       {!owner && <AttendanceDashboardCard userId={profile.id} />}
 
