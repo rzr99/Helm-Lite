@@ -88,6 +88,16 @@ export default async function ActivityPage({
     return q;
   };
 
+  // Attendance for the range — quota targets are tied to days actually worked.
+  // (RLS: the owner sees everyone; a team lead sees only their own rows.)
+  let attendanceQuery = supabase
+    .from("attendance")
+    .select("user_id, status")
+    .gte("date", fromDate)
+    .lte("date", toDate)
+    .limit(100000);
+  if (agent) attendanceQuery = attendanceQuery.eq("user_id", agent);
+
   const [
     { data: users },
     { data: leadsAdded },
@@ -95,6 +105,7 @@ export default async function ActivityPage({
     { data: dealDays },
     { data: dupRows },
     { data: uniqueAdded },
+    { data: attendanceRows },
   ] = await Promise.all([
     supabase.from("users").select("id, full_name").eq("active", true).order("full_name"),
     dayQuery("activity_leads_added"),
@@ -108,7 +119,25 @@ export default async function ActivityPage({
       p_to: toDate,
       p_agent: agent || null,
     }),
+    attendanceQuery,
   ]);
+
+  // Present days per agent: present & late count as a full day, half-day as 0.5,
+  // absent / unmarked as 0. This is the quota denominator.
+  const attendedByAgent = new Map<string, number>();
+  for (const r of (attendanceRows ?? []) as {
+    user_id: string;
+    status: string;
+  }[]) {
+    const weight =
+      r.status === "present" || r.status === "late"
+        ? 1
+        : r.status === "half_day"
+          ? 0.5
+          : 0;
+    if (weight === 0) continue;
+    attendedByAgent.set(r.user_id, (attendedByAgent.get(r.user_id) ?? 0) + weight);
+  }
 
   const nameOf = new Map((users ?? []).map((u) => [u.id, u.full_name]));
 
@@ -192,30 +221,27 @@ export default async function ActivityPage({
   // up per agent so we can show each agent's total + daily average).
   const perAgent = new Map<
     string,
-    { added: number; followUps: number; closes: number; daysMet: number }
+    { added: number; followUps: number; closes: number }
   >();
   for (const r of rows) {
-    const a =
-      perAgent.get(r.agentId) ??
-      { added: 0, followUps: 0, closes: 0, daysMet: 0 };
+    const a = perAgent.get(r.agentId) ?? { added: 0, followUps: 0, closes: 0 };
     a.added += r.added;
     a.followUps += r.followUps;
     a.closes += r.closes;
-    // Each row is one agent-day, so this counts the days quota was hit.
-    if (r.added >= DAILY_LEAD_QUOTA) a.daysMet += 1;
     perAgent.set(r.agentId, a);
   }
   const perAgentList = [...perAgent.entries()]
     .map(([agentId, v]) => ({ agentId, ...v }))
     .sort((a, b) => b.added - a.added);
 
-  // Quota target for one agent over the range, and attainment helpers.
-  const agentTarget = DAILY_LEAD_QUOTA * daysInRange;
+  // Quota targets are tied to present days: target = 30 x present days.
   const quotaPct = (added: number, target: number) =>
     target > 0 ? Math.round((added / target) * 100) : 0;
-  const teamTarget = agentTarget * perAgentList.length;
-  const teamDaysMet = perAgentList.reduce((s, a) => s + a.daysMet, 0);
-  const teamDays = daysInRange * perAgentList.length;
+  const targetFor = (agentId: string) =>
+    DAILY_LEAD_QUOTA * (attendedByAgent.get(agentId) ?? 0);
+  const fmtDays = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  const teamAttended = [...attendedByAgent.values()].reduce((s, n) => s + n, 0);
+  const teamTarget = DAILY_LEAD_QUOTA * teamAttended;
 
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
@@ -367,7 +393,7 @@ export default async function ActivityPage({
           title="Per agent — total, daily average & quota"
           description={`Average = leads ÷ ${daysInRange} day${
             daysInRange === 1 ? "" : "s"
-          }. Quota = ${DAILY_LEAD_QUOTA}/day, so target is ${agentTarget} for this range.`}
+          }. Quota = ${DAILY_LEAD_QUOTA} per present day (late counts full, half-day counts half).`}
           padded={false}
         >
           <div className="overflow-x-auto">
@@ -402,15 +428,27 @@ export default async function ActivityPage({
                       {perDayAvg(a.added)}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span
-                        className="font-semibold"
-                        style={{ color: quotaColor(quotaPct(a.added, agentTarget)) }}
-                      >
-                        {quotaPct(a.added, agentTarget)}%
-                      </span>
-                      <span className="block text-[11px] text-[var(--text-faint)]">
-                        {a.daysMet}/{daysInRange} day{daysInRange === 1 ? "" : "s"} hit {DAILY_LEAD_QUOTA}+
-                      </span>
+                      {(attendedByAgent.get(a.agentId) ?? 0) > 0 ? (
+                        <>
+                          <span
+                            className="font-semibold"
+                            style={{ color: quotaColor(quotaPct(a.added, targetFor(a.agentId))) }}
+                          >
+                            {quotaPct(a.added, targetFor(a.agentId))}%
+                          </span>
+                          <span className="block text-[11px] text-[var(--text-faint)]">
+                            {fmtDays(attendedByAgent.get(a.agentId) ?? 0)} present day
+                            {(attendedByAgent.get(a.agentId) ?? 0) === 1 ? "" : "s"} · target {targetFor(a.agentId)}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[var(--text-faint)]">—</span>
+                          <span className="block text-[11px] text-[var(--text-faint)]">
+                            no present days
+                          </span>
+                        </>
+                      )}
                     </td>
                     <td className="hidden px-5 py-3.5 text-zinc-600 sm:table-cell dark:text-zinc-400">
                       {a.followUps}
@@ -433,15 +471,21 @@ export default async function ActivityPage({
                     {perDayAvg(totals.added)}
                   </td>
                   <td className="px-5 py-3">
-                    <span
-                      className="font-semibold"
-                      style={{ color: quotaColor(quotaPct(totals.added, teamTarget)) }}
-                    >
-                      {quotaPct(totals.added, teamTarget)}%
-                    </span>
-                    <span className="block text-[10px] normal-case tracking-normal text-[var(--text-faint)]">
-                      {teamDaysMet}/{teamDays} agent-days
-                    </span>
+                    {teamAttended > 0 ? (
+                      <>
+                        <span
+                          className="font-semibold"
+                          style={{ color: quotaColor(quotaPct(totals.added, teamTarget)) }}
+                        >
+                          {quotaPct(totals.added, teamTarget)}%
+                        </span>
+                        <span className="block text-[10px] normal-case tracking-normal text-[var(--text-faint)]">
+                          {fmtDays(teamAttended)} present days · target {teamTarget}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-semibold text-[var(--text-faint)]">—</span>
+                    )}
                   </td>
                   <td className="hidden px-5 py-3 font-semibold text-[var(--text)] sm:table-cell">
                     {totals.followUps}
