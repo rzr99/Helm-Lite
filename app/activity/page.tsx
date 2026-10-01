@@ -144,31 +144,19 @@ export default async function ActivityPage({
   }[];
   let uniqueAddedCount = (uniqueAdded as number | null) ?? 0;
   if (intentOk) {
-    let lc = supabase
-      .from("lead_clients")
-      .select("agent_id, first_added, handle_key")
-      .gte("first_added", fromDate)
-      .lte("first_added", toDate)
-      .eq("rep_intent", intent)
-      .limit(100000);
-    if (agent) lc = lc.eq("agent_id", agent);
-    const { data: lcData } = await lc;
-    const perDay = new Map<string, number>();
-    const uniq = new Set<string>();
-    for (const r of (lcData ?? []) as {
-      agent_id: string;
-      first_added: string;
-      handle_key: string;
-    }[]) {
-      const k = `${r.first_added}|${r.agent_id}`;
-      perDay.set(k, (perDay.get(k) ?? 0) + 1);
-      uniq.add(r.handle_key);
-    }
-    addedRows = [...perDay].map(([k, n]) => {
-      const [day, agent_id] = k.split("|");
-      return { day, agent_id, n };
+    // Aggregated in Postgres so a big intent-filtered set isn't capped at 1000.
+    const { data: fdata } = await supabase.rpc("activity_leads_added_filtered", {
+      p_intent: intent,
+      p_from: fromDate,
+      p_to: toDate,
+      p_agent: agent || null,
     });
-    uniqueAddedCount = uniq.size;
+    const res = (fdata ?? {}) as {
+      by_day?: { agent_id: string; day: string; n: number }[];
+      unique?: number;
+    };
+    addedRows = res.by_day ?? [];
+    uniqueAddedCount = res.unique ?? 0;
   }
 
   type DayRow = { agent_id: string; day: string; n: number };

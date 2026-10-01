@@ -145,18 +145,13 @@ export default async function Dashboard({
   // How many of each agent's clients are also worked by another agent — one row
   // per (client, agent) in the duplicate view, so counting per agent gives it.
   const sharedByAgent = new Map<string, number>();
-  const sharedKeys = new Set<string>();
   if (floor && !agent && !isSummary && !filtered) {
-    const { data: dupRows } = await supabase
-      .from("lead_duplicate_entries")
-      .select("agent_id, handle_key")
-      .limit(100000);
-    for (const r of (dupRows ?? []) as {
-      agent_id: string;
-      handle_key: string;
-    }[]) {
-      sharedByAgent.set(r.agent_id, (sharedByAgent.get(r.agent_id) ?? 0) + 1);
-      sharedKeys.add(r.handle_key);
+    // Aggregated per-agent in Postgres (the old per-row fetch hit the 1000 cap).
+    const { data: sc } = await supabase
+      .from("agent_shared_counts")
+      .select("agent_id, shared");
+    for (const r of (sc ?? []) as { agent_id: string; shared: number }[]) {
+      sharedByAgent.set(r.agent_id, r.shared);
     }
   }
 
