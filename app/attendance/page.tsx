@@ -4,6 +4,7 @@ import { Card, Avatar, btnSecondary, btnPrimary, inputClass } from "@/components
 import { requireProfile } from "@/lib/profile";
 import { todayStr } from "@/lib/dates";
 import { markDay } from "@/app/attendance/actions";
+import { AgentFilter } from "@/components/agent-filter";
 import {
   ATT,
   ATT_ORDER,
@@ -218,32 +219,16 @@ export default async function AttendancePage({
           description="Pick a date, set each person, and save. Leave someone blank to not change them."
         >
           {/* Filter the sheet + marking list to one person, or everyone. */}
-          <div className="mb-4 flex flex-wrap items-center gap-1.5">
-            <Link
-              href={attHref({ agent: null })}
-              className={
-                "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
-                (!activeAgent
-                  ? "bg-amber-600 text-[#0e0e0d]"
-                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
-              }
-            >
-              Everyone
-            </Link>
-            {people.map((p) => (
-              <Link
-                key={p.id}
-                href={attHref({ agent: p.id })}
-                className={
-                  "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
-                  (activeAgent === p.id
-                    ? "bg-amber-600 text-[#0e0e0d]"
-                    : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
-                }
-              >
-                {p.full_name.split(" ")[0]}
-              </Link>
-            ))}
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+              Filter by agent
+            </label>
+            <AgentFilter
+              people={people.map((p) => ({ id: p.id, full_name: p.full_name }))}
+              value={activeAgent ?? ""}
+              month={M.month}
+              date={dateParam || undefined}
+            />
           </div>
 
           <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
