@@ -34,16 +34,34 @@ const MARK_OPTIONS: { value: string; code: string; on: string }[] = [
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; date?: string }>;
+  searchParams: Promise<{ month?: string; date?: string; agent?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const owner = profile.role === "owner";
   const today = todayStr();
 
-  const { month: monthParam, date: dateParam } = await searchParams;
+  const { month: monthParam, date: dateParam, agent: agentParam } =
+    await searchParams;
   const M = monthMeta(monthParam);
   const selDate =
     dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : today;
+
+  // Build an /attendance URL that keeps the other params intact.
+  const attHref = (over: {
+    agent?: string | null;
+    month?: string;
+    date?: string;
+  }) => {
+    const sp = new URLSearchParams();
+    const a = "agent" in over ? over.agent : agentParam;
+    const mo = over.month ?? M.month;
+    const d = over.date ?? (dateParam || undefined);
+    if (mo) sp.set("month", mo);
+    if (d) sp.set("date", d);
+    if (a) sp.set("agent", a);
+    const s = sp.toString();
+    return s ? `/attendance?${s}` : "/attendance";
+  };
 
   // Who appears in the sheet.
   let people: Person[];
@@ -65,6 +83,15 @@ export default async function AttendancePage({
       },
     ];
   }
+
+  // Owner can filter the sheet down to a single person.
+  const activeAgent =
+    owner && agentParam && people.some((p) => p.id === agentParam)
+      ? agentParam
+      : null;
+  const shownPeople = activeAgent
+    ? people.filter((p) => p.id === activeAgent)
+    : people;
 
   // This month's marks. RLS scopes agents to their own rows automatically.
   const { data: rowsData } = await supabase
@@ -190,8 +217,40 @@ export default async function AttendancePage({
           title="Mark a day"
           description="Pick a date, set each person, and save. Leave someone blank to not change them."
         >
+          {/* Filter the sheet + marking list to one person, or everyone. */}
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
+            <Link
+              href={attHref({ agent: null })}
+              className={
+                "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
+                (!activeAgent
+                  ? "bg-amber-600 text-[#0e0e0d]"
+                  : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+              }
+            >
+              Everyone
+            </Link>
+            {people.map((p) => (
+              <Link
+                key={p.id}
+                href={attHref({ agent: p.id })}
+                className={
+                  "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors " +
+                  (activeAgent === p.id
+                    ? "bg-amber-600 text-[#0e0e0d]"
+                    : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:text-[var(--text)]")
+                }
+              >
+                {p.full_name.split(" ")[0]}
+              </Link>
+            ))}
+          </div>
+
           <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
             <input type="hidden" name="month" value={M.month} />
+            {activeAgent && (
+              <input type="hidden" name="agent" value={activeAgent} />
+            )}
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
                 Date
@@ -208,7 +267,7 @@ export default async function AttendancePage({
             </button>
           </form>
 
-          {people.length === 0 ? (
+          {shownPeople.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">
               No team members to mark yet.
             </p>
@@ -219,7 +278,7 @@ export default async function AttendancePage({
                 {selDate === today ? "Today · " : ""}
                 {selDate}
               </p>
-              {people.map((p) => {
+              {shownPeople.map((p) => {
                 const sel = byUser.get(p.id)?.get(selDate) ?? null;
                 return (
                   <div
@@ -268,13 +327,16 @@ export default async function AttendancePage({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
           <h2 className="text-sm font-semibold text-[var(--text)]">{M.label}</h2>
           <div className="flex items-center gap-1">
-            <Link href={`/attendance?month=${M.prev}`} className={btnSecondary + " px-3"}>
+            <Link href={attHref({ month: M.prev })} className={btnSecondary + " px-3"}>
               ←
             </Link>
-            <Link href="/attendance" className={btnSecondary + " px-3"}>
+            <Link
+              href={attHref({ month: todayStr().slice(0, 7) })}
+              className={btnSecondary + " px-3"}
+            >
               This month
             </Link>
-            <Link href={`/attendance?month=${M.next}`} className={btnSecondary + " px-3"}>
+            <Link href={attHref({ month: M.next })} className={btnSecondary + " px-3"}>
               →
             </Link>
           </div>
@@ -307,7 +369,7 @@ export default async function AttendancePage({
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-soft)]">
-              {people.map((p) => {
+              {shownPeople.map((p) => {
                 const marks = byUser.get(p.id);
                 const s = summaryFor(p.id);
                 return (
