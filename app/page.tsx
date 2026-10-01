@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { Card, EmptyState, Avatar, Readouts, Readout, btnPrimary, btnSecondary, btnGhost, inputClass } from "@/components/ui";
 import { DashboardSummary } from "@/components/dashboard-summary";
+import { AttendanceDashboardCard } from "@/components/attendance-card";
 import { getDashboardSummary } from "@/lib/dashboard-summary";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
@@ -336,6 +337,9 @@ export default async function Dashboard({
         </Link>
       }
     >
+      {/* Agents see their own attendance right at the top of the dashboard. */}
+      {!owner && <AttendanceDashboardCard userId={profile.id} />}
+
       {/* Controls — two structured lines */}
       <div className="flex flex-col gap-2.5">
         {/* Line 1: view toggle + lead type */}
