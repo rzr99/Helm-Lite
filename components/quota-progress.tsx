@@ -1,15 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui";
 import { QuotaBar } from "@/components/quota-bar";
-import { monthRange, workingDaysInMonth, isSunday } from "@/lib/dates";
+import { MonthNav } from "@/components/month-nav";
+import { workingDaysInMonth, isSunday } from "@/lib/dates";
+import { monthMeta } from "@/lib/attendance";
 import { DAILY_LEAD_QUOTA, MONTHLY_SALES_TARGET } from "@/lib/enums";
 
 // Each person's own whole-month progress: a leads quota bar (30 x the month's
 // working days — Mon–Sat, minus their absences) and a sales target bar ($2000,
 // filled only from revenue received).
-export async function QuotaProgress({ userId }: { userId: string }) {
+export async function QuotaProgress({
+  userId,
+  month,
+}: {
+  userId: string;
+  month?: string;
+}) {
   const supabase = await createClient();
-  const { from, to } = monthRange();
+  const M = monthMeta(month);
+  const from = M.first;
+  const to = M.last;
   const workingDays = workingDaysInMonth(from, to);
 
   const [{ data: att }, { data: leadDays }, { data: deals }] = await Promise.all(
@@ -54,15 +64,14 @@ export async function QuotaProgress({ userId }: { userId: string }) {
     0
   );
 
-  const monthLabel = new Date(from + "T00:00:00").toLocaleString("en-US", {
-    month: "long",
-  });
-
   const leadsHit = leadsTarget > 0 && leadsDone >= leadsTarget;
   const salesHit = salesDone >= MONTHLY_SALES_TARGET;
 
   return (
-    <Card title={`Your targets · ${monthLabel}`}>
+    <Card
+      title={`Your targets · ${M.label}`}
+      action={<MonthNav prev={M.prev} next={M.next} />}
+    >
       <div className="flex flex-col gap-3.5">
         <QuotaBar
           label="Leads quota"

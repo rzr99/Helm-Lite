@@ -342,7 +342,7 @@ export default async function Dashboard({
     >
       {/* Owner sees every agent's month progress; agents see their own. */}
       {owner && <TeamQuotaBoard month={qmonth} />}
-      {!owner && <QuotaProgress userId={profile.id} />}
+      {!owner && <QuotaProgress userId={profile.id} month={qmonth} />}
       {!owner && <AttendanceDashboardCard userId={profile.id} />}
 
       {/* Controls — two structured lines */}
