@@ -5,6 +5,7 @@ import { requireProfile } from "@/lib/profile";
 import { todayStr } from "@/lib/dates";
 import { markDay } from "@/app/attendance/actions";
 import { AgentFilter } from "@/components/agent-filter";
+import { FreshToday } from "@/components/fresh-today";
 import {
   ATT,
   ATT_ORDER,
@@ -128,6 +129,7 @@ export default async function AttendancePage({
           : "Your attendance for the month."
       }
     >
+      <FreshToday today={today} />
       {/* ---------- Rules ---------- */}
       <Card
         title="The rules"

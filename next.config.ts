@@ -32,6 +32,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Don't let the client Router Cache serve a stale render of a dynamic page on
+  // navigation — always refetch. (Date-sensitive pages like Attendance were
+  // showing a render from a previous day/month after the tab sat open.)
+  experimental: {
+    staleTimes: { dynamic: 0 },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

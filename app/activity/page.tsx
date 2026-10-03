@@ -14,6 +14,7 @@ import {
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { todayStr, weekRange, monthRange } from "@/lib/dates";
 import { DAILY_LEAD_QUOTA } from "@/lib/enums";
+import { FreshToday } from "@/components/fresh-today";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +44,9 @@ export default async function ActivityPage({
   const { agent, from, to, intent } = await searchParams;
   const intentOk = intent === "high_intent" || intent === "cold_outreach";
   // Default view is Today; the Daily/Weekly/Monthly buttons set exact ranges.
-  const fromDate = from || todayStr();
-  const toDate = to || todayStr();
+  const today = todayStr();
+  const fromDate = from || today;
+  const toDate = to || today;
 
   const week = weekRange();
   const month = monthRange();
@@ -258,6 +260,7 @@ export default async function ActivityPage({
       title="Daily activity"
       subtitle="Derived automatically from leads, follow-ups, and deals — nothing here is typed in by hand."
     >
+      <FreshToday today={today} />
       {/* Lead type switch — All / High intent / Cold outreach */}
       <div className="flex flex-wrap items-center gap-2">
         {[

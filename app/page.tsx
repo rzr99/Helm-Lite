@@ -5,6 +5,7 @@ import { DashboardSummary } from "@/components/dashboard-summary";
 import { AttendanceDashboardCard } from "@/components/attendance-card";
 import { QuotaProgress } from "@/components/quota-progress";
 import { TeamQuotaBoard } from "@/components/team-quota-board";
+import { FreshToday } from "@/components/fresh-today";
 import { getDashboardSummary } from "@/lib/dashboard-summary";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { STAGES, stageLabel } from "@/lib/enums";
@@ -323,6 +324,7 @@ export default async function Dashboard({
         </Link>
       }
     >
+      <FreshToday today={today} />
       {/* The floor (owner + team lead) sees every agent's month progress;
           agents see their own targets + attendance. */}
       {floor && <TeamQuotaBoard month={qmonth} />}
