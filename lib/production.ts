@@ -357,6 +357,7 @@ export const KIT: { code: string; what: string }[] = [
 export const PROJECT_STATUSES = [
   { value: "new", label: "New" },
   { value: "briefed", label: "Briefed & sent" },
+  { value: "waiting_assets", label: "Waiting for assets" },
   { value: "production", label: "In production" },
   { value: "feedback", label: "Waiting for feedback" },
   { value: "delivered", label: "Delivered" },
@@ -373,6 +374,7 @@ export function projectStatusLabel(value: string) {
 export const PROJECT_STATUS_COLOR: Record<string, string> = {
   new: "#8b8f96",
   briefed: "#e0932e",
+  waiting_assets: "#06b6d4", // cyan — blocked on the client sending materials
   production: "#3b82f6",
   feedback: "#a855f7",
   delivered: "#22c55e",
