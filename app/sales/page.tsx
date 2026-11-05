@@ -420,7 +420,7 @@ export default async function SalesPage({
           view === "payments"
             ? "Every payment that came in this month, whichever month the sale closed. This is what counts toward targets."
             : view === "unpaid"
-              ? "All months. Open a sale and use Record payment when the client pays the next part."
+              ? "All months. When the client pays the next part, use + Log sale or payment and pick their sale at the top."
               : undefined
         }
         padded={false}
