@@ -141,7 +141,7 @@ export async function getDashboardSummary(
       ? supabase.from("users").select("id, full_name").eq("active", true).order("full_name")
       : empty,
     owner
-      ? supabase.from("expenses").select("amount").gte("date", cur0).lte("date", curTo)
+      ? supabase.from("expenses").select("amount").eq("currency", "PKR").gte("date", cur0).lte("date", curTo)
       : empty,
     owner ? supabase.from("accounts").select("statuses") : empty,
   ]);

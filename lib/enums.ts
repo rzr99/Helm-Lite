@@ -106,6 +106,21 @@ export function fmtPKR(value: number) {
   );
 }
 
+// Expenses are in rupees unless paid in USDT; USDT is totalled separately.
+export const EXPENSE_CURRENCIES = [
+  { value: "PKR", label: "Rs" },
+  { value: "USDT", label: "USDT" },
+] as const;
+
+export function fmtUSDT(value: number) {
+  return (
+    value.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }) + " USDT"
+  );
+}
+
 // The real states the team faces, healthiest → worst. `restricted` = "DM
 // restricted" (reuses the existing value so current data carries over).
 // recovery/compromised remain valid DB values (fallback) but aren't offered.

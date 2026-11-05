@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
 import { Card } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
-import { EXPENSE_CATEGORIES, fmtPKR } from "@/lib/enums";
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_CURRENCIES,
+  fmtPKR,
+  fmtUSDT,
+} from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
 import {
   createExpense,
@@ -41,8 +46,18 @@ type ExpenseRow = {
   category: string;
   description: string;
   amount: number;
+  currency: string;
   date: string;
 };
+
+const isUSDT = (e: ExpenseRow) => e.currency === "USDT";
+
+// Rs and USDT are never added together.
+function sumBy(items: ExpenseRow[], usdt: boolean) {
+  return items
+    .filter((e) => isUSDT(e) === usdt)
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+}
 
 type IncomeRow = {
   id: string;
@@ -78,7 +93,7 @@ export default async function ExpensesPage({
   ] = await Promise.all([
     supabase
       .from("expenses")
-      .select("id, category, description, amount, date")
+      .select("id, category, description, amount, currency, date")
       .gte("date", start)
       .lt("date", end)
       .order("date")
@@ -93,7 +108,11 @@ export default async function ExpensesPage({
     // All-time sums drive the live bank balance. limit() defeats the default
     // 1000-row cap; swap to a DB aggregate if this ever gets huge.
     supabase.from("income").select("amount").limit(100000),
-    supabase.from("expenses").select("amount").limit(100000),
+    supabase
+      .from("expenses")
+      .select("amount")
+      .eq("currency", "PKR")
+      .limit(100000),
     supabase
       .from("finance_settings")
       .select("bank_baseline")
@@ -103,7 +122,10 @@ export default async function ExpensesPage({
 
   const expenses = (data ?? []) as ExpenseRow[];
   const incomes = (monthIncomeData ?? []) as IncomeRow[];
-  const spending = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const spending = sumBy(expenses, false);
+  // USDT is paid from a crypto wallet: its own total, outside net profit and
+  // the bank balance.
+  const usdtSpending = sumBy(expenses, true);
   // "Closing" = the month's money in from that month's sales (sum of the
   // payments logged against it, whatever day the payout actually lands).
   const received = incomes.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -138,7 +160,8 @@ export default async function ExpensesPage({
   ]
     .map((s) => ({
       ...s,
-      total: s.items.reduce((sum, e) => sum + Number(e.amount), 0),
+      total: sumBy(s.items, false),
+      usdtTotal: sumBy(s.items, true),
     }))
     .filter((s) => s.value !== "" || s.items.length > 0);
 
@@ -204,6 +227,14 @@ export default async function ExpensesPage({
           <p className="mt-2 text-xs text-[var(--text-muted)]">
             {expenses.length} item{expenses.length === 1 ? "" : "s"} this month
           </p>
+          {usdtSpending > 0 && (
+            <p className="mt-1 font-mono text-xs tabular-nums text-[var(--text-muted)]">
+              + {fmtUSDT(usdtSpending)}{" "}
+              <span className="font-sans text-[var(--text-faint)]">
+                (separate)
+              </span>
+            </p>
+          )}
         </div>
 
         <div className={statCard}>
@@ -375,7 +406,12 @@ export default async function ExpensesPage({
                 </span>
               </span>
               <span className="font-mono text-[13.5px] font-medium tabular-nums text-[var(--text-muted)]">
-                {s.total > 0 ? fmtPKR(s.total) : "—"}
+                {[
+                  s.total > 0 && fmtPKR(s.total),
+                  s.usdtTotal > 0 && fmtUSDT(s.usdtTotal),
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "—"}
               </span>
             </summary>
 
@@ -399,6 +435,11 @@ export default async function ExpensesPage({
                   </Link>
                   <span className="font-mono text-sm tabular-nums text-[var(--text)]">
                     {Number(e.amount).toLocaleString("en-US")}
+                    {isUSDT(e) && (
+                      <span className="ml-1 text-[11px] text-amber-600">
+                        USDT
+                      </span>
+                    )}
                   </span>
                 </p>
               </div>
@@ -425,6 +466,18 @@ export default async function ExpensesPage({
                   placeholder="0"
                   className="w-24 border-0 bg-transparent py-1 text-right font-mono text-sm tabular-nums text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
                 />
+                <select
+                  name="currency"
+                  defaultValue="PKR"
+                  aria-label="Currency"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 font-mono text-xs text-[var(--text-muted)] outline-none focus:border-amber-600"
+                >
+                  {EXPENSE_CURRENCIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
                   className="rounded-md px-2.5 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-[var(--accent-soft)]"
@@ -444,6 +497,19 @@ export default async function ExpensesPage({
             {fmtPKR(spending)}
           </p>
         </div>
+        {usdtSpending > 0 && (
+          <div className="flex items-center justify-between border-t border-[var(--border-soft)] bg-[var(--sunken)] px-5 py-3">
+            <p className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--text-muted)]">
+              Total in USDT
+              <span className="ml-2 normal-case tracking-normal text-[var(--text-faint)]">
+                not in Rs totals or bank balance
+              </span>
+            </p>
+            <p className="font-mono text-[15px] font-medium tabular-nums text-[var(--text)]">
+              {fmtUSDT(usdtSpending)}
+            </p>
+          </div>
+        )}
       </Card>
 
       <p className="text-center text-xs text-[var(--text-faint)]">

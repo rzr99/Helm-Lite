@@ -18,6 +18,10 @@ function money(formData: FormData, key: string) {
   return value;
 }
 
+function currency(formData: FormData) {
+  return text(formData, "currency") === "USDT" ? "USDT" : "PKR";
+}
+
 // Like money(), but allows a negative value (a bank balance can go below zero).
 function signedMoney(formData: FormData, key: string) {
   const raw = text(formData, key).replace(/[$,\s]/g, "");
@@ -35,6 +39,7 @@ export async function createExpense(formData: FormData) {
     category: text(formData, "category") || "others",
     description: text(formData, "description"),
     amount: money(formData, "amount"),
+    currency: currency(formData),
     date: text(formData, "date") || todayStr(),
   };
 
@@ -93,7 +98,12 @@ export async function setBankBalance(formData: FormData) {
 
   const [{ data: inc }, { data: exp }] = await Promise.all([
     supabase.from("income").select("amount").limit(100000),
-    supabase.from("expenses").select("amount").limit(100000),
+    // USDT is paid from a wallet, not the bank — keep it out of the balance.
+    supabase
+      .from("expenses")
+      .select("amount")
+      .eq("currency", "PKR")
+      .limit(100000),
   ]);
 
   const totalIn = ((inc ?? []) as { amount: number }[]).reduce(
@@ -123,6 +133,7 @@ export async function updateExpense(expenseId: string, formData: FormData) {
     category: text(formData, "category") || "others",
     description: text(formData, "description"),
     amount: money(formData, "amount"),
+    currency: currency(formData),
     date: text(formData, "date") || todayStr(),
   };
 

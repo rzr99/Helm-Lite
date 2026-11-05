@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Shell } from "@/components/shell";
 import { Card, btnPrimary, inputClass, labelClass } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
-import { EXPENSE_CATEGORIES } from "@/lib/enums";
+import { EXPENSE_CATEGORIES, EXPENSE_CURRENCIES } from "@/lib/enums";
 import { updateExpense, deleteExpense } from "@/app/expenses/actions";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function ExpenseDetailPage({
 
   const { data: expense } = await supabase
     .from("expenses")
-    .select("id, category, description, amount, date")
+    .select("id, category, description, amount, currency, date")
     .eq("id", id)
     .single();
 
@@ -86,15 +86,33 @@ export default async function ExpenseDetailPage({
 
             <div>
               <label className={labelClass}>
-                Amount (Rs) <span className="text-red-500">*</span>
+                Amount <span className="text-red-500">*</span>
               </label>
-              <input
-                name="amount"
-                required
-                inputMode="decimal"
-                defaultValue={String(expense.amount)}
-                className={inputClass + " max-w-40"}
-              />
+              <div className="flex gap-2">
+                <input
+                  name="amount"
+                  required
+                  inputMode="decimal"
+                  defaultValue={String(expense.amount)}
+                  className={inputClass + " max-w-40"}
+                />
+                <select
+                  name="currency"
+                  defaultValue={expense.currency ?? "PKR"}
+                  aria-label="Currency"
+                  className={inputClass + " max-w-28"}
+                >
+                  {EXPENSE_CURRENCIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-1.5 text-xs text-[var(--text-faint)]">
+                USDT items are totalled separately and don&apos;t affect the Rs
+                totals or bank balance.
+              </p>
             </div>
 
             <button type="submit" className={btnPrimary + " self-start"}>
