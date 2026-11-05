@@ -173,6 +173,32 @@ export default async function SalesPage({
   if (category) owedQuery = owedQuery.eq("service_category", category);
   if (floor && agent) owedQuery = owedQuery.eq("agent_id", agent);
 
+  // Owner-only "Till date": every dollar ever received across the business,
+  // and what's still owed on sales since balance tracking began.
+  const isOwner = profile.role === "owner";
+  const none = Promise.resolve({ data: [] as unknown[] });
+  const [{ data: allPaidData }, { data: allOwedData }] = await Promise.all([
+    isOwner
+      ? supabase.from("deal_payments").select("amount").limit(100000)
+      : none,
+    isOwner
+      ? supabase
+          .from("deals")
+          .select("balance")
+          .gt("balance", 0)
+          .gte("date_closed", BALANCE_TRACKING_FROM)
+          .limit(100000)
+      : none,
+  ]);
+  const tillDateReceived = ((allPaidData ?? []) as { amount: number }[]).reduce(
+    (s, r) => s + Number(r.amount),
+    0
+  );
+  const tillDateOwed = ((allOwedData ?? []) as { balance: number }[]).reduce(
+    (s, r) => s + Number(r.balance),
+    0
+  );
+
   const [{ data, count }, { data: summaryData }, { data: owedData }] =
     await Promise.all([
     view === "payments" ? payQuery : query,
@@ -346,6 +372,34 @@ export default async function SalesPage({
           </div>
         </form>
       </Card>
+
+      {isOwner && (
+        <Card padded={false}>
+          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-4">
+            <p className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-amber-600">
+              Till date · all agents
+            </p>
+            <div className="flex flex-wrap gap-x-10 gap-y-3">
+              <div>
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+                  Total received
+                </p>
+                <p className="mt-1 font-mono text-[22px] font-medium tabular-nums text-[var(--text)]">
+                  {fmtMoney(tillDateReceived)}
+                </p>
+              </div>
+              <div>
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+                  Still owed · Nov 2026 on
+                </p>
+                <p className="mt-1 font-mono text-[22px] font-medium tabular-nums text-[var(--text)]">
+                  {fmtMoney(tillDateOwed)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Readouts cols={4}>
         <Readout
