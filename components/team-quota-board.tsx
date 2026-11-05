@@ -36,11 +36,12 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
         .gte("day", from)
         .lte("day", to)
         .limit(100000),
+      // Credit follows the money: payments in this month, whenever the sale closed.
       supabase
-        .from("deals")
-        .select("agent_id, revenue_received")
-        .gte("date_closed", from)
-        .lte("date_closed", to)
+        .from("deal_payments")
+        .select("agent_id, amount")
+        .gte("paid_on", from)
+        .lte("paid_on", to)
         .limit(100000),
     ]);
 
@@ -60,11 +61,11 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
   const salesBy = new Map<string, number>();
   for (const r of (deals ?? []) as {
     agent_id: string;
-    revenue_received: number;
+    amount: number;
   }[])
     salesBy.set(
       r.agent_id,
-      (salesBy.get(r.agent_id) ?? 0) + Number(r.revenue_received ?? 0)
+      (salesBy.get(r.agent_id) ?? 0) + Number(r.amount ?? 0)
     );
 
   const rows = ((users ?? []) as {

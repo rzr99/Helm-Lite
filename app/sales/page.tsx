@@ -8,6 +8,8 @@ import {
   Readout,
   btnPrimary,
   btnSecondary,
+  pillClass,
+  pillActiveClass,
   inputClass,
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
@@ -56,6 +58,26 @@ type DealRow = {
   lead: { id: string; handle: string } | null;
 };
 
+type PaymentRow = {
+  id: string;
+  amount: number;
+  paid_on: string;
+  payment_method: string | null;
+  note: string | null;
+  deal: {
+    id: string;
+    client_name: string;
+    service_category: string | null;
+    deal_size: number;
+    date_closed: string;
+    agent: { full_name: string; avatar_url: string | null } | null;
+  } | null;
+};
+
+// closed = sales closed this month · payments = cash that came in this month
+// (any sale) · unpaid = every sale still owing money, any month.
+type View = "closed" | "payments" | "unpaid";
+
 export default async function SalesPage({
   searchParams,
 }: {
@@ -65,11 +87,21 @@ export default async function SalesPage({
     agent?: string;
     month?: string;
     page?: string;
+    view?: string;
   }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
-  const { service, category, agent, month: monthRaw, page } = await searchParams;
+  const {
+    service,
+    category,
+    agent,
+    month: monthRaw,
+    page,
+    view: viewRaw,
+  } = await searchParams;
+  const view: View =
+    viewRaw === "payments" || viewRaw === "unpaid" ? viewRaw : "closed";
   const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
   // Default to the current month, so a fresh month starts empty until deals land.
@@ -101,15 +133,35 @@ export default async function SalesPage({
   if (service) query = query.eq("service", service);
   if (category) query = query.eq("service_category", category);
   if (floor && agent) query = query.eq("agent_id", agent);
-  query = query
-    .gte("date_closed", monthStart)
-    .lt("date_closed", nextMonthStart);
+  if (view === "unpaid") {
+    query = query.gt("balance", 0);
+  } else {
+    query = query
+      .gte("date_closed", monthStart)
+      .lt("date_closed", nextMonthStart);
+  }
   query = query.range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE - 1);
+
+  // Payments that came in this month, on any sale (filters apply to the sale).
+  let payQuery = supabase
+    .from("deal_payments")
+    .select(
+      "id, amount, paid_on, payment_method, note, deal:deals!inner(id, client_name, service, service_category, deal_size, date_closed, agent_id, agent:users(full_name, avatar_url))",
+      { count: "exact" }
+    )
+    .gte("paid_on", monthStart)
+    .lt("paid_on", nextMonthStart)
+    .order("paid_on", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (service) payQuery = payQuery.eq("deal.service", service);
+  if (category) payQuery = payQuery.eq("deal.service_category", category);
+  if (floor && agent) payQuery = payQuery.eq("agent_id", agent);
+  payQuery = payQuery.range((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE - 1);
 
   // Totals + category breakdown for the WHOLE filtered set come from the DB,
   // so they stay correct no matter which page of the list is shown.
   const [{ data, count }, { data: summaryData }] = await Promise.all([
-    query,
+    view === "payments" ? payQuery : query,
     supabase.rpc("deal_summary", {
       p_service: service || null,
       p_category: category || null,
@@ -119,7 +171,10 @@ export default async function SalesPage({
     }),
   ]);
 
-  const deals = (data ?? []) as unknown as DealRow[];
+  const deals = (view === "payments" ? [] : data ?? []) as unknown as DealRow[];
+  const payments = (
+    view === "payments" ? data ?? [] : []
+  ) as unknown as PaymentRow[];
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = Boolean(service || category || agent);
@@ -128,10 +183,14 @@ export default async function SalesPage({
     total_received?: number;
     total_size?: number;
     deal_count?: number;
+    outstanding?: number;
+    outstanding_count?: number;
     by_category?: { name: string; revenue: number; count: number }[];
   };
   const totalRevenue = Number(summary.total_received ?? 0);
   const dealCount = Number(summary.deal_count ?? 0);
+  const outstanding = Number(summary.outstanding ?? 0);
+  const outstandingCount = Number(summary.outstanding_count ?? 0);
   const avgDeal = dealCount > 0 ? Number(summary.total_size ?? 0) / dealCount : 0;
   const byCategory = (summary.by_category ?? []).map((c) => ({
     name: c.name,
@@ -140,8 +199,10 @@ export default async function SalesPage({
   }));
   const maxCategoryRevenue = Math.max(1, ...byCategory.map((c) => c.revenue));
 
-  const buildHref = (over: { month?: string; page?: number }) => {
+  const buildHref = (over: { month?: string; page?: number; view?: View }) => {
     const sp = new URLSearchParams();
+    const v = over.view ?? view;
+    if (v !== "closed") sp.set("view", v);
     if (service) sp.set("service", service);
     if (category) sp.set("category", category);
     if (agent) sp.set("agent", agent);
@@ -154,6 +215,7 @@ export default async function SalesPage({
   };
   const pageHref = (p: number) => buildHref({ page: p });
   const monthHref = (m: string) => buildHref({ month: m });
+  const viewHref = (v: View) => buildHref({ view: v });
 
   return (
     <Shell
@@ -204,6 +266,9 @@ export default async function SalesPage({
         <form method="get" className="flex flex-wrap items-end gap-4 px-5 py-4">
           {month !== currentMonth && (
             <input type="hidden" name="month" value={month} />
+          )}
+          {view !== "closed" && (
+            <input type="hidden" name="view" value={view} />
           )}
           <div>
             <label className={filterLabel}>Category</label>
@@ -268,9 +333,9 @@ export default async function SalesPage({
         </form>
       </Card>
 
-      <Readouts cols={3}>
+      <Readouts cols={4}>
         <Readout
-          label={`Revenue received${hasFilters ? " · filtered" : ""}`}
+          label={`Received this month${hasFilters ? " · filtered" : ""}`}
           value={fmtMoney(totalRevenue)}
         />
         <Readout
@@ -278,12 +343,16 @@ export default async function SalesPage({
           value={dealCount}
         />
         <Readout label="Average deal size" value={fmtMoney(avgDeal)} />
+        <Readout
+          label={`Still owed · ${outstandingCount} sale${outstandingCount === 1 ? "" : "s"}`}
+          value={fmtMoney(outstanding)}
+        />
       </Readouts>
 
       {byCategory.length > 0 && (
         <Card
           title="Revenue by category"
-          description="Which kind of work brings the most sales."
+          description="Money received this month, by kind of work."
         >
           <ul className="flex flex-col gap-4">
             {byCategory.map((s) => (
@@ -313,11 +382,129 @@ export default async function SalesPage({
         </Card>
       )}
 
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["closed", "Sales closed"],
+            ["payments", "Payments received"],
+            ["unpaid", "Unpaid balances"],
+          ] as [View, string][]
+        ).map(([v, label]) => (
+          <Link
+            key={v}
+            href={viewHref(v)}
+            className={view === v ? pillActiveClass : pillClass}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+
       <Card
-        title={`${total} deal${total === 1 ? "" : "s"}${hasFilters ? " found" : ""}`}
+        title={
+          view === "payments"
+            ? `${total} payment${total === 1 ? "" : "s"} in ${monthTitle(month)}`
+            : view === "unpaid"
+              ? `${total} sale${total === 1 ? "" : "s"} with money still owed`
+              : `${total} deal${total === 1 ? "" : "s"}${hasFilters ? " found" : ""}`
+        }
+        description={
+          view === "payments"
+            ? "Every payment that came in this month, whichever month the sale closed. This is what counts toward targets."
+            : view === "unpaid"
+              ? "All months. Open a sale and use Record payment when the client pays the next part."
+              : undefined
+        }
         padded={false}
       >
-        {deals.length === 0 ? (
+        {view === "payments" ? (
+          payments.length === 0 ? (
+            <EmptyState
+              emoji="💵"
+              title={`No payments in ${monthTitle(month)}`}
+              hint="Payments appear here as they're recorded on a sale."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-[var(--border)] font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
+                  <tr>
+                    <th className="px-5 py-3 font-semibold">Paid on</th>
+                    <th className="px-5 py-3 font-semibold">Client</th>
+                    <th className="px-5 py-3 font-semibold">Amount</th>
+                    <th className="px-5 py-3 font-semibold">Sale</th>
+                    <th className="px-5 py-3 font-semibold">Sale closed</th>
+                    <th className="px-5 py-3 font-semibold">Method</th>
+                    <th className="px-5 py-3 font-semibold">Note</th>
+                    {floor && <th className="px-5 py-3 font-semibold">Agent</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {payments.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    >
+                      <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[13px] text-[var(--text-muted)]">
+                        {p.paid_on}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5">
+                        {p.deal ? (
+                          <Link
+                            href={`/sales/${p.deal.id}`}
+                            className="font-semibold text-[var(--text)] hover:underline"
+                          >
+                            {p.deal.client_name}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-[var(--text)]">
+                        {fmtMoney(Number(p.amount))}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-[var(--text-muted)]">
+                        {p.deal ? fmtMoney(Number(p.deal.deal_size)) : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-[var(--text-muted)]">
+                        {p.deal?.date_closed ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-[var(--text-muted)]">
+                        {p.payment_method ?? "—"}
+                      </td>
+                      <td className="px-5 py-3.5 text-[var(--text-muted)]">
+                        {p.note ?? "—"}
+                      </td>
+                      {floor && (
+                        <td className="px-5 py-3.5">
+                          {p.deal?.agent ? (
+                            <span className="flex items-center gap-2 text-[var(--text-muted)]">
+                              <Avatar
+                                name={p.deal.agent.full_name}
+                                src={p.deal.agent.avatar_url}
+                                size={7}
+                              />
+                              {p.deal.agent.full_name}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : deals.length === 0 ? (
+          view === "unpaid" ? (
+            <EmptyState
+              emoji="✅"
+              title="Nothing owed"
+              hint="Every sale here is paid in full."
+            />
+          ) : (
           <EmptyState
             emoji={hasFilters ? "🔍" : "💰"}
             title={
@@ -335,6 +522,7 @@ export default async function SalesPage({
             actionHref={hasFilters || month !== currentMonth ? undefined : "/sales/new"}
             actionLabel={hasFilters || month !== currentMonth ? undefined : "+ Log deal"}
           />
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">

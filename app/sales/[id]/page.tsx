@@ -4,6 +4,8 @@ import { Shell } from "@/components/shell";
 import {
   Card,
   Avatar,
+  Readouts,
+  Readout,
   btnPrimary,
   inputClass,
   labelClass,
@@ -16,9 +18,24 @@ import {
   MERCHANTS,
   fmtMoney,
 } from "@/lib/enums";
-import { updateDeal, deleteDeal } from "@/app/sales/actions";
+import { todayStr } from "@/lib/dates";
+import {
+  updateDeal,
+  deleteDeal,
+  addPayment,
+  deletePayment,
+} from "@/app/sales/actions";
 
 export const dynamic = "force-dynamic";
+
+function monthLabel(date: string) {
+  const [y, m] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 export default async function DealDetailPage({
   params,
@@ -39,6 +56,20 @@ export default async function DealDetailPage({
 
   if (!deal) notFound();
 
+  const { data: paymentData } = await supabase
+    .from("deal_payments")
+    .select("id, amount, paid_on, payment_method, note")
+    .eq("deal_id", deal.id)
+    .order("paid_on")
+    .order("created_at");
+  const payments = (paymentData ?? []) as {
+    id: string;
+    amount: number;
+    paid_on: string;
+    payment_method: string | null;
+    note: string | null;
+  }[];
+
   const remaining = Number(deal.deal_size) - Number(deal.revenue_received);
 
   const agentInfo = deal.agent as unknown as {
@@ -53,6 +84,7 @@ export default async function DealDetailPage({
 
   const saveDeal = updateDeal.bind(null, deal.id);
   const removeDeal = deleteDeal.bind(null, deal.id);
+  const recordPayment = addPayment.bind(null, deal.id);
 
   return (
     <Shell
@@ -85,6 +117,128 @@ export default async function DealDetailPage({
           .
         </p>
       )}
+
+      <Readouts cols={3}>
+        <Readout label="Sale amount" value={fmtMoney(Number(deal.deal_size))} />
+        <Readout
+          label="Received"
+          value={fmtMoney(Number(deal.revenue_received))}
+        />
+        <Readout
+          label={remaining > 0 ? "Still owed" : "Remaining"}
+          value={remaining > 0 ? fmtMoney(remaining) : "Paid in full"}
+        />
+      </Readouts>
+
+      <Card
+        title="Payments"
+        description="Every payment the client makes on this sale. Each one counts toward the month it was paid in."
+        padded={false}
+      >
+        {payments.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-[var(--text-muted)]">
+            No payments recorded yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-[var(--border)] font-mono text-[10.5px] uppercase tracking-[0.13em] text-[var(--text-faint)]">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Paid on</th>
+                  <th className="px-5 py-3 font-semibold">Amount</th>
+                  <th className="px-5 py-3 font-semibold">Method</th>
+                  <th className="px-5 py-3 font-semibold">Note</th>
+                  <th className="px-5 py-3 font-semibold">Counts toward</th>
+                  {canEdit && <th className="px-5 py-3" />}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-soft)]">
+                {payments.map((p) => {
+                  const removePayment = deletePayment.bind(null, deal.id, p.id);
+                  return (
+                    <tr key={p.id}>
+                      <td className="whitespace-nowrap px-5 py-3 font-mono text-[13px] text-[var(--text-muted)]">
+                        {p.paid_on}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3 font-semibold tabular-nums text-[var(--text)]">
+                        {fmtMoney(Number(p.amount))}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3 text-[var(--text-muted)]">
+                        {p.payment_method ?? "—"}
+                      </td>
+                      <td className="px-5 py-3 text-[var(--text-muted)]">
+                        {p.note ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3 text-[var(--text-muted)]">
+                        {monthLabel(p.paid_on)}
+                      </td>
+                      {canEdit && (
+                        <td className="whitespace-nowrap px-5 py-3 text-right">
+                          <form action={removePayment}>
+                            <button
+                              type="submit"
+                              className="text-xs font-medium text-[var(--text-faint)] hover:text-[var(--negative)] hover:underline"
+                            >
+                              remove
+                            </button>
+                          </form>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {canEdit && (
+          <form
+            action={recordPayment}
+            className="flex flex-wrap items-end gap-3 border-t border-[var(--border)] bg-[var(--sunken)] px-5 py-4"
+          >
+            <div>
+              <label className={labelClass}>Amount paid ($)</label>
+              <input
+                name="amount"
+                required
+                inputMode="decimal"
+                placeholder={remaining > 0 ? String(remaining) : "0"}
+                className={inputClass + " w-32"}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Paid on</label>
+              <input
+                type="date"
+                name="paid_on"
+                defaultValue={todayStr()}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Method</label>
+              <input
+                name="payment_method"
+                list="payment-list"
+                defaultValue={deal.payment_method ?? ""}
+                className={inputClass + " w-40"}
+              />
+            </div>
+            <div className="min-w-40 flex-1">
+              <label className={labelClass}>Note</label>
+              <input
+                name="note"
+                placeholder="e.g. 2nd milestone"
+                className={inputClass}
+              />
+            </div>
+            <button type="submit" className={btnPrimary}>
+              Record payment
+            </button>
+          </form>
+        )}
+      </Card>
 
       <Card
         title="Deal details"
@@ -146,7 +300,7 @@ export default async function DealDetailPage({
                 />
               </div>
               <div>
-                <label className={labelClass}>Date</label>
+                <label className={labelClass}>Date closed</label>
                 <input
                   type="date"
                   name="date_closed"
@@ -160,15 +314,6 @@ export default async function DealDetailPage({
                   name="deal_size"
                   inputMode="decimal"
                   defaultValue={String(deal.deal_size)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Received amount ($)</label>
-                <input
-                  name="revenue_received"
-                  inputMode="decimal"
-                  defaultValue={String(deal.revenue_received)}
                   className={inputClass}
                 />
               </div>
@@ -219,12 +364,6 @@ export default async function DealDetailPage({
               )}
             </div>
 
-            <p className="text-sm text-[var(--text-muted)]">
-              Remaining:{" "}
-              <span className="font-medium text-[var(--text)]">
-                {fmtMoney(remaining)}
-              </span>
-            </p>
 
             <button type="submit" className={btnPrimary + " self-start"}>
               Save changes

@@ -68,6 +68,20 @@ export default async function NewDealPage({
       }
     >
       <div className="max-w-xl">
+        <div className="mb-4 rounded-xl border border-amber-600/40 bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--text)]">
+          <p className="font-medium">Only for a NEW sale.</p>
+          <p className="mt-1 text-[var(--text-muted)]">
+            Client paying the next part of a sale you already logged? Don&apos;t
+            log it again. Open that sale (see{" "}
+            <Link
+              href="/sales?view=unpaid"
+              className="font-medium text-amber-600 hover:underline"
+            >
+              Unpaid balances
+            </Link>
+            ) and use <span className="font-medium">Record payment</span>.
+          </p>
+        </div>
         <Card padded>
           <form action={createDeal} className="flex flex-col gap-5">
             {lead && <input type="hidden" name="lead_id" value={lead.id} />}
@@ -162,7 +176,7 @@ export default async function NewDealPage({
                 </p>
               </div>
               <div>
-                <label className={labelClass}>Received amount ($)</label>
+                <label className={labelClass}>Paid now ($)</label>
                 <input
                   name="revenue_received"
                   inputMode="decimal"
@@ -170,7 +184,8 @@ export default async function NewDealPage({
                   className={inputClass}
                 />
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  Paid so far. Remaining is worked out for you.
+                  The first payment, if any. Later payments are added on the
+                  sale&apos;s page.
                 </p>
               </div>
             </div>

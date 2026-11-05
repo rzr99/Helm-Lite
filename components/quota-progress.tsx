@@ -38,12 +38,14 @@ export async function QuotaProgress({
         .gte("day", from)
         .lte("day", to)
         .limit(100000),
+      // Sales credit follows the money: each payment counts in the month it
+      // was paid, whenever the sale itself closed.
       supabase
-        .from("deals")
-        .select("revenue_received")
+        .from("deal_payments")
+        .select("amount")
         .eq("agent_id", userId)
-        .gte("date_closed", from)
-        .lte("date_closed", to)
+        .gte("paid_on", from)
+        .lte("paid_on", to)
         .limit(100000),
     ]
   );
@@ -59,8 +61,8 @@ export async function QuotaProgress({
     (s, r) => s + (r.n ?? 0),
     0
   );
-  const salesDone = ((deals ?? []) as { revenue_received: number }[]).reduce(
-    (s, r) => s + Number(r.revenue_received ?? 0),
+  const salesDone = ((deals ?? []) as { amount: number }[]).reduce(
+    (s, r) => s + Number(r.amount ?? 0),
     0
   );
 

@@ -124,11 +124,14 @@ export async function getDashboardSummary(
     if (agent) q = q.eq("agent_id", agent);
     return q;
   };
+  // Revenue = cash on the day it was paid (a sale paid in instalments spreads
+  // across the days/months the money actually came in).
   let dealsQ = supabase
-    .from("deals")
-    .select("agent_id, date_closed, revenue_received")
-    .gte("date_closed", rangeStart)
-    .lte("date_closed", rangeEnd);
+    .from("deal_payments")
+    .select("agent_id, paid_on, amount")
+    .gte("paid_on", rangeStart)
+    .lte("paid_on", rangeEnd)
+    .limit(100000);
   if (agent) dealsQ = dealsQ.eq("agent_id", agent);
 
   const empty = Promise.resolve({ data: [] as unknown[] });
@@ -158,8 +161,8 @@ export async function getDashboardSummary(
   for (const r of (leadsR.data ?? []) as SR[]) dget(r.day).leads += r.n;
   for (const r of (fuR.data ?? []) as SR[]) dget(r.day).fu += r.n;
   for (const r of (dealCntR.data ?? []) as SR[]) dget(r.day).deals += r.n;
-  for (const r of (dealsRev.data ?? []) as { date_closed: string; revenue_received: number }[])
-    dget(r.date_closed).rev += Number(r.revenue_received);
+  for (const r of (dealsRev.data ?? []) as { paid_on: string; amount: number }[])
+    dget(r.paid_on).rev += Number(r.amount);
 
   const sumRange = (from: string, to: string, key: Key) => {
     let s = 0;
