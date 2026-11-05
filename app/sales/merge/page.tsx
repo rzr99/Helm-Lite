@@ -4,7 +4,12 @@ import { Shell } from "@/components/shell";
 import { Card, EmptyState, btnPrimary, btnSecondary, inputClass } from "@/components/ui";
 import { requireProfile } from "@/lib/profile";
 import { fmtMoney } from "@/lib/enums";
-import { mergeDeals, undoMerge } from "@/app/sales/merge/actions";
+import {
+  mergeDeals,
+  mergeAllObvious,
+  undoMerge,
+} from "@/app/sales/merge/actions";
+import { clientKey } from "@/lib/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +26,24 @@ type Deal = {
   agent: { full_name: string } | null;
 };
 
-// "Alex/blake" and "Blake / Alex" are the same client: compare the set of words.
-function nameKey(name: string) {
-  return name
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter(Boolean)
-    .sort()
-    .join(" ");
+const nameKey = clientKey;
+
+// Same client + same agent + same total: the old form re-entered the full total
+// with every payment, so these are certainly one sale.
+function obviousCount(deals: Deal[]) {
+  const counts = new Map<string, number>();
+  for (const d of deals) {
+    const k = `${nameKey(d.client_name)}|${d.agent_id}|${Number(d.deal_size)}`;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  let groups = 0;
+  let rows = 0;
+  for (const n of counts.values())
+    if (n > 1) {
+      groups++;
+      rows += n;
+    }
+  return { groups, rows };
 }
 
 // Group sales that look like one sale logged several times: same client name
@@ -179,11 +194,16 @@ function GroupForm({ deals, label }: { deals: Deal[]; label: string }) {
 export default async function MergeSalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; merged?: string; undone?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    merged?: string;
+    undone?: string;
+    all?: string;
+  }>;
 }) {
   const { supabase, profile } = await requireProfile();
   if (profile.role !== "owner") redirect("/sales");
-  const { q, merged, undone } = await searchParams;
+  const { q, merged, undone, all } = await searchParams;
   const search = (q ?? "").trim();
 
   const [{ data: dealData }, { data: mergeData }] = await Promise.all([
@@ -203,6 +223,7 @@ export default async function MergeSalesPage({
 
   const deals = (dealData ?? []) as unknown as Deal[];
   const groups = suggestGroups(deals);
+  const obvious = obviousCount(deals);
   const searchHits = search
     ? deals.filter((d) =>
         d.client_name.toLowerCase().includes(search.toLowerCase())
@@ -237,6 +258,34 @@ export default async function MergeSalesPage({
           Merged. All payments are now on one sale. Changed your mind? Use Undo
           under Recent merges.
         </p>
+      )}
+      {all && (
+        <p className="rounded-xl border border-amber-600/40 bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--text)]">
+          Merged {all} sale{all === "1" ? "" : "s"} that had been logged once per
+          payment. Each one is listed under Recent merges with its own Undo.
+        </p>
+      )}
+      {obvious.groups > 0 && (
+        <Card padded>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="text-sm">
+              <p className="font-medium text-[var(--text)]">
+                {obvious.groups} sale{obvious.groups === 1 ? " was" : "s were"}{" "}
+                logged more than once ({obvious.rows} rows)
+              </p>
+              <p className="mt-1 text-[var(--text-muted)]">
+                Same client, same agent and same sale total. Merge them all in
+                one click. Every payment keeps its own date, and each merge can
+                be undone.
+              </p>
+            </div>
+            <form action={mergeAllObvious}>
+              <button type="submit" className={btnPrimary}>
+                Merge all {obvious.groups}
+              </button>
+            </form>
+          </div>
+        </Card>
       )}
       {undone && (
         <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)]">

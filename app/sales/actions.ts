@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { todayStr } from "@/lib/dates";
+import { clientKey } from "@/lib/sales";
 
 function text(formData: FormData, key: string) {
   return ((formData.get(key) as string) || "").trim();
@@ -44,6 +45,72 @@ export async function createDeal(formData: FormData) {
   const firstPayment = money(formData, "revenue_received");
 
   if (!values.client_name) throw new Error("The deal needs a client name.");
+
+  // Same sale, next payment? Either the agent picked it, or it's the same
+  // client + same total as one of this agent's sales that still has money
+  // owed. Then the existing entry is updated instead of a new sale being made.
+  let existingId = text(formData, "existing_deal_id");
+  if (!existingId) {
+    const { data: open } = await supabase
+      .from("deals")
+      .select("id, client_name")
+      .eq("agent_id", values.agent_id)
+      .eq("deal_size", values.deal_size)
+      .gt("balance", 0)
+      .order("date_closed", { ascending: false })
+      .limit(200);
+    const key = clientKey(values.client_name);
+    existingId =
+      (open ?? []).find((d) => clientKey(d.client_name) === key)?.id ?? "";
+  }
+
+  if (existingId) {
+    const { data: sale } = await supabase
+      .from("deals")
+      .select("id")
+      .eq("id", existingId)
+      .single();
+    if (!sale) throw new Error("That sale could not be found.");
+
+    // Keep the sale's agent and close date; refresh the details the agent
+    // filled in (a blank field leaves what's there).
+    const changes: Record<string, unknown> = {
+      client_name: values.client_name,
+      deal_size: values.deal_size,
+    };
+    for (const k of [
+      "service",
+      "service_category",
+      "payment_method",
+      "merchant_name",
+      "social_platform",
+      "conversation",
+      "designer",
+    ] as const)
+      if (values[k]) changes[k] = values[k];
+
+    const { error: upError } = await supabase
+      .from("deals")
+      .update(changes)
+      .eq("id", existingId);
+    if (upError) throw new Error("Could not update the sale: " + upError.message);
+
+    if (firstPayment > 0) {
+      const { error: payError } = await supabase.from("deal_payments").insert({
+        deal_id: existingId,
+        agent_id: values.agent_id,
+        amount: firstPayment,
+        paid_on: values.date_closed,
+        payment_method: values.payment_method,
+      });
+      if (payError)
+        throw new Error("Could not save the payment: " + payError.message);
+    }
+
+    revalidatePath("/sales");
+    revalidatePath(`/sales/${existingId}`);
+    redirect(`/sales/${existingId}?updated=1`);
+  }
 
   const { data, error } = await supabase
     .from("deals")

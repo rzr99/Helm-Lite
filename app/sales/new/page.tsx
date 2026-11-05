@@ -17,6 +17,8 @@ import {
 } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
 import { createDeal } from "@/app/sales/actions";
+import { SalePicker } from "@/components/sale-picker";
+import type { OpenSale } from "@/lib/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,27 @@ export default async function NewDealPage({
     lead = data;
   }
 
+  // Sales that still have money owed — the picker offers them so the next
+  // payment updates the same sale. Owner sees everyone's; others their own.
+  let openQ = supabase
+    .from("deals")
+    .select(
+      "id, client_name, deal_size, revenue_received, balance, service, service_category, payment_method, merchant_name, social_platform, conversation, date_closed, agent:users(full_name)"
+    )
+    .gt("balance", 0)
+    .order("date_closed", { ascending: false })
+    .limit(500);
+  if (profile.role !== "owner") openQ = openQ.eq("agent_id", profile.id);
+  const { data: openData } = await openQ;
+  const openSales: OpenSale[] = (
+    (openData ?? []) as unknown as (OpenSale & {
+      agent: { full_name: string } | null;
+    })[]
+  ).map(({ agent, ...s }) => ({
+    ...s,
+    agent_name: profile.role === "owner" ? (agent?.full_name ?? null) : null,
+  }));
+
   let teammates: { id: string; full_name: string }[] = [];
   if (profile.role === "owner") {
     const { data } = await supabase
@@ -68,22 +91,9 @@ export default async function NewDealPage({
       }
     >
       <div className="max-w-xl">
-        <div className="mb-4 rounded-xl border border-amber-600/40 bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--text)]">
-          <p className="font-medium">Only for a NEW sale.</p>
-          <p className="mt-1 text-[var(--text-muted)]">
-            Client paying the next part of a sale you already logged? Don&apos;t
-            log it again. Open that sale (see{" "}
-            <Link
-              href="/sales?view=unpaid"
-              className="font-medium text-amber-600 hover:underline"
-            >
-              Unpaid balances
-            </Link>
-            ) and use <span className="font-medium">Record payment</span>.
-          </p>
-        </div>
         <Card padded>
           <form action={createDeal} className="flex flex-col gap-5">
+            {!lead && <SalePicker sales={openSales} />}
             {lead && <input type="hidden" name="lead_id" value={lead.id} />}
 
             <div>
@@ -150,6 +160,9 @@ export default async function NewDealPage({
               </div>
               <div>
                 <label className={labelClass}>Date</label>
+                <p className="mb-1 text-xs text-zinc-400 dark:text-zinc-500">
+                  The day the client paid (or the day the sale closed).
+                </p>
                 <input
                   type="date"
                   name="date_closed"
@@ -184,8 +197,8 @@ export default async function NewDealPage({
                   className={inputClass}
                 />
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  The first payment, if any. Later payments are added on the
-                  sale&apos;s page.
+                  What the client paid this time. Remaining is worked out for
+                  you.
                 </p>
               </div>
             </div>

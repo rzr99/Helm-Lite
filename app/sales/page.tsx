@@ -229,7 +229,7 @@ export default async function SalesPage({
       }
       action={
         <Link href="/sales/new" className={btnPrimary}>
-          + Log deal
+          + Log sale or payment
         </Link>
       }
     >

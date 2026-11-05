@@ -39,10 +39,13 @@ function monthLabel(date: string) {
 
 export default async function DealDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ updated?: string }>;
 }) {
   const { id } = await params;
+  const { updated } = await searchParams;
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
 
@@ -105,6 +108,12 @@ export default async function DealDetailPage({
         </Link>
       }
     >
+      {updated && (
+        <p className="rounded-xl border border-amber-600/40 bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--text)]">
+          Updated this existing sale. The new payment is added below and the
+          remaining balance is worked out. It still counts as one sale.
+        </p>
+      )}
       {leadInfo && (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           This deal came from lead{" "}

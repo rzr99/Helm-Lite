@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/profile";
+import { clientKey } from "@/lib/sales";
 
 type Moved = { id: string; deal_id: string };
 
@@ -28,6 +29,16 @@ export async function mergeDeals(formData: FormData) {
   if (removeIds.length === 0)
     throw new Error("Tick at least two sales to merge.");
 
+  const logId = await mergeInto(supabase, keep, removeIds);
+
+  revalidatePath("/sales");
+  revalidatePath("/sales/merge");
+  redirect(`/sales/merge?merged=${logId}`);
+}
+
+type Supa = Awaited<ReturnType<typeof requireOwner>>;
+
+async function mergeInto(supabase: Supa, keep: string, removeIds: string[]) {
   const [{ data: removed }, { data: payments }, { data: jobs }] =
     await Promise.all([
       supabase.from("deals").select("*").in("id", removeIds),
@@ -74,9 +85,39 @@ export async function mergeDeals(formData: FormData) {
         ". Use Undo on the merge page to put everything back."
     );
 
+  return log.id as string;
+}
+
+// The obvious ones: same client, same agent, same sale total — the old form
+// re-entered the full total with every payment. Keeps the earliest row of each.
+// Each group is its own logged (undoable) merge.
+export async function mergeAllObvious() {
+  const supabase = await requireOwner();
+
+  const { data } = await supabase
+    .from("deals")
+    .select("id, client_name, agent_id, deal_size, date_closed, created_at")
+    .order("date_closed")
+    .order("created_at")
+    .limit(100000);
+
+  const groups = new Map<string, string[]>();
+  for (const d of data ?? []) {
+    const key = `${clientKey(d.client_name)}|${d.agent_id}|${Number(d.deal_size)}`;
+    if (key.startsWith("|")) continue;
+    groups.set(key, [...(groups.get(key) ?? []), d.id]);
+  }
+
+  let merged = 0;
+  for (const ids of groups.values()) {
+    if (ids.length < 2) continue;
+    await mergeInto(supabase, ids[0], ids.slice(1));
+    merged++;
+  }
+
   revalidatePath("/sales");
   revalidatePath("/sales/merge");
-  redirect(`/sales/merge?merged=${log.id}`);
+  redirect(`/sales/merge?all=${merged}`);
 }
 
 export async function undoMerge(mergeId: string) {
