@@ -398,6 +398,14 @@ export default async function SalesPage({
             {label}
           </Link>
         ))}
+        {profile.role === "owner" && (
+          <Link
+            href="/sales/merge"
+            className="ml-auto self-center font-mono text-[11px] uppercase tracking-[0.08em] text-amber-600 hover:underline"
+          >
+            Merge duplicate sales →
+          </Link>
+        )}
       </div>
 
       <Card
