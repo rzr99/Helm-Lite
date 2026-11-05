@@ -15,6 +15,7 @@ import {
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { SERVICE_CATEGORIES, SERVICE_SUGGESTIONS, fmtMoney } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
+import { BALANCE_TRACKING_FROM } from "@/lib/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -134,7 +135,7 @@ export default async function SalesPage({
   if (category) query = query.eq("service_category", category);
   if (floor && agent) query = query.eq("agent_id", agent);
   if (view === "unpaid") {
-    query = query.gt("balance", 0);
+    query = query.gt("balance", 0).gte("date_closed", BALANCE_TRACKING_FROM);
   } else {
     query = query
       .gte("date_closed", monthStart)
@@ -160,7 +161,20 @@ export default async function SalesPage({
 
   // Totals + category breakdown for the WHOLE filtered set come from the DB,
   // so they stay correct no matter which page of the list is shown.
-  const [{ data, count }, { data: summaryData }] = await Promise.all([
+  // Still owed: only sales closed since payment tracking began (older ones
+  // were logged once per instalment, so their remaining isn't real).
+  let owedQuery = supabase
+    .from("deals")
+    .select("balance")
+    .gt("balance", 0)
+    .gte("date_closed", BALANCE_TRACKING_FROM)
+    .limit(100000);
+  if (service) owedQuery = owedQuery.eq("service", service);
+  if (category) owedQuery = owedQuery.eq("service_category", category);
+  if (floor && agent) owedQuery = owedQuery.eq("agent_id", agent);
+
+  const [{ data, count }, { data: summaryData }, { data: owedData }] =
+    await Promise.all([
     view === "payments" ? payQuery : query,
     supabase.rpc("deal_summary", {
       p_service: service || null,
@@ -169,6 +183,7 @@ export default async function SalesPage({
       p_from: monthStart,
       p_to: monthEnd,
     }),
+    owedQuery,
   ]);
 
   const deals = (view === "payments" ? [] : data ?? []) as unknown as DealRow[];
@@ -183,14 +198,13 @@ export default async function SalesPage({
     total_received?: number;
     total_size?: number;
     deal_count?: number;
-    outstanding?: number;
-    outstanding_count?: number;
     by_category?: { name: string; revenue: number; count: number }[];
   };
   const totalRevenue = Number(summary.total_received ?? 0);
   const dealCount = Number(summary.deal_count ?? 0);
-  const outstanding = Number(summary.outstanding ?? 0);
-  const outstandingCount = Number(summary.outstanding_count ?? 0);
+  const owedRows = (owedData ?? []) as { balance: number }[];
+  const outstanding = owedRows.reduce((s, r) => s + Number(r.balance), 0);
+  const outstandingCount = owedRows.length;
   const avgDeal = dealCount > 0 ? Number(summary.total_size ?? 0) / dealCount : 0;
   const byCategory = (summary.by_category ?? []).map((c) => ({
     name: c.name,
@@ -398,14 +412,6 @@ export default async function SalesPage({
             {label}
           </Link>
         ))}
-        {profile.role === "owner" && (
-          <Link
-            href="/sales/merge"
-            className="ml-auto self-center font-mono text-[11px] uppercase tracking-[0.08em] text-amber-600 hover:underline"
-          >
-            Merge duplicate sales →
-          </Link>
-        )}
       </div>
 
       <Card
@@ -420,7 +426,7 @@ export default async function SalesPage({
           view === "payments"
             ? "Every payment that came in this month, whichever month the sale closed. This is what counts toward targets."
             : view === "unpaid"
-              ? "All months. When the client pays the next part, use + Log sale or payment and pick their sale at the top."
+              ? "Sales from November 2026 on. When the client pays the next part, use + Log sale or payment and pick their sale at the top."
               : undefined
         }
         padded={false}
@@ -591,7 +597,9 @@ export default async function SalesPage({
                       {fmtMoney(Number(deal.revenue_received))}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
-                      {remaining > 0 ? fmtMoney(remaining) : "—"}
+                      {remaining > 0 && deal.date_closed >= BALANCE_TRACKING_FROM
+                        ? fmtMoney(remaining)
+                        : "—"}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-zinc-600 dark:text-zinc-400">
                       {deal.payment_method ?? "—"}

@@ -18,7 +18,7 @@ import {
 import { todayStr } from "@/lib/dates";
 import { createDeal } from "@/app/sales/actions";
 import { SalePicker } from "@/components/sale-picker";
-import type { OpenSale } from "@/lib/sales";
+import { BALANCE_TRACKING_FROM, type OpenSale } from "@/lib/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +56,7 @@ export default async function NewDealPage({
       "id, client_name, deal_size, revenue_received, balance, service, service_category, payment_method, merchant_name, social_platform, conversation, date_closed, agent:users(full_name)"
     )
     .gt("balance", 0)
+    .gte("date_closed", BALANCE_TRACKING_FROM)
     .order("date_closed", { ascending: false })
     .limit(500);
   if (profile.role !== "owner") openQ = openQ.eq("agent_id", profile.id);

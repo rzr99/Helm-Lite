@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { todayStr } from "@/lib/dates";
-import { clientKey } from "@/lib/sales";
+import { clientKey, BALANCE_TRACKING_FROM } from "@/lib/sales";
 
 function text(formData: FormData, key: string) {
   return ((formData.get(key) as string) || "").trim();
@@ -57,6 +57,7 @@ export async function createDeal(formData: FormData) {
       .eq("agent_id", values.agent_id)
       .eq("deal_size", values.deal_size)
       .gt("balance", 0)
+      .gte("date_closed", BALANCE_TRACKING_FROM)
       .order("date_closed", { ascending: false })
       .limit(200);
     const key = clientKey(values.client_name);

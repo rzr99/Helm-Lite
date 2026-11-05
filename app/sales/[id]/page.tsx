@@ -19,6 +19,7 @@ import {
   fmtMoney,
 } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
+import { BALANCE_TRACKING_FROM } from "@/lib/sales";
 import {
   updateDeal,
   deleteDeal,
@@ -73,7 +74,12 @@ export default async function DealDetailPage({
     note: string | null;
   }[];
 
-  const remaining = Number(deal.deal_size) - Number(deal.revenue_received);
+  // Sales before payment tracking began were logged once per instalment, so
+  // their remaining isn't real — show none.
+  const tracked = deal.date_closed >= BALANCE_TRACKING_FROM;
+  const remaining = tracked
+    ? Number(deal.deal_size) - Number(deal.revenue_received)
+    : 0;
 
   const agentInfo = deal.agent as unknown as {
     full_name: string;
@@ -135,7 +141,9 @@ export default async function DealDetailPage({
         />
         <Readout
           label={remaining > 0 ? "Still owed" : "Remaining"}
-          value={remaining > 0 ? fmtMoney(remaining) : "Paid in full"}
+          value={
+            !tracked ? "—" : remaining > 0 ? fmtMoney(remaining) : "Paid in full"
+          }
         />
       </Readouts>
 
@@ -413,7 +421,7 @@ export default async function DealDetailPage({
             <div>
               <dt className="text-zinc-500 dark:text-zinc-400">Remaining</dt>
               <dd className="font-medium text-zinc-900 dark:text-zinc-50">
-                {fmtMoney(remaining)}
+                {tracked ? fmtMoney(remaining) : "—"}
               </dd>
             </div>
             <div>

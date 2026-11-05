@@ -23,3 +23,9 @@ export type OpenSale = {
   date_closed: string;
   agent_name?: string | null;
 };
+
+// Payment tracking (one sale, many payments) started in November 2026. Older
+// sales were logged once per instalment, so their "remaining" isn't real —
+// balances, Unpaid balances and the Log form's sale picker only look at sales
+// closed from this date on.
+export const BALANCE_TRACKING_FROM = "2026-11-01";
