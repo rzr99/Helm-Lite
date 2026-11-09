@@ -10,7 +10,7 @@ import {
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { fmtMoney } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
-import { addPayment } from "@/app/sales/actions";
+import { addPayment, closeSale } from "@/app/sales/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +100,7 @@ function RemainingCell({ d }: { d: Sale }) {
 function PaymentButton({ d }: { d: Sale }) {
   const l = left(d);
   const record = addPayment.bind(null, d.id);
+  const markLost = closeSale.bind(null, d.id);
   return (
     <details>
       <summary className="cursor-pointer list-none rounded-md border border-amber-600/50 px-2.5 py-1 text-center text-xs font-medium text-amber-600 hover:bg-[var(--accent-soft)] [&::-webkit-details-marker]:hidden">
@@ -124,12 +125,27 @@ function PaymentButton({ d }: { d: Sale }) {
         <button type="submit" className={btnPrimary + " py-1.5"}>
           Save payment
         </button>
-        <Link
-          href={`/sales/${d.id}`}
-          className="text-center text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] hover:underline"
+      </form>
+      <form
+        action={markLost}
+        className="mt-3 flex w-52 flex-col gap-2 border-t border-[var(--border)] pt-3"
+      >
+        <input type="hidden" name="reason" value="lost" />
+        <p className="text-[11px] text-[var(--text-faint)]">
+          Client won&apos;t pay the rest?
+        </p>
+        <input
+          name="note"
+          placeholder="Reason (optional)"
+          aria-label="Reason"
+          className={inputClass + " py-1.5"}
+        />
+        <button
+          type="submit"
+          className="rounded-lg border border-[var(--negative)]/50 px-3 py-1.5 text-xs font-medium text-[var(--negative)] hover:bg-[var(--hover)]"
         >
-          Client won&apos;t pay the rest? Close it →
-        </Link>
+          Mark {fmtMoney(l)} as lost
+        </button>
       </form>
     </details>
   );
@@ -200,8 +216,6 @@ export default async function SalesPage({
     { data: openData },
     { data: lostData },
     { data: teamData },
-    { data: allPaidData },
-    { data: allLostData },
   ] = await Promise.all([
     paymentsQ,
     closedQ,
@@ -213,16 +227,6 @@ export default async function SalesPage({
           .select("id, full_name")
           .eq("active", true)
           .order("full_name")
-      : none,
-    isOwner
-      ? supabase.from("deal_payments").select("amount").limit(100000)
-      : none,
-    isOwner
-      ? supabase
-          .from("deals")
-          .select("lost_amount")
-          .eq("pay_status", "lost")
-          .limit(100000)
       : none,
   ]);
 
@@ -270,14 +274,6 @@ export default async function SalesPage({
   const newValue = closedInMonth.reduce((s, d) => s + Number(d.deal_size), 0);
   const toCollect = openSales.reduce((s, d) => s + left(d), 0);
   const lostTotal = lostInMonth.reduce((s, d) => s + Number(d.lost_amount), 0);
-  const tillDateReceived = ((allPaidData ?? []) as { amount: number }[]).reduce(
-    (s, r) => s + Number(r.amount),
-    0
-  );
-  const tillDateLost = ((allLostData ?? []) as { lost_amount: number }[]).reduce(
-    (s, r) => s + Number(r.lost_amount),
-    0
-  );
 
   // Totals by payment method (like the bottom of the sheet).
   const methodTotals = new Map<string, { label: string; amount: number }>();
@@ -376,18 +372,6 @@ export default async function SalesPage({
         <Readout label="Still to collect" value={fmtMoney(toCollect)} />
         <Readout label="Payment lost" value={fmtMoney(lostTotal)} />
       </Readouts>
-      {isOwner && (
-        <p className="-mt-2 text-xs text-[var(--text-faint)]">
-          Till date, all agents: received{" "}
-          <span className="font-mono text-[var(--text)]">
-            {fmtMoney(tillDateReceived)}
-          </span>{" "}
-          · lost{" "}
-          <span className="font-mono text-[var(--text)]">
-            {fmtMoney(tillDateLost)}
-          </span>
-        </p>
-      )}
 
       {/* The monthly sheet */}
       <Card
