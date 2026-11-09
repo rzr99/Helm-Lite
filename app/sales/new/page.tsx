@@ -17,8 +17,6 @@ import {
 } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
 import { createDeal } from "@/app/sales/actions";
-import { SalePicker } from "@/components/sale-picker";
-import { BALANCE_TRACKING_FROM, type OpenSale } from "@/lib/sales";
 
 export const dynamic = "force-dynamic";
 
@@ -48,28 +46,6 @@ export default async function NewDealPage({
     lead = data;
   }
 
-  // Sales that still have money owed — the picker offers them so the next
-  // payment updates the same sale. Owner sees everyone's; others their own.
-  let openQ = supabase
-    .from("deals")
-    .select(
-      "id, client_name, deal_size, revenue_received, balance, service, service_category, payment_method, merchant_name, social_platform, conversation, date_closed, agent:users(full_name)"
-    )
-    .gt("balance", 0)
-    .gte("date_closed", BALANCE_TRACKING_FROM)
-    .order("date_closed", { ascending: false })
-    .limit(500);
-  if (profile.role !== "owner") openQ = openQ.eq("agent_id", profile.id);
-  const { data: openData } = await openQ;
-  const openSales: OpenSale[] = (
-    (openData ?? []) as unknown as (OpenSale & {
-      agent: { full_name: string } | null;
-    })[]
-  ).map(({ agent, ...s }) => ({
-    ...s,
-    agent_name: profile.role === "owner" ? (agent?.full_name ?? null) : null,
-  }));
-
   let teammates: { id: string; full_name: string }[] = [];
   if (profile.role === "owner") {
     const { data } = await supabase
@@ -84,17 +60,16 @@ export default async function NewDealPage({
     <Shell
       profile={profile}
       active="sales"
-      title="Log a deal"
+      title="New sale"
       subtitle={
         lead
           ? `Closing out ${lead.handle} — details are prefilled, adjust as needed.`
-          : "Record a closed sale so it counts toward revenue."
+          : "A client signed. Next payments are added with + Payment on the Sales page."
       }
     >
       <div className="max-w-xl">
         <Card padded>
           <form action={createDeal} className="flex flex-col gap-5">
-            {!lead && <SalePicker sales={openSales} />}
             {lead && <input type="hidden" name="lead_id" value={lead.id} />}
 
             <div>
@@ -162,7 +137,7 @@ export default async function NewDealPage({
               <div>
                 <label className={labelClass}>Date</label>
                 <p className="mb-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  The day the client paid (or the day the sale closed).
+                  The day the client signed.
                 </p>
                 <input
                   type="date"
@@ -190,7 +165,7 @@ export default async function NewDealPage({
                 </p>
               </div>
               <div>
-                <label className={labelClass}>Paid now ($)</label>
+                <label className={labelClass}>Paid upfront ($)</label>
                 <input
                   name="revenue_received"
                   inputMode="decimal"
@@ -198,7 +173,7 @@ export default async function NewDealPage({
                   className={inputClass}
                 />
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
-                  What the client paid this time. Remaining is worked out for
+                  50%, 100%, or leave empty. Remaining is worked out for
                   you.
                 </p>
               </div>
@@ -273,7 +248,7 @@ export default async function NewDealPage({
 
             <div className="flex gap-3 pt-1">
               <button type="submit" className={btnPrimary}>
-                Save deal
+                Save sale
               </button>
               <Link href="/sales" className={btnSecondary}>
                 Cancel

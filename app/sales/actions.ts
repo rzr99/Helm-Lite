@@ -198,7 +198,7 @@ export async function addPayment(dealId: string, formData: FormData) {
 
   const { data: deal } = await supabase
     .from("deals")
-    .select("agent_id")
+    .select("agent_id, payment_method")
     .eq("id", dealId)
     .single();
   if (!deal) throw new Error("Sale not found.");
@@ -208,7 +208,7 @@ export async function addPayment(dealId: string, formData: FormData) {
     agent_id: deal.agent_id,
     amount,
     paid_on: text(formData, "paid_on") || todayStr(),
-    payment_method: text(formData, "payment_method") || null,
+    payment_method: text(formData, "payment_method") || deal.payment_method,
     note: text(formData, "note") || null,
   });
 

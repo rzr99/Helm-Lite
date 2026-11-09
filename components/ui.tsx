@@ -123,15 +123,23 @@ export function Card({
   action,
   children,
   padded = true,
+  clip = true,
 }: {
   title?: string;
   description?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   padded?: boolean;
+  // false lets pop-overs inside the card (e.g. + Payment) extend past its edge.
+  clip?: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+    <section
+      className={
+        (clip ? "overflow-hidden " : "") +
+        "rounded-xl border border-[var(--border)] bg-[var(--surface)]"
+      }
+    >
       {(title || action) && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] px-5 py-3.5">
           <div className="flex items-center gap-2.5">
