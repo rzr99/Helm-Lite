@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { todayStr } from "@/lib/dates";
-import { clientKey, BALANCE_TRACKING_FROM } from "@/lib/sales";
+import { clientKey } from "@/lib/sales";
 
 function text(formData: FormData, key: string) {
   return ((formData.get(key) as string) || "").trim();
@@ -57,7 +57,7 @@ export async function createDeal(formData: FormData) {
       .eq("agent_id", values.agent_id)
       .eq("deal_size", values.deal_size)
       .gt("balance", 0)
-      .gte("date_closed", BALANCE_TRACKING_FROM)
+      .eq("pay_status", "open")
       .order("date_closed", { ascending: false })
       .limit(200);
     const key = clientKey(values.client_name);
@@ -227,6 +227,49 @@ export async function deletePayment(dealId: string, paymentId: string) {
     .eq("id", paymentId);
 
   if (error) throw new Error("Could not remove the payment: " + error.message);
+
+  revalidatePath("/sales");
+  revalidatePath(`/sales/${dealId}`);
+}
+
+// The client won't pay the rest ('lost' — the amount left goes to the Payment
+// lost list) or nothing is really owed ('settled' — an old sale logged twice).
+export async function closeSale(dealId: string, formData: FormData) {
+  const supabase = await createClient();
+  const reason = text(formData, "reason") === "settled" ? "settled" : "lost";
+
+  const { data: deal } = await supabase
+    .from("deals")
+    .select("deal_size, revenue_received")
+    .eq("id", dealId)
+    .single();
+  if (!deal) throw new Error("Sale not found.");
+
+  const left = Math.max(0, Number(deal.deal_size) - Number(deal.revenue_received));
+
+  const { error } = await supabase
+    .from("deals")
+    .update({
+      pay_status: reason,
+      lost_amount: reason === "lost" ? left : 0,
+      closed_on: todayStr(),
+      close_note: text(formData, "note") || null,
+    })
+    .eq("id", dealId);
+  if (error) throw new Error("Could not close the sale: " + error.message);
+
+  revalidatePath("/sales");
+  revalidatePath(`/sales/${dealId}`);
+}
+
+export async function reopenSale(dealId: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("deals")
+    .update({ pay_status: "open", lost_amount: 0, closed_on: null, close_note: null })
+    .eq("id", dealId);
+  if (error) throw new Error("Could not reopen the sale: " + error.message);
 
   revalidatePath("/sales");
   revalidatePath(`/sales/${dealId}`);

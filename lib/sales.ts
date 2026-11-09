@@ -7,25 +7,3 @@ export function clientKey(name: string) {
     .sort()
     .join(" ");
 }
-
-export type OpenSale = {
-  id: string;
-  client_name: string;
-  deal_size: number;
-  revenue_received: number;
-  balance: number;
-  service: string | null;
-  service_category: string | null;
-  payment_method: string | null;
-  merchant_name: string | null;
-  social_platform: string | null;
-  conversation: string | null;
-  date_closed: string;
-  agent_name?: string | null;
-};
-
-// Payment tracking (one sale, many payments) started in November 2026. Older
-// sales were logged once per instalment, so their "remaining" isn't real —
-// balances, Unpaid balances and the Log form's sale picker only look at sales
-// closed from this date on.
-export const BALANCE_TRACKING_FROM = "2026-11-01";

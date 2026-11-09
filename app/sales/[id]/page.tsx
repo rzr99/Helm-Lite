@@ -19,12 +19,13 @@ import {
   fmtMoney,
 } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
-import { BALANCE_TRACKING_FROM } from "@/lib/sales";
 import {
   updateDeal,
   deleteDeal,
   addPayment,
   deletePayment,
+  closeSale,
+  reopenSale,
 } from "@/app/sales/actions";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,7 @@ export default async function DealDetailPage({
   const { data: deal } = await supabase
     .from("deals")
     .select(
-      "id, agent_id, client_name, service, service_category, deal_size, revenue_received, date_closed, payment_method, merchant_name, social_platform, conversation, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)"
+      "id, agent_id, client_name, service, service_category, deal_size, revenue_received, pay_status, lost_amount, closed_on, close_note, date_closed, payment_method, merchant_name, social_platform, conversation, designer, agent:users(full_name, avatar_url), lead:leads(id, handle)"
     )
     .eq("id", id)
     .single();
@@ -74,12 +75,11 @@ export default async function DealDetailPage({
     note: string | null;
   }[];
 
-  // Sales before payment tracking began were logged once per instalment, so
-  // their remaining isn't real — show none.
-  const tracked = deal.date_closed >= BALANCE_TRACKING_FROM;
-  const remaining = tracked
-    ? Number(deal.deal_size) - Number(deal.revenue_received)
-    : 0;
+  const status = (deal.pay_status ?? "open") as "open" | "lost" | "settled";
+  const remaining =
+    status === "open"
+      ? Math.max(0, Number(deal.deal_size) - Number(deal.revenue_received))
+      : 0;
 
   const agentInfo = deal.agent as unknown as {
     full_name: string;
@@ -94,6 +94,8 @@ export default async function DealDetailPage({
   const saveDeal = updateDeal.bind(null, deal.id);
   const removeDeal = deleteDeal.bind(null, deal.id);
   const recordPayment = addPayment.bind(null, deal.id);
+  const close = closeSale.bind(null, deal.id);
+  const reopen = reopenSale.bind(null, deal.id);
 
   return (
     <Shell
@@ -140,12 +142,92 @@ export default async function DealDetailPage({
           value={fmtMoney(Number(deal.revenue_received))}
         />
         <Readout
-          label={remaining > 0 ? "Still owed" : "Remaining"}
+          label={
+            status === "lost"
+              ? "Payment lost"
+              : remaining > 0
+                ? "Still owed"
+                : "Remaining"
+          }
           value={
-            !tracked ? "—" : remaining > 0 ? fmtMoney(remaining) : "Paid in full"
+            status === "lost"
+              ? fmtMoney(Number(deal.lost_amount))
+              : status === "settled"
+                ? "Closed"
+                : remaining > 0
+                  ? fmtMoney(remaining)
+                  : "Paid in full"
           }
         />
       </Readouts>
+
+      {status !== "open" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-3.5 text-sm">
+          <p className="text-[var(--text-muted)]">
+            {status === "lost"
+              ? `Closed as not paid on ${deal.closed_on ?? ""}: ${fmtMoney(Number(deal.lost_amount))} lost.`
+              : `Closed on ${deal.closed_on ?? ""} as already paid (old double entry).`}
+            {deal.close_note ? ` Note: ${deal.close_note}` : ""}
+          </p>
+          {canEdit && (
+            <form action={reopen}>
+              <button
+                type="submit"
+                className="text-sm font-medium text-amber-600 hover:underline"
+              >
+                Reopen
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {status === "open" && remaining > 0 && canEdit && (
+        <details className="rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          <summary className="cursor-pointer list-none px-5 py-3.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] [&::-webkit-details-marker]:hidden">
+            Client won&apos;t pay the rest? Close this sale ▾
+          </summary>
+          <form
+            action={close}
+            className="flex flex-col gap-3 border-t border-[var(--border)] px-5 py-4"
+          >
+            <label className="flex items-start gap-2 text-sm text-[var(--text)]">
+              <input
+                type="radio"
+                name="reason"
+                value="lost"
+                defaultChecked
+                className="mt-1 accent-amber-600"
+              />
+              <span>
+                Not paid — {fmtMoney(remaining)} goes to{" "}
+                <span className="font-medium">Payment lost</span>
+              </span>
+            </label>
+            {profile.role === "owner" && (
+              <label className="flex items-start gap-2 text-sm text-[var(--text)]">
+                <input
+                  type="radio"
+                  name="reason"
+                  value="settled"
+                  className="mt-1 accent-amber-600"
+                />
+                <span>
+                  Already paid — an old sale entered twice (nothing lost)
+                </span>
+              </label>
+            )}
+            <input
+              name="note"
+              placeholder="Note (optional), e.g. client stopped the project"
+              className={inputClass}
+            />
+            <button type="submit" className={btnPrimary + " self-start"}>
+              Close sale
+            </button>
+          </form>
+        </details>
+      )}
 
       <Card
         title="Payments"
@@ -421,7 +503,7 @@ export default async function DealDetailPage({
             <div>
               <dt className="text-zinc-500 dark:text-zinc-400">Remaining</dt>
               <dd className="font-medium text-zinc-900 dark:text-zinc-50">
-                {tracked ? fmtMoney(remaining) : "—"}
+                {fmtMoney(remaining)}
               </dd>
             </div>
             <div>

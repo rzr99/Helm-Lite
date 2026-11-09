@@ -2,18 +2,14 @@ import Link from "next/link";
 import { Shell } from "@/components/shell";
 import {
   Card,
-  EmptyState,
   Readouts,
   Readout,
   btnPrimary,
-  pillClass,
-  pillActiveClass,
   inputClass,
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
 import { fmtMoney } from "@/lib/enums";
 import { todayStr } from "@/lib/dates";
-import { BALANCE_TRACKING_FROM } from "@/lib/sales";
 import { addPayment } from "@/app/sales/actions";
 
 export const dynamic = "force-dynamic";
@@ -47,38 +43,108 @@ type Sale = {
   service: string | null;
   deal_size: number;
   revenue_received: number;
+  pay_status: "open" | "lost" | "settled";
+  lost_amount: number;
+  closed_on: string | null;
+  close_note: string | null;
   date_closed: string;
-  agent: { full_name: string; avatar_url: string | null } | null;
+  payment_method: string | null;
+  merchant_name: string | null;
+  social_platform: string | null;
+  agent: { full_name: string } | null;
 };
 
 type Payment = {
   id: string;
+  deal_id: string;
   amount: number;
   paid_on: string;
-  deal: {
-    id: string;
-    client_name: string;
-    service_category: string | null;
-    deal_size: number;
-    agent: { full_name: string } | null;
-  } | null;
+  payment_method: string | null;
 };
 
 const SALE_FIELDS =
-  "id, agent_id, client_name, service, deal_size, revenue_received, date_closed, agent:users(full_name, avatar_url)";
+  "id, agent_id, client_name, service, deal_size, revenue_received, pay_status, lost_amount, closed_on, close_note, date_closed, payment_method, merchant_name, social_platform, agent:users(full_name)";
+
+const th =
+  "whitespace-nowrap px-3 py-2.5 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-faint)]";
+const td = "whitespace-nowrap px-3 py-2.5 text-[13px] text-[var(--text-muted)]";
+const tdNum =
+  "whitespace-nowrap px-3 py-2.5 text-right font-mono text-[13px] tabular-nums";
+
+function left(d: Sale) {
+  return d.pay_status === "open"
+    ? Math.max(0, Number(d.deal_size) - Number(d.revenue_received))
+    : 0;
+}
+
+// Remaining column: amount left, Paid ✓, Lost $X, or Closed.
+function RemainingCell({ d }: { d: Sale }) {
+  if (d.pay_status === "lost")
+    return (
+      <span className="text-[var(--negative)]">
+        Lost {fmtMoney(Number(d.lost_amount))}
+      </span>
+    );
+  if (d.pay_status === "settled")
+    return <span className="text-[var(--text-faint)]">Closed</span>;
+  const l = left(d);
+  return l > 0 ? (
+    <span className="font-semibold text-[var(--text)]">{fmtMoney(l)}</span>
+  ) : (
+    <span className="text-[var(--text-faint)]">Paid ✓</span>
+  );
+}
+
+// "+ Payment" opens a small form right in the row; the payment updates this
+// same sale. Also links to closing it as not paid.
+function PaymentButton({ d }: { d: Sale }) {
+  const l = left(d);
+  const record = addPayment.bind(null, d.id);
+  return (
+    <details>
+      <summary className="cursor-pointer list-none rounded-md border border-amber-600/50 px-2.5 py-1 text-center text-xs font-medium text-amber-600 hover:bg-[var(--accent-soft)] [&::-webkit-details-marker]:hidden">
+        + Payment
+      </summary>
+      <form action={record} className="mt-2 flex w-52 flex-col gap-2">
+        <input
+          name="amount"
+          required
+          inputMode="decimal"
+          defaultValue={String(l)}
+          aria-label="Amount paid"
+          className={inputClass + " py-1.5"}
+        />
+        <input
+          type="date"
+          name="paid_on"
+          defaultValue={todayStr()}
+          aria-label="Date paid"
+          className={inputClass + " py-1.5"}
+        />
+        <button type="submit" className={btnPrimary + " py-1.5"}>
+          Save payment
+        </button>
+        <Link
+          href={`/sales/${d.id}`}
+          className="text-center text-[11px] text-[var(--text-faint)] hover:text-[var(--text)] hover:underline"
+        >
+          Client won&apos;t pay the rest? Close it →
+        </Link>
+      </form>
+    </details>
+  );
+}
 
 export default async function SalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; agent?: string; show?: string }>;
+  searchParams: Promise<{ month?: string; agent?: string }>;
 }) {
   const { supabase, profile } = await requireProfile();
   const floor = isFloorRole(profile.role);
   const isOwner = profile.role === "owner";
-  const { month: monthRaw, agent: agentRaw, show } = await searchParams;
+  const { month: monthRaw, agent: agentRaw } = await searchParams;
   const agent = floor ? agentRaw || "" : "";
-  // Projects list: everything still owed (any month), or the month's new sales.
-  const listMode: "open" | "month" = show === "month" ? "month" : "open";
 
   const currentMonth = todayStr().slice(0, 7);
   const month =
@@ -86,49 +152,61 @@ export default async function SalesPage({
   const monthStart = `${month}-01`;
   const nextMonthStart = `${shiftMonth(month, 1)}-01`;
 
+  const canPayOn = (d: Sale) =>
+    d.pay_status === "open" &&
+    left(d) > 0 &&
+    (isOwner || d.agent_id === profile.id);
+
   let paymentsQ = supabase
     .from("deal_payments")
-    .select(
-      "id, amount, paid_on, deal:deals!inner(id, client_name, service_category, deal_size, agent:users(full_name))"
-    )
+    .select("id, deal_id, amount, paid_on, payment_method")
     .gte("paid_on", monthStart)
     .lt("paid_on", nextMonthStart)
-    .order("paid_on", { ascending: false })
-    .order("created_at", { ascending: false })
+    .order("paid_on")
     .limit(5000);
   if (agent) paymentsQ = paymentsQ.eq("agent_id", agent);
 
-  let newSalesQ = supabase
+  let closedQ = supabase
     .from("deals")
     .select(SALE_FIELDS)
     .gte("date_closed", monthStart)
     .lt("date_closed", nextMonthStart)
-    .order("date_closed", { ascending: false })
     .limit(5000);
-  if (agent) newSalesQ = newSalesQ.eq("agent_id", agent);
+  if (agent) closedQ = closedQ.eq("agent_id", agent);
 
-  // Older sales were logged once per instalment, so only sales from
-  // BALANCE_TRACKING_FROM on have a real "left to pay".
   let openQ = supabase
     .from("deals")
     .select(SALE_FIELDS)
+    .eq("pay_status", "open")
     .gt("balance", 0)
-    .gte("date_closed", BALANCE_TRACKING_FROM)
     .order("date_closed", { ascending: false })
     .limit(5000);
   if (agent) openQ = openQ.eq("agent_id", agent);
 
+  let lostQ = supabase
+    .from("deals")
+    .select(SALE_FIELDS)
+    .eq("pay_status", "lost")
+    .gte("closed_on", monthStart)
+    .lt("closed_on", nextMonthStart)
+    .order("closed_on", { ascending: false })
+    .limit(5000);
+  if (agent) lostQ = lostQ.eq("agent_id", agent);
+
   const none = Promise.resolve({ data: [] as unknown[] });
   const [
     { data: payData },
-    { data: newData },
+    { data: closedData },
     { data: openData },
+    { data: lostData },
     { data: teamData },
     { data: allPaidData },
+    { data: allLostData },
   ] = await Promise.all([
     paymentsQ,
-    newSalesQ,
+    closedQ,
     openQ,
+    lostQ,
     floor
       ? supabase
           .from("users")
@@ -139,56 +217,94 @@ export default async function SalesPage({
     isOwner
       ? supabase.from("deal_payments").select("amount").limit(100000)
       : none,
+    isOwner
+      ? supabase
+          .from("deals")
+          .select("lost_amount")
+          .eq("pay_status", "lost")
+          .limit(100000)
+      : none,
   ]);
 
-  const payments = (payData ?? []) as unknown as Payment[];
-  const newSales = (newData ?? []) as unknown as Sale[];
+  const payments = (payData ?? []) as Payment[];
+  const closedInMonth = (closedData ?? []) as unknown as Sale[];
   const openSales = (openData ?? []) as unknown as Sale[];
+  const lostInMonth = (lostData ?? []) as unknown as Sale[];
   const teammates = (teamData ?? []) as { id: string; full_name: string }[];
 
-  const monthSales = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const newSalesValue = newSales.reduce((s, d) => s + Number(d.deal_size), 0);
-  const toCollect = openSales.reduce(
-    (s, d) => s + (Number(d.deal_size) - Number(d.revenue_received)),
-    0
+  // The month's sheet: every project that closed this month or had money come
+  // in this month (an older project paying its next part shows up again here).
+  const byId = new Map<string, Sale>();
+  for (const d of closedInMonth) byId.set(d.id, d);
+  const missing = [
+    ...new Set(payments.map((p) => p.deal_id).filter((id) => !byId.has(id))),
+  ];
+  if (missing.length > 0) {
+    const { data } = await supabase
+      .from("deals")
+      .select(SALE_FIELDS)
+      .in("id", missing);
+    for (const d of (data ?? []) as unknown as Sale[]) byId.set(d.id, d);
+  }
+
+  const receivedThisMonth = new Map<string, number>();
+  const firstPaidThisMonth = new Map<string, string>();
+  for (const p of payments) {
+    receivedThisMonth.set(
+      p.deal_id,
+      (receivedThisMonth.get(p.deal_id) ?? 0) + Number(p.amount)
+    );
+    if (!firstPaidThisMonth.has(p.deal_id))
+      firstPaidThisMonth.set(p.deal_id, p.paid_on);
+  }
+
+  const rowDate = (d: Sale) =>
+    d.date_closed >= monthStart && d.date_closed < nextMonthStart
+      ? d.date_closed
+      : (firstPaidThisMonth.get(d.id) ?? d.date_closed);
+  const rows = [...byId.values()].sort((a, b) =>
+    rowDate(a).localeCompare(rowDate(b))
   );
-  const tillDate = ((allPaidData ?? []) as { amount: number }[]).reduce(
+
+  const monthSales = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const newValue = closedInMonth.reduce((s, d) => s + Number(d.deal_size), 0);
+  const toCollect = openSales.reduce((s, d) => s + left(d), 0);
+  const lostTotal = lostInMonth.reduce((s, d) => s + Number(d.lost_amount), 0);
+  const tillDateReceived = ((allPaidData ?? []) as { amount: number }[]).reduce(
     (s, r) => s + Number(r.amount),
     0
   );
+  const tillDateLost = ((allLostData ?? []) as { lost_amount: number }[]).reduce(
+    (s, r) => s + Number(r.lost_amount),
+    0
+  );
 
-  // Money in by kind of work (optional breakdown).
-  const byCategory = new Map<string, number>();
+  // Totals by payment method (like the bottom of the sheet).
+  const methodTotals = new Map<string, { label: string; amount: number }>();
   for (const p of payments) {
-    const c = p.deal?.service_category || "Uncategorized";
-    byCategory.set(c, (byCategory.get(c) ?? 0) + Number(p.amount));
+    const label =
+      p.payment_method?.trim() || byId.get(p.deal_id)?.payment_method?.trim() || "Other";
+    const key = label.toLowerCase();
+    const cur = methodTotals.get(key) ?? { label, amount: 0 };
+    cur.amount += Number(p.amount);
+    methodTotals.set(key, cur);
   }
-  const categories = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
+  const methods = [...methodTotals.values()].sort((a, b) => b.amount - a.amount);
 
-  const href = (over: { month?: string; show?: string }) => {
+  const href = (m: string) => {
     const sp = new URLSearchParams();
-    const m = over.month ?? month;
     if (m !== currentMonth) sp.set("month", m);
     if (agent) sp.set("agent", agent);
-    const s = over.show ?? (listMode === "month" ? "month" : "");
-    if (s) sp.set("show", s);
     const q = sp.toString();
     return q ? `/sales?${q}` : "/sales";
   };
-
-  const list = listMode === "open" ? openSales : newSales;
-  const today = todayStr();
 
   return (
     <Shell
       profile={profile}
       active="sales"
       title="Sales"
-      subtitle={
-        floor
-          ? "Each project once. A sale counts in the month its money arrives."
-          : "Your projects. A sale counts in the month its money arrives."
-      }
+      subtitle="A month's sales = the money received that month."
       action={
         <Link href="/sales/new" className={btnPrimary}>
           + New sale
@@ -199,7 +315,7 @@ export default async function SalesPage({
       <Card padded={false}>
         <div className="flex flex-wrap items-center gap-3 px-5 py-3.5">
           <Link
-            href={href({ month: shiftMonth(month, -1) })}
+            href={href(shiftMonth(month, -1))}
             aria-label="Previous month"
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-strong)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
           >
@@ -209,7 +325,7 @@ export default async function SalesPage({
             {monthTitle(month)}
           </span>
           <Link
-            href={href({ month: shiftMonth(month, 1) })}
+            href={href(shiftMonth(month, 1))}
             aria-label="Next month"
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-strong)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
           >
@@ -217,20 +333,16 @@ export default async function SalesPage({
           </Link>
           {month !== currentMonth && (
             <Link
-              href={href({ month: currentMonth })}
+              href={href(currentMonth)}
               className="ml-1 font-mono text-[11px] uppercase tracking-[0.08em] text-amber-600 hover:underline"
             >
               This month
             </Link>
           )}
-
           {floor && (
             <form method="get" className="ml-auto flex items-center gap-2">
               {month !== currentMonth && (
                 <input type="hidden" name="month" value={month} />
-              )}
-              {listMode === "month" && (
-                <input type="hidden" name="show" value="month" />
               )}
               <select
                 name="agent"
@@ -255,247 +367,265 @@ export default async function SalesPage({
         </div>
       </Card>
 
-      <Readouts cols={3}>
+      <Readouts cols={4}>
+        <Readout label="Sales (received)" value={fmtMoney(monthSales)} />
         <Readout
-          label={`Sales · ${monthTitle(month)}`}
-          value={fmtMoney(monthSales)}
+          label={`New projects · ${closedInMonth.length}`}
+          value={fmtMoney(newValue)}
         />
-        <Readout
-          label={`New projects · ${newSales.length}`}
-          value={fmtMoney(newSalesValue)}
-        />
-        <Readout
-          label={`Still to collect · ${openSales.length}`}
-          value={fmtMoney(toCollect)}
-        />
+        <Readout label="Still to collect" value={fmtMoney(toCollect)} />
+        <Readout label="Payment lost" value={fmtMoney(lostTotal)} />
       </Readouts>
-      <p className="-mt-2 text-xs text-[var(--text-faint)]">
-        <span className="text-[var(--text-muted)]">Sales</span> = money received
-        in {monthTitle(month)}, from any project.{" "}
-        <span className="text-[var(--text-muted)]">New projects</span> = sales
-        closed this month (full value).{" "}
-        <span className="text-[var(--text-muted)]">Still to collect</span> = what
-        clients still owe, all months.
-        {isOwner && (
-          <>
-            {" "}
-            Received till date (all agents):{" "}
-            <span className="font-mono text-[var(--text)]">
-              {fmtMoney(tillDate)}
-            </span>
-          </>
-        )}
-      </p>
+      {isOwner && (
+        <p className="-mt-2 text-xs text-[var(--text-faint)]">
+          Till date, all agents: received{" "}
+          <span className="font-mono text-[var(--text)]">
+            {fmtMoney(tillDateReceived)}
+          </span>{" "}
+          · lost{" "}
+          <span className="font-mono text-[var(--text)]">
+            {fmtMoney(tillDateLost)}
+          </span>
+        </p>
+      )}
 
-      {/* Projects */}
+      {/* The monthly sheet */}
       <Card
-        title="Projects"
-        clip={false}
-        action={
-          <div className="flex gap-2">
-            <Link
-              href={href({ show: "" })}
-              className={listMode === "open" ? pillActiveClass : pillClass}
-            >
-              Still owed
-            </Link>
-            <Link
-              href={href({ show: "month" })}
-              className={listMode === "month" ? pillActiveClass : pillClass}
-            >
-              New in {monthTitle(month).split(" ")[0]}
-            </Link>
+        title={`${monthTitle(month)} sheet`}
+        description="Every project signed or paid this month. Received = paid this month; Received total = paid so far."
+        padded={false}
+      >
+        {rows.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-[var(--text-muted)]">
+            Nothing signed or paid in {monthTitle(month)}.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-[var(--border)]">
+                <tr>
+                  <th className={th}>Date</th>
+                  {floor && <th className={th}>Agent</th>}
+                  <th className={th}>Client</th>
+                  <th className={th}>Service</th>
+                  <th className={th + " text-right"}>Sale</th>
+                  <th className={th + " text-right"}>Received</th>
+                  <th className={th + " text-right"}>Received total</th>
+                  <th className={th + " text-right"}>Remaining</th>
+                  <th className={th}>Method</th>
+                  <th className={th}>Merchant</th>
+                  <th className={th}>Platform</th>
+                  <th className={th} />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-soft)]">
+                {rows.map((d) => {
+                  const inMonth = receivedThisMonth.get(d.id) ?? 0;
+                  const isNew =
+                    d.date_closed >= monthStart && d.date_closed < nextMonthStart;
+                  return (
+                    <tr key={d.id} className="align-top hover:bg-[var(--sunken)]">
+                      <td className={td + " font-mono text-[12px]"}>
+                        {shortDate(rowDate(d))}
+                      </td>
+                      {floor && <td className={td}>{d.agent?.full_name ?? "—"}</td>}
+                      <td className="px-3 py-2.5 text-[13px]">
+                        <Link
+                          href={`/sales/${d.id}`}
+                          className="font-semibold text-[var(--text)] hover:underline"
+                        >
+                          {d.client_name}
+                        </Link>
+                        {!isNew && (
+                          <p className="text-[11px] text-[var(--text-faint)]">
+                            signed {shortDate(d.date_closed)}
+                          </p>
+                        )}
+                      </td>
+                      <td className={td}>{d.service ?? "—"}</td>
+                      <td className={tdNum + " text-[var(--text-muted)]"}>
+                        {fmtMoney(Number(d.deal_size))}
+                      </td>
+                      <td className={tdNum + " font-semibold text-[var(--text)]"}>
+                        {inMonth > 0 ? fmtMoney(inMonth) : "—"}
+                      </td>
+                      <td className={tdNum + " text-[var(--text-muted)]"}>
+                        {fmtMoney(Number(d.revenue_received))}
+                      </td>
+                      <td className={tdNum}>
+                        <RemainingCell d={d} />
+                      </td>
+                      <td className={td}>{d.payment_method ?? "—"}</td>
+                      <td className={td}>{d.merchant_name ?? "—"}</td>
+                      <td className={td}>{d.social_platform ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        {canPayOn(d) && <PaymentButton d={d} />}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-[var(--border)] bg-[var(--sunken)]">
+                  <td
+                    colSpan={floor ? 5 : 4}
+                    className="px-3 py-3 text-right font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
+                  >
+                    Total
+                  </td>
+                  <td className="px-3 py-3 text-right font-mono text-[15px] font-semibold tabular-nums text-[var(--text)]">
+                    {fmtMoney(monthSales)}
+                  </td>
+                  <td colSpan={6} />
+                </tr>
+              </tfoot>
+            </table>
           </div>
+        )}
+
+        {methods.length > 0 && (
+          <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-[var(--border)] px-5 py-3.5">
+            {methods.map((m) => (
+              <p key={m.label} className="text-sm">
+                <span className="text-[var(--text-faint)]">{m.label}</span>{" "}
+                <span className="font-mono tabular-nums text-[var(--text)]">
+                  {fmtMoney(m.amount)}
+                </span>
+              </p>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Still to collect — every month */}
+      <Card
+        title={`Still to collect · ${openSales.length}`}
+        description="Projects with money left, from any month. When the client pays, use + Payment."
+        action={
+          <span className="font-mono text-sm tabular-nums text-[var(--text)]">
+            {fmtMoney(toCollect)}
+          </span>
         }
         padded={false}
       >
-        {list.length === 0 ? (
-          <EmptyState
-            emoji={listMode === "open" ? "✅" : "💰"}
-            title={
-              listMode === "open"
-                ? "Nothing left to collect"
-                : `No new projects in ${monthTitle(month)}`
-            }
-            hint={
-              listMode === "open"
-                ? "Every project is paid in full."
-                : "Use + New sale when a client signs."
-            }
-          />
+        {openSales.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-[var(--text-muted)]">
+            Nothing left to collect. Every project is paid.
+          </p>
         ) : (
-          <ul className="divide-y divide-[var(--border-soft)]">
-            {list.map((d) => {
-              const total = Number(d.deal_size);
-              const paid = Number(d.revenue_received);
-              const tracked = d.date_closed >= BALANCE_TRACKING_FROM;
-              const left = tracked ? Math.max(0, total - paid) : 0;
-              const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 100;
-              const canPay =
-                tracked &&
-                left > 0 &&
-                (isOwner || d.agent_id === profile.id);
-              const recordPayment = addPayment.bind(null, d.id);
-              return (
-                <li key={d.id} className="px-5 py-3.5">
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                    <div className="min-w-44 flex-1">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-[var(--border)]">
+                <tr>
+                  <th className={th}>Signed</th>
+                  {floor && <th className={th}>Agent</th>}
+                  <th className={th}>Client</th>
+                  <th className={th}>Service</th>
+                  <th className={th + " text-right"}>Sale</th>
+                  <th className={th + " text-right"}>Received</th>
+                  <th className={th + " text-right"}>Left</th>
+                  <th className={th} />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-soft)]">
+                {openSales.map((d) => (
+                  <tr key={d.id} className="align-top hover:bg-[var(--sunken)]">
+                    <td className={td + " font-mono text-[12px]"}>
+                      {shortDate(d.date_closed)}
+                    </td>
+                    {floor && <td className={td}>{d.agent?.full_name ?? "—"}</td>}
+                    <td className="px-3 py-2.5 text-[13px]">
                       <Link
                         href={`/sales/${d.id}`}
                         className="font-semibold text-[var(--text)] hover:underline"
                       >
                         {d.client_name}
                       </Link>
-                      <p className="text-xs text-[var(--text-faint)]">
-                        {d.service ? `${d.service} · ` : ""}
-                        {shortDate(d.date_closed)}
-                        {floor && d.agent ? ` · ${d.agent.full_name}` : ""}
-                      </p>
-                    </div>
-
-                    <div className="w-48">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--border)]">
-                        <div
-                          className="h-full rounded-full bg-amber-600"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <p className="mt-1 font-mono text-[11.5px] tabular-nums text-[var(--text-muted)]">
-                        {fmtMoney(paid)} of {fmtMoney(total)}
-                      </p>
-                    </div>
-
-                    <div className="w-28 text-right">
-                      {!tracked ? (
-                        <span className="text-xs text-[var(--text-faint)]">—</span>
-                      ) : left > 0 ? (
-                        <>
-                          <p className="font-mono text-[14px] font-semibold tabular-nums text-[var(--text)]">
-                            {fmtMoney(left)}
-                          </p>
-                          <p className="text-[11px] text-[var(--text-faint)]">
-                            left
-                          </p>
-                        </>
-                      ) : (
-                        <span className="rounded-full bg-[var(--hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)]">
-                          Paid ✓
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="w-28 text-right">
-                      {canPay && (
-                        <details className="group relative">
-                          <summary className="cursor-pointer list-none rounded-lg border border-amber-600/50 px-3 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-[var(--accent-soft)] [&::-webkit-details-marker]:hidden">
-                            + Payment
-                          </summary>
-                          <form
-                            action={recordPayment}
-                            className="absolute right-0 z-10 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] p-3 text-left shadow-lg"
-                          >
-                            <label className="text-xs text-[var(--text-muted)]">
-                              Amount paid ($)
-                              <input
-                                name="amount"
-                                required
-                                inputMode="decimal"
-                                defaultValue={String(left)}
-                                className={inputClass + " mt-1"}
-                              />
-                            </label>
-                            <label className="text-xs text-[var(--text-muted)]">
-                              Date paid
-                              <input
-                                type="date"
-                                name="paid_on"
-                                defaultValue={today}
-                                className={inputClass + " mt-1"}
-                              />
-                            </label>
-                            <button type="submit" className={btnPrimary}>
-                              Save payment
-                            </button>
-                          </form>
-                        </details>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    </td>
+                    <td className={td}>{d.service ?? "—"}</td>
+                    <td className={tdNum + " text-[var(--text-muted)]"}>
+                      {fmtMoney(Number(d.deal_size))}
+                    </td>
+                    <td className={tdNum + " text-[var(--text-muted)]"}>
+                      {fmtMoney(Number(d.revenue_received))}
+                    </td>
+                    <td className={tdNum + " font-semibold text-[var(--text)]"}>
+                      {fmtMoney(left(d))}
+                    </td>
+                    <td className="px-3 py-2">
+                      {canPayOn(d) && <PaymentButton d={d} />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
 
-      {/* The month's sales = the payments that came in */}
+      {/* Payment lost this month */}
       <Card
-        title={`Sales in ${monthTitle(month)}`}
-        description="Every payment received this month. These add up to the month's sales."
+        title={`Payment lost · ${monthTitle(month)}`}
+        description="Projects closed this month where the client didn't pay the rest."
         action={
-          <span className="font-mono text-sm tabular-nums text-[var(--text)]">
-            {fmtMoney(monthSales)}
+          <span className="font-mono text-sm tabular-nums text-[var(--negative)]">
+            {fmtMoney(lostTotal)}
           </span>
         }
         padded={false}
       >
-        {payments.length === 0 ? (
+        {lostInMonth.length === 0 ? (
           <p className="px-5 py-4 text-sm text-[var(--text-muted)]">
-            No money received in {monthTitle(month)} yet.
+            No lost payments in {monthTitle(month)}.
           </p>
         ) : (
-          <ul className="divide-y divide-[var(--border-soft)]">
-            {payments.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm"
-              >
-                <p className="min-w-0 truncate">
-                  <span className="mr-3 font-mono text-xs text-[var(--text-faint)]">
-                    {shortDate(p.paid_on)}
-                  </span>
-                  {p.deal ? (
-                    <Link
-                      href={`/sales/${p.deal.id}`}
-                      className="text-[var(--text)] hover:underline"
-                    >
-                      {p.deal.client_name}
-                    </Link>
-                  ) : (
-                    "—"
-                  )}
-                  <span className="ml-2 text-xs text-[var(--text-faint)]">
-                    {p.deal ? `of ${fmtMoney(Number(p.deal.deal_size))}` : ""}
-                    {floor && p.deal?.agent ? ` · ${p.deal.agent.full_name}` : ""}
-                  </span>
-                </p>
-                <span className="shrink-0 font-mono font-semibold tabular-nums text-[var(--text)]">
-                  {fmtMoney(Number(p.amount))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {categories.length > 0 && (
-          <details className="border-t border-[var(--border)]">
-            <summary className="cursor-pointer list-none px-5 py-3 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-faint)] hover:text-[var(--text-muted)] [&::-webkit-details-marker]:hidden">
-              Breakdown by kind of work ▾
-            </summary>
-            <ul className="flex flex-col gap-2 px-5 pb-4">
-              {categories.map(([name, amount]) => (
-                <li key={name} className="flex justify-between text-sm">
-                  <span className="text-[var(--text-muted)]">{name}</span>
-                  <span className="font-mono tabular-nums text-[var(--text)]">
-                    {fmtMoney(amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </details>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-[var(--border)]">
+                <tr>
+                  <th className={th}>Closed</th>
+                  {floor && <th className={th}>Agent</th>}
+                  <th className={th}>Client</th>
+                  <th className={th + " text-right"}>Sale</th>
+                  <th className={th + " text-right"}>Received</th>
+                  <th className={th + " text-right"}>Lost</th>
+                  <th className={th}>Note</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-soft)]">
+                {lostInMonth.map((d) => (
+                  <tr key={d.id} className="hover:bg-[var(--sunken)]">
+                    <td className={td + " font-mono text-[12px]"}>
+                      {d.closed_on ? shortDate(d.closed_on) : "—"}
+                    </td>
+                    {floor && <td className={td}>{d.agent?.full_name ?? "—"}</td>}
+                    <td className="px-3 py-2.5 text-[13px]">
+                      <Link
+                        href={`/sales/${d.id}`}
+                        className="font-semibold text-[var(--text)] hover:underline"
+                      >
+                        {d.client_name}
+                      </Link>
+                    </td>
+                    <td className={tdNum + " text-[var(--text-muted)]"}>
+                      {fmtMoney(Number(d.deal_size))}
+                    </td>
+                    <td className={tdNum + " text-[var(--text-muted)]"}>
+                      {fmtMoney(Number(d.revenue_received))}
+                    </td>
+                    <td className={tdNum + " font-semibold text-[var(--negative)]"}>
+                      {fmtMoney(Number(d.lost_amount))}
+                    </td>
+                    <td className={td + " whitespace-normal"}>
+                      {d.close_note ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
-
     </Shell>
   );
 }
