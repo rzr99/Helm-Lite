@@ -53,6 +53,18 @@ export function workingDaysInMonth(from: string, to: string) {
   return count;
 }
 
+// Working days (Mon–Sat) from `from` to `to`, both YYYY-MM-DD, inclusive.
+export function workingDaysBetween(from: string, to: string) {
+  const [y1, m1, d1] = from.split("-").map(Number);
+  const [y2, m2, d2] = to.split("-").map(Number);
+  const end = Date.UTC(y2, m2 - 1, d2);
+  let count = 0;
+  for (let t = Date.UTC(y1, m1 - 1, d1); t <= end; t += 86400000) {
+    if (new Date(t).getUTCDay() !== 0) count++;
+  }
+  return count;
+}
+
 // This month, 1st → last day, based on the Karachi calendar date.
 export function monthRange() {
   const [y, m] = todayStr().split("-").map(Number);

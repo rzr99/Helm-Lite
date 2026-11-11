@@ -2,13 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, Avatar } from "@/components/ui";
 import { QuotaBar } from "@/components/quota-bar";
 import { MonthNav } from "@/components/month-nav";
-import { workingDaysInMonth, isSunday } from "@/lib/dates";
+import { workingDaysInMonth } from "@/lib/dates";
 import { monthMeta } from "@/lib/attendance";
 import { DAILY_LEAD_QUOTA, MONTHLY_SALES_TARGET } from "@/lib/enums";
+import { dailyTarget } from "@/lib/quota";
 
 // Owner view: every agent's whole-month progress, with a long team bar on top.
-// Leads quota = 30 x the month's working days (Mon–Sat) minus that agent's
-// absences; the sales bar fills only from revenue received.
+// Leads quota = 30 x the month's working days (Mon–Sat), present or absent;
+// the sales bar fills only from revenue received.
 export async function TeamQuotaBoard({ month }: { month?: string }) {
   const supabase = await createClient();
   const M = monthMeta(month);
@@ -16,7 +17,7 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
   const to = M.last;
   const workingDays = workingDaysInMonth(from, to);
 
-  const [{ data: users }, { data: att }, { data: leadDays }, { data: deals }] =
+  const [{ data: users }, { data: leadDays }, { data: deals }] =
     await Promise.all([
       supabase
         .from("users")
@@ -25,14 +26,8 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
         .neq("role", "owner")
         .order("full_name"),
       supabase
-        .from("attendance")
-        .select("user_id, status, date")
-        .gte("date", from)
-        .lte("date", to)
-        .limit(100000),
-      supabase
         .from("activity_leads_added")
-        .select("agent_id, n")
+        .select("agent_id, day, n")
         .gte("day", from)
         .lte("day", to)
         .limit(100000),
@@ -45,18 +40,18 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
         .limit(100000),
     ]);
 
-  const absentBy = new Map<string, number>();
-  for (const r of (att ?? []) as {
-    user_id: string;
-    status: string;
-    date: string;
-  }[])
-    if (r.status === "absent" && !isSunday(r.date))
-      absentBy.set(r.user_id, (absentBy.get(r.user_id) ?? 0) + 1);
-
   const leadsBy = new Map<string, number>();
-  for (const r of (leadDays ?? []) as { agent_id: string; n: number }[])
+  const daysBy = new Map<string, Map<string, number>>();
+  for (const r of (leadDays ?? []) as {
+    agent_id: string;
+    day: string;
+    n: number;
+  }[]) {
     leadsBy.set(r.agent_id, (leadsBy.get(r.agent_id) ?? 0) + (r.n ?? 0));
+    const m = daysBy.get(r.agent_id) ?? new Map<string, number>();
+    m.set(r.day, (m.get(r.day) ?? 0) + (r.n ?? 0));
+    daysBy.set(r.agent_id, m);
+  }
 
   const salesBy = new Map<string, number>();
   for (const r of (deals ?? []) as {
@@ -73,14 +68,18 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
     full_name: string;
     avatar_url: string | null;
   }[]).map((u) => {
-    const absent = absentBy.get(u.id) ?? 0;
-    const quotaDays = Math.max(0, workingDays - absent);
     return {
       id: u.id,
       name: u.full_name,
       avatar: u.avatar_url,
       leadsDone: leadsBy.get(u.id) ?? 0,
-      leadsTarget: DAILY_LEAD_QUOTA * quotaDays,
+      leadsTarget: DAILY_LEAD_QUOTA * workingDays,
+      today: dailyTarget(
+        DAILY_LEAD_QUOTA * workingDays,
+        daysBy.get(u.id) ?? new Map(),
+        from,
+        to
+      ),
       salesDone: salesBy.get(u.id) ?? 0,
     };
   });
@@ -105,7 +104,7 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
   return (
     <Card
       title={`Team targets · ${M.label}`}
-      description={`Whole-month quota: ${DAILY_LEAD_QUOTA}/day × ${workingDays} working days (Mon–Sat), minus absences. Sales bar fills from revenue received.`}
+      description={`Whole-month quota: ${DAILY_LEAD_QUOTA}/day × ${workingDays} working days (Mon–Sat), present or absent. "Today" = leads needed today to stay on track: missed days are added to the days left. Sales bar fills from revenue received.`}
       action={<MonthNav prev={M.prev} next={M.next} />}
     >
       {/* The long team bars. */}
@@ -160,6 +159,27 @@ export async function TeamQuotaBoard({ month }: { month?: string }) {
                   <span className="flex w-24 shrink-0 items-center gap-1 truncate text-sm font-medium text-[var(--text)]">
                     {r.name.split(" ")[0]}
                     {leadsHit && <span title="Quota smashed">🔥</span>}
+                  </span>
+                  <span
+                    className="w-20 shrink-0 text-right font-mono text-[11px] tabular-nums"
+                    title="Today's catch-up target: the month's remaining quota spread over the working days left"
+                  >
+                    {r.today ? (
+                      <>
+                        <span
+                          className={
+                            r.today.target > DAILY_LEAD_QUOTA
+                              ? "font-semibold text-amber-600"
+                              : "text-[var(--text)]"
+                          }
+                        >
+                          {r.today.doneToday}/{r.today.target}
+                        </span>
+                        <span className="block text-[10px] text-[var(--text-faint)]">
+                          {r.today.sunday ? "next day" : "today"}
+                        </span>
+                      </>
+                    ) : null}
                   </span>
                   <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                     <QuotaBar

@@ -12,7 +12,12 @@ import {
   inputClass,
 } from "@/components/ui";
 import { requireProfile, isFloorRole } from "@/lib/profile";
-import { todayStr, weekRange, monthRange } from "@/lib/dates";
+import {
+  todayStr,
+  weekRange,
+  monthRange,
+  workingDaysBetween,
+} from "@/lib/dates";
 import { DAILY_LEAD_QUOTA } from "@/lib/enums";
 import { FreshToday } from "@/components/fresh-today";
 
@@ -90,15 +95,6 @@ export default async function ActivityPage({
     return q;
   };
 
-  // Attendance for the range — quota targets are tied to days actually worked.
-  // (RLS: the owner sees everyone; a team lead sees only their own rows.)
-  let attendanceQuery = supabase
-    .from("attendance")
-    .select("user_id, status")
-    .gte("date", fromDate)
-    .lte("date", toDate)
-    .limit(100000);
-  if (agent) attendanceQuery = attendanceQuery.eq("user_id", agent);
 
   const [
     { data: users },
@@ -107,7 +103,6 @@ export default async function ActivityPage({
     { data: dealDays },
     { data: dupRows },
     { data: uniqueAdded },
-    { data: attendanceRows },
   ] = await Promise.all([
     supabase.from("users").select("id, full_name").eq("active", true).order("full_name"),
     dayQuery("activity_leads_added"),
@@ -121,19 +116,11 @@ export default async function ActivityPage({
       p_to: toDate,
       p_agent: agent || null,
     }),
-    attendanceQuery,
   ]);
 
-  // Attended days per agent: every day expects the full quota except Absent —
-  // present, late and half-day all count as one. Absent / unmarked count as 0.
-  const attendedByAgent = new Map<string, number>();
-  for (const r of (attendanceRows ?? []) as {
-    user_id: string;
-    status: string;
-  }[]) {
-    if (r.status === "absent") continue;
-    attendedByAgent.set(r.user_id, (attendedByAgent.get(r.user_id) ?? 0) + 1);
-  }
+  // Quota is set by the calendar, not attendance: every working day (Mon–Sat)
+  // in the range expects the full quota, present or absent.
+  const workingDays = workingDaysBetween(fromDate, toDate);
 
   const nameOf = new Map((users ?? []).map((u) => [u.id, u.full_name]));
 
@@ -218,14 +205,12 @@ export default async function ActivityPage({
     .map(([agentId, v]) => ({ agentId, ...v }))
     .sort((a, b) => b.added - a.added);
 
-  // Quota targets are tied to present days: target = 30 x present days.
+  // Target = 30 x working days in the range, the same for every agent.
   const quotaPct = (added: number, target: number) =>
     target > 0 ? Math.round((added / target) * 100) : 0;
-  const targetFor = (agentId: string) =>
-    DAILY_LEAD_QUOTA * (attendedByAgent.get(agentId) ?? 0);
-  const fmtDays = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-  const teamAttended = [...attendedByAgent.values()].reduce((s, n) => s + n, 0);
-  const teamTarget = DAILY_LEAD_QUOTA * teamAttended;
+  const agentTarget = DAILY_LEAD_QUOTA * workingDays;
+  const teamTarget = agentTarget * perAgentList.length;
+  const daysLabel = `${workingDays} working day${workingDays === 1 ? "" : "s"}`;
 
   // Cross-agent duplicates come straight from the view: it returns one row per
   // (client, agent) only for handles two or more DIFFERENT agents have worked.
@@ -378,7 +363,7 @@ export default async function ActivityPage({
           title="Per agent — total, daily average & quota"
           description={`Average = leads ÷ ${daysInRange} day${
             daysInRange === 1 ? "" : "s"
-          }. Quota = ${DAILY_LEAD_QUOTA} per attended day (every day counts except Absent).`}
+          }. Quota = ${DAILY_LEAD_QUOTA} per working day (Mon–Sat), present or absent.`}
           padded={false}
         >
           <div className="overflow-x-auto">
@@ -413,26 +398,20 @@ export default async function ActivityPage({
                       {perDayAvg(a.added)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {(attendedByAgent.get(a.agentId) ?? 0) > 0 ? (
+                      {agentTarget > 0 ? (
                         <>
                           <span
                             className="font-semibold"
-                            style={{ color: quotaColor(quotaPct(a.added, targetFor(a.agentId))) }}
+                            style={{ color: quotaColor(quotaPct(a.added, agentTarget)) }}
                           >
-                            {quotaPct(a.added, targetFor(a.agentId))}%
+                            {quotaPct(a.added, agentTarget)}%
                           </span>
                           <span className="block text-[11px] text-[var(--text-faint)]">
-                            {fmtDays(attendedByAgent.get(a.agentId) ?? 0)} attended day
-                            {(attendedByAgent.get(a.agentId) ?? 0) === 1 ? "" : "s"} · target {targetFor(a.agentId)}
+                            {daysLabel} · target {agentTarget}
                           </span>
                         </>
                       ) : (
-                        <>
-                          <span className="text-[var(--text-faint)]">—</span>
-                          <span className="block text-[11px] text-[var(--text-faint)]">
-                            no attended days
-                          </span>
-                        </>
+                        <span className="text-[var(--text-faint)]">—</span>
                       )}
                     </td>
                     <td className="hidden px-5 py-3.5 text-zinc-600 sm:table-cell dark:text-zinc-400">
@@ -456,7 +435,7 @@ export default async function ActivityPage({
                     {perDayAvg(totals.added)}
                   </td>
                   <td className="px-5 py-3">
-                    {teamAttended > 0 ? (
+                    {teamTarget > 0 ? (
                       <>
                         <span
                           className="font-semibold"
@@ -465,7 +444,7 @@ export default async function ActivityPage({
                           {quotaPct(totals.added, teamTarget)}%
                         </span>
                         <span className="block text-[10px] normal-case tracking-normal text-[var(--text-faint)]">
-                          {fmtDays(teamAttended)} attended days · target {teamTarget}
+                          {perAgentList.length} agents × {daysLabel} · target {teamTarget}
                         </span>
                       </>
                     ) : (
